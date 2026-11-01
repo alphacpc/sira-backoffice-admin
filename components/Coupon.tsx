@@ -21,11 +21,11 @@ export function Coupon({
   const navy = tone === "navy";
   return (
     <div
-      className={`relative overflow-hidden rounded-3xl ${
+      className={`relative flex flex-col overflow-hidden rounded-3xl ${
         navy ? "bg-navy text-white" : "bg-white text-ink shadow-soft"
       } ${className}`}
     >
-      <div className="p-6 lg:p-8">{children}</div>
+      <div className="flex-1 p-6 lg:p-8">{children}</div>
       {stub ? (
         <>
           <div className="relative">

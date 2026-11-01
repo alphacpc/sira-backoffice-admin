@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
-import { Container, Eyebrow, ButtonLink } from "@/components/ui";
+import Image from "next/image";
+import { Container, Eyebrow, ButtonLink, Title2 } from "@/components/ui";
 import { Reveal } from "@/components/motion";
 import { Icon } from "@/components/icons";
 import { trustSections } from "@/content/trust";
@@ -11,90 +12,135 @@ export const metadata: Metadata = {
     "Isolation entre compagnies, rôles, journal d'audit, RGPD et exploitation : comment Sira protège vos données.",
 };
 
+/** Mono two-column ledger line: name in amber, role in soft white. */
+function LedgerList({ items }: { items: { name: string; role: string }[] }) {
+  return (
+    <ul className="mt-5 grid grid-cols-1 overflow-hidden rounded-2xl border border-white/15 bg-navy-deep/60 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
+      {items.map((s) => (
+        <li key={s.name} className="border-b border-dashed border-white/15 p-5">
+          <p className="font-mono text-sm font-semibold text-amber">{s.name}</p>
+          <p className="mt-1.5 text-sm text-white/75">{s.role}</p>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 export default function SecurityPage() {
   return (
-    <main>
-      <section className="pb-6 pt-16 lg:pt-24">
-        <Container>
+    <main className="bg-paper">
+      {/* Hero: photo bottom-anchored and zoomed so the burned-in logo (top of the file) stays out of frame. */}
+      <section className="relative overflow-hidden bg-navy-deep">
+        <Image
+          src="/images/bus-sunset.png"
+          alt=""
+          fill
+          priority
+          sizes="100vw"
+          className="origin-bottom scale-[1.5] object-cover object-bottom lg:scale-[1.08]"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-0 bg-gradient-to-r from-navy-deep/85 via-navy/50 to-navy/10"
+        />
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-navy-deep/70 to-transparent"
+        />
+        <Container className="relative pb-20 pt-16 lg:pb-28 lg:pt-24">
           <Reveal>
-            <Eyebrow>Sécurité et confiance</Eyebrow>
-            <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl">
-              Des données de voyageurs et de paiements, traitées avec sérieux.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg text-ink/75">
+            <Eyebrow tone="dark">Sécurité et confiance</Eyebrow>
+            <Title2
+              as="h1"
+              tone="dark"
+              lead="Des données de voyageurs et de paiements,"
+              accent="traitées avec sérieux."
+              className="mt-4 max-w-3xl text-4xl sm:text-5xl lg:text-6xl"
+            />
+            <p className="mt-6 max-w-2xl text-lg text-white/80">
               Voici ce que la plateforme fait aujourd&apos;hui, sans promesse sur ce qui n&apos;existe
               pas encore.
             </p>
+            <div className="mt-8">
+              <ButtonLink href="#sous-le-capot" variant="outline-light">
+                Sous le capot
+              </ButtonLink>
+            </div>
           </Reveal>
         </Container>
       </section>
 
-      <section className="py-12">
-        <Container className="space-y-5">
+      <section className="py-16 lg:py-24">
+        <Container className="space-y-6">
           {trustSections.map((s, i) => (
             <Reveal key={s.title} delay={Math.min(i, 2) * 0.05}>
-              <article className="grid grid-cols-1 [&>*]:min-w-0 gap-6 rounded-3xl border border-ink/10 bg-white p-7 sm:grid-cols-[auto_1fr] sm:p-8">
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-forest/10 text-forest">
-                  <Icon name={s.icon} className="h-6 w-6" />
-                </span>
-                <div>
-                  <h2 className="text-2xl font-semibold">{s.title}</h2>
+              <article className="grid grid-cols-1 overflow-hidden rounded-3xl bg-white shadow-soft ring-1 ring-navy/10 lg:grid-cols-[0.8fr_1.2fr] [&>*]:min-w-0">
+                <div className="p-7 lg:p-9">
+                  <div className="flex items-center gap-3">
+                    <span className="font-mono text-sm font-bold tracking-[0.18em] text-amber-ink">
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span aria-hidden="true" className="h-px flex-1 border-t border-dashed border-navy/25" />
+                    <Icon name={s.icon} className="h-5 w-5 text-navy" />
+                  </div>
+                  <h2 className="mt-5 text-2xl font-extrabold tracking-tight text-navy">{s.title}</h2>
                   <p className="mt-2 text-ink/70">{s.description}</p>
-                  <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 [&>*]:min-w-0">
-                    {s.points.map((p) => (
-                      <li key={p} className="flex gap-2.5 text-sm text-ink/85">
-                        <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-forest" />
-                        {p}
-                      </li>
-                    ))}
-                  </ul>
                 </div>
+                <ul className="border-t-2 border-dashed border-navy/15 p-7 lg:border-l-2 lg:border-t-0 lg:p-9">
+                  {s.points.map((p, j) => (
+                    <li
+                      key={p}
+                      className="grid grid-cols-[2.25rem_1fr] gap-2 border-b border-dashed border-navy/15 py-3 text-sm text-ink/85 first:pt-0 last:border-b-0 last:pb-0"
+                    >
+                      <span className="font-mono text-xs font-semibold text-amber-ink">
+                        {String(i + 1).padStart(2, "0")}.{j + 1}
+                      </span>
+                      <span>{p}</span>
+                    </li>
+                  ))}
+                </ul>
               </article>
             </Reveal>
           ))}
         </Container>
       </section>
 
-      <section id="sous-le-capot" className="bg-sand/60 py-20">
+      <section id="sous-le-capot" className="bg-navy-dark py-20 text-white lg:py-28">
         <Container>
           <Reveal>
-            <Eyebrow>Sous le capot</Eyebrow>
-            <h2 className="mt-3 max-w-2xl text-3xl font-semibold">
-              Pour vos équipes techniques : comment c&apos;est construit.
-            </h2>
+            <Eyebrow tone="dark">Sous le capot</Eyebrow>
+            <Title2
+              tone="dark"
+              lead="Pour vos équipes techniques :"
+              accent="comment c'est construit."
+              className="mt-3 max-w-3xl text-3xl sm:text-4xl"
+            />
           </Reveal>
 
           <ul className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3 [&>*]:min-w-0">
-            {underTheHood.principles.map((p) => (
-              <li key={p.title} className="rounded-2xl border border-ink/10 bg-white p-6">
-                <h3 className="text-lg font-semibold">{p.title}</h3>
-                <p className="mt-2 text-sm text-ink/70">{p.text}</p>
+            {underTheHood.principles.map((p, i) => (
+              <li key={p.title} className="rounded-2xl border border-white/15 p-6">
+                <p className="font-mono text-xs font-semibold tracking-[0.18em] text-amber">
+                  P{i + 1}
+                </p>
+                <h3 className="mt-3 text-lg font-bold">{p.title}</h3>
+                <p className="mt-2 text-sm text-white/75">{p.text}</p>
               </li>
             ))}
           </ul>
 
-          <h3 className="mt-14 text-xl font-semibold">Dix services métier</h3>
-          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
-            {underTheHood.services.map((s) => (
-              <li key={s.name} className="rounded-xl border border-ink/10 bg-white p-4 text-sm">
-                <p className="font-semibold">{s.name}</p>
-                <p className="mt-1 text-ink/70">{s.role}</p>
-              </li>
-            ))}
-          </ul>
+          <h3 className="mt-14 font-mono text-sm font-semibold uppercase tracking-[0.18em] text-white">
+            Dix services métier
+          </h3>
+          <LedgerList items={underTheHood.services} />
 
-          <h3 className="mt-12 text-xl font-semibold">Composants communs</h3>
-          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
-            {underTheHood.components.map((c) => (
-              <li key={c.name} className="rounded-xl border border-ink/10 bg-white p-4 text-sm">
-                <p className="font-semibold">{c.name}</p>
-                <p className="mt-1 text-ink/70">{c.role}</p>
-              </li>
-            ))}
-          </ul>
+          <h3 className="mt-12 font-mono text-sm font-semibold uppercase tracking-[0.18em] text-white">
+            Composants communs
+          </h3>
+          <LedgerList items={underTheHood.components} />
 
-          <p className="mt-10 text-sm text-ink/70">
-            <span className="font-semibold text-ink">Technologies : </span>
+          <p className="mt-10 font-mono text-sm leading-relaxed text-white/75">
+            <span className="font-semibold text-amber">Technologies : </span>
             {underTheHood.stack.join(" · ")}.
           </p>
         </Container>
@@ -102,8 +148,13 @@ export default function SecurityPage() {
 
       <section className="py-20">
         <Container>
-          <div className="rounded-3xl bg-forest px-8 py-12 text-center text-white">
-            <h2 className="text-3xl font-semibold">Une question de sécurité ou de conformité ?</h2>
+          <div className="rounded-3xl bg-navy px-8 py-12 text-center text-white">
+            <Title2
+              tone="dark"
+              lead="Une question de sécurité"
+              accent="ou de conformité ?"
+              className="text-3xl"
+            />
             <p className="mx-auto mt-3 max-w-xl text-white/80">
               Parlons-en lors d&apos;une démonstration, avec vos responsables techniques si vous le souhaitez.
             </p>

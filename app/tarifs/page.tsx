@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Container, Eyebrow } from "@/components/ui";
+import { Container, Eyebrow, Title2 } from "@/components/ui";
 import { Reveal } from "@/components/motion";
 import PlanTable from "@/components/PlanTable";
 import { plans } from "@/content/plans";
@@ -11,14 +11,17 @@ export const metadata: Metadata = {
 
 export default function PricingPage() {
   return (
-    <main>
+    <main className="bg-paper">
       <section className="pb-6 pt-16 lg:pt-24">
         <Container>
           <Reveal>
             <Eyebrow>Tarifs</Eyebrow>
-            <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl">
-              Une offre composée pour votre compagnie.
-            </h1>
+            <Title2
+              as="h1"
+              lead="Une offre composée"
+              accent="pour votre compagnie."
+              className="mt-4 max-w-3xl text-4xl sm:text-5xl lg:text-6xl [&>span:last-child]:block"
+            />
             <p className="mt-6 max-w-2xl text-lg text-ink/75">
               Les plans, leurs limites et les fonctions activées sont configurés pour chaque
               compagnie. Les trois niveaux ci-dessous sont des exemples de compositions courantes,
@@ -34,7 +37,7 @@ export default function PricingPage() {
       </section>
       <section className="pb-24">
         <Container className="max-w-3xl">
-          <p className="rounded-2xl border border-dashed border-ink/25 p-5 text-sm text-ink/70">
+          <p className="rounded-2xl border-2 border-dashed border-navy/25 p-5 text-sm text-ink/70">
             Une période d&apos;essai peut être prévue selon le plan. Les montants, devises
             (XOF, EUR, USD) et cycles de facturation (mensuel ou annuel) sont précisés dans le devis.
           </p>

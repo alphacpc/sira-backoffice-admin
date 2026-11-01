@@ -3,7 +3,7 @@
 import { useState, type FormEvent } from "react";
 
 const field =
-  "mt-1 w-full rounded-lg border border-ink/20 bg-white px-4 py-2.5 text-ink focus:border-forest focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest";
+  "mt-1 w-full rounded-lg border border-ink/20 bg-white px-4 py-2.5 text-ink focus:border-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy";
 
 export default function DemoForm() {
   const [done, setDone] = useState(false);
@@ -73,7 +73,7 @@ export default function DemoForm() {
             écrivez-nous à{" "}
             <a
               href="mailto:contact@sira.app"
-              className="underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+              className="underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
             >
               contact@sira.app
             </a>
@@ -81,7 +81,7 @@ export default function DemoForm() {
             <button
               type="button"
               onClick={copy}
-              className="rounded-full border border-ink/20 px-3 py-1 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+              className="rounded-full border border-ink/20 px-3 py-1 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
             >
               {copied ? "Message copié" : "Copier le message"}
             </button>
@@ -90,7 +90,7 @@ export default function DemoForm() {
       </div>
       <button
         type="submit"
-        className="rounded-full bg-forest px-6 py-3 text-sm font-semibold text-white transition hover:bg-forest-deep focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+        className="rounded-full bg-navy px-6 py-3 text-sm font-semibold text-white transition hover:bg-navy-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
       >
         Préparer mon message
       </button>

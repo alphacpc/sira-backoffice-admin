@@ -1,11 +1,11 @@
-# Task 6 report
-Status: DONE. Build OK (/solution 1.5 kB, /faq still compiles). check-site: no "texte trop pâle"; only legacy "interdite" lines remain.
-scrollWidth: 1280 at 1280; 390 at 390 (after scrolling to bottom). One h1; anchors flotte/billetterie/colis/equipes/pilotage/faq present.
-Visual: columns alternate, sticky mockup (top-28) does not clip under the header; "À venir" boxes and mobile layout fine.
-Changes vs brief: overrides applied (grid-cols-1 [&>*]:min-w-0, focus-visible on chapter nav links); solution.ts audit-log point reworded.
-Restarted stale `next start` on :3100 after build.
-
-## Fix round
-- faq.ts: survente question/answer qualified; data-separation answer qualified; space before `;` in prose.
-- ui.tsx: Container applies max-w-6xl only when className has no max-w- utility.
-- Build OK; no "texte trop pâle"; FAQ container on /solution at 1280px measures 768px.
+# Task 6 report — /securite, /tarifs, /demo, legal pages
+Files: app/securite|tarifs|demo/page.tsx, components/{PlanTable,LegalLayout,DemoForm,Coupon}.tsx (Coupon: root flex-col + body flex-1 so stubs align at card bottom).
+Checks: tsc OK, pnpm build OK, pnpm check OK; scrollWidth 1280/390 and 390 on all four pages (also reduced-motion). Port 3641, killed.
+/securite: bus-sunset full-bleed, navy veil left-to-right 85%->10% (+ top gradient) so the seat silhouettes stay visible on the right. Burned-in logo: img is object-bottom + origin-bottom scale 1.5 (mobile) / 1.08 (lg) => top ~33% of the file is clipped out; top gradient is a safety net; verified absent at 1280 and 390. Five trust cards: two columns (mono index 01 + dashed rule + icon + title/desc | dashed vertical divider | points as ledger rows 01.1, 01.2 with dashed separators). Sous le capot (#sous-le-capot kept) on navy-dark: P1-P3 outlined cards, services/components as mono ledger grids (amber mono name, white/75 role), stack as mono line. CTA navy block with Title2.
+/tarifs: Title2 hero, three Coupons with perforation, stub = mono "TARIF" + « Sur devis » + button; Exploitation = ring-2 amber, lifted 12px, no badge text.
+/demo: Title2, amber numbered steps, tilted PhotoCard voyageuse.jpg, form inside Coupon with stub contact@sira.app. DemoForm behaviour untouched (only forest->navy classes).
+Legal: white, mono "LÉGAL" eyebrow, Title2 split on last word, 70ch measure, mono numbered markers in a 2.5rem gutter.
+Header/top padding: NOT a real bug. Viewport screenshots at scrollY 0 and 1500 show the header full width (rect x0 w1280 h73) and sticky. The "crammed / touching" look is a full-page capture artifact (sticky header painted at the current scroll offset mid-page). Pages already have pt-14..24 on hero; no shared cause. cap script now neutralises header position for full-page captures.
+Defects fixed on iteration: hero photo nearly invisible (zoomed too dark/veil heavy) -> lighter veil, right side shows photo; stub wrapped "Sur devis" and button in 2 lines -> stacked layout, nowrap; orphan "pour" in tarifs title -> accent on its own line; same for demo.
+Screens: v2-securite 1280 seg1-3, 390 seg1-5; v2-tarifs 1280 seg1-2, 390 seg1-3; v2-demo 1280 seg1, 390 seg1-2; v2-mentions 1280 seg1, 390 seg1-2 (+ v2-hdr-0/1500).
+Weaknesses: hero photo is dark by nature, only silhouettes show; mobile amber title over the bright part of the photo is slightly less crisp; last ledger row keeps a dashed bottom border inside the rounded frame; notch half-discs on tarifs are faint; Supervision sits alone on the last ledger row; demo photo contains a baked-in "Billet confirmé" chip (asset). FaqAccordion already restyled in Task 5. confidentialite/cgu share LegalLayout, only mentions captured.
