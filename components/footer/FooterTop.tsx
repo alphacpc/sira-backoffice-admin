@@ -6,33 +6,6 @@ import { Icon } from "@/components/icons";
 import { EASE, useReduce } from "@/components/motion";
 
 /**
- * Bord perforé : une rangée de demi-disques navy qui mordent sur la page, comme la tranche d'un
- * billet. Aucune couleur de page n'est supposée : seules les bosses navy sont dessinées.
- * Entrée : la rangée se dresse depuis le bas (transform uniquement).
- */
-export function PerforatedEdge() {
-  const reduce = useReduce();
-  const common = "pointer-events-none block h-3.5 w-full";
-  const style = {
-    backgroundImage: "radial-gradient(circle at 10px 100%, #0d1226 9px, transparent 9.5px)",
-    backgroundSize: "20px 100%",
-  } as const;
-  if (reduce) return <span aria-hidden="true" className={common} style={style} />;
-  return (
-    <motion.span
-      aria-hidden="true"
-      data-motion=""
-      className={common}
-      style={{ ...style, transformOrigin: "50% 100%" }}
-      initial={{ scaleY: 0 }}
-      whileInView={{ scaleY: 1 }}
-      viewport={{ once: true, margin: "0px 0px -10% 0px" }}
-      transition={{ duration: 0.6, ease: EASE }}
-    />
-  );
-}
-
-/**
  * Ligne « DKR ———— TBA » : se trace une fois à l'entrée dans le viewport. Le disque-bus au bout est
  * un vrai bouton : il remonte la page en douceur pendant que le bus glisse le long de la ligne.
  * En mouvement réduit : défilement instantané, aucun glissement.

@@ -3,7 +3,7 @@ import { ButtonLink, Title2 } from "@/components/ui";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { chapters } from "@/content/solution";
 import { FooterLink } from "@/components/footer/FooterLink";
-import { FooterRoute, PerforatedEdge } from "@/components/footer/FooterTop";
+import { FooterRoute } from "@/components/footer/FooterTop";
 
 const site = [
   { href: "/", label: "Accueil" },
@@ -27,7 +27,6 @@ export default function Footer() {
   const year = new Date().getFullYear();
   return (
     <footer className="relative mt-4">
-      <PerforatedEdge />
       <div className="relative overflow-hidden bg-gradient-to-b from-navy to-navy-deep text-white">
         {/* Anneaux très discrets */}
         <svg aria-hidden="true" className="pointer-events-none absolute -right-40 top-10 h-[520px] w-[520px] text-amber/[0.07]" viewBox="0 0 520 520" fill="none">
