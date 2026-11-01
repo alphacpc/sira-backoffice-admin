@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Container, Eyebrow, ButtonLink, Title2 } from "@/components/ui";
-import { Reveal } from "@/components/motion";
+import { HeroBlock, Reveal } from "@/components/motion";
 import { Icon } from "@/components/icons";
 import { PhotoCard } from "@/components/PhotoCard";
 import { audiences, type Audience } from "@/content/audiences";
@@ -99,7 +99,8 @@ export default function ForWhoPage() {
       <section className="relative overflow-hidden bg-paper pb-6 pt-14 lg:pt-20">
         <Rings className="-right-40 -top-52 h-[520px] w-[520px]" />
         <Container className="relative">
-          <Reveal>
+          <div>
+<HeroBlock>
             <Eyebrow>Pour qui</Eyebrow>
             <Title2
               as="h1"
@@ -116,14 +117,15 @@ export default function ForWhoPage() {
                 <a
                   key={a.id}
                   href={`#${a.id}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-navy/20 bg-white px-4 py-2 text-sm font-semibold text-navy transition hover:border-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+                  className="inline-flex items-center gap-2 rounded-full border border-navy/20 bg-white px-4 py-2 text-sm font-semibold text-navy transition duration-200 hover:-translate-y-0.5 hover:border-navy hover:shadow-soft motion-reduce:hover:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
                 >
                   <Icon name={a.icon} className="h-4 w-4 text-amber-ink" />
                   {a.title}
                 </a>
               ))}
             </nav>
-          </Reveal>
+          </HeroBlock>
+</div>
         </Container>
       </section>
 

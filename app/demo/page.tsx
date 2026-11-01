@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Container, Eyebrow, Title2 } from "@/components/ui";
-import { Reveal } from "@/components/motion";
+import { HeroBlock, Reveal } from "@/components/motion";
 import { Icon } from "@/components/icons";
 import { Coupon } from "@/components/Coupon";
 import { PhotoCard } from "@/components/PhotoCard";
@@ -22,7 +22,8 @@ export default function DemoPage() {
     <main className="bg-paper">
       <section className="pb-20 pt-16 lg:pb-28 lg:pt-24">
         <Container className="grid grid-cols-1 gap-14 lg:grid-cols-[1fr_1.05fr] lg:gap-16 [&>*]:min-w-0">
-          <Reveal>
+          <div>
+<HeroBlock>
             <Eyebrow>Démonstration</Eyebrow>
             <Title2
               as="h1"
@@ -49,7 +50,8 @@ export default function DemoPage() {
               sizes="(min-width: 1024px) 40vw, 90vw"
               className="mt-10 max-w-md"
             />
-          </Reveal>
+          </HeroBlock>
+</div>
           <Reveal delay={0.08}>
             <Coupon
               notch="#fafafa"

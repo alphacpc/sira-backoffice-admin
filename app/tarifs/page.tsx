@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { Container, Eyebrow, Title2 } from "@/components/ui";
-import { Reveal } from "@/components/motion";
+import { HeroBlock, Reveal } from "@/components/motion";
 import PlanTable from "@/components/PlanTable";
 import { plans } from "@/content/plans";
 
@@ -14,7 +14,8 @@ export default function PricingPage() {
     <main className="bg-paper">
       <section className="pb-6 pt-16 lg:pt-24">
         <Container>
-          <Reveal>
+          <div>
+<HeroBlock>
             <Eyebrow>Tarifs</Eyebrow>
             <Title2
               as="h1"
@@ -27,7 +28,8 @@ export default function PricingPage() {
               compagnie. Les trois niveaux ci-dessous sont des exemples de compositions courantes,
               pas des forfaits figés; le tarif est établi sur devis, selon la taille de la flotte.
             </p>
-          </Reveal>
+          </HeroBlock>
+</div>
         </Container>
       </section>
       <section className="py-12">

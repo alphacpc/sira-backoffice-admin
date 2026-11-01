@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Container, Eyebrow, ButtonLink, Title2 } from "@/components/ui";
-import { Reveal } from "@/components/motion";
+import { HeroBlock, Reveal } from "@/components/motion";
 import { Icon } from "@/components/icons";
 import { trustSections } from "@/content/trust";
 import { underTheHood } from "@/content/under-the-hood";
@@ -48,7 +48,8 @@ export default function SecurityPage() {
           className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-navy-deep/70 to-transparent"
         />
         <Container className="relative pb-20 pt-16 lg:pb-28 lg:pt-24">
-          <Reveal>
+          <div>
+<HeroBlock>
             <Eyebrow tone="dark">Sécurité et confiance</Eyebrow>
             <Title2
               as="h1"
@@ -66,7 +67,8 @@ export default function SecurityPage() {
                 Sous le capot
               </ButtonLink>
             </div>
-          </Reveal>
+          </HeroBlock>
+</div>
         </Container>
       </section>
 

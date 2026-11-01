@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Container, Eyebrow, ButtonLink, Title2 } from "@/components/ui";
-import { Reveal } from "@/components/motion";
+import { Enter, HeroBlock, Reveal } from "@/components/motion";
 import { RouteThread } from "@/components/route/RouteThread";
 import { Stop } from "@/components/route/Stop";
 import { ChapterFull } from "@/components/route/ChapterFull";
@@ -91,7 +91,8 @@ export default function SolutionPage() {
           ))}
         </svg>
         <Container className="relative">
-          <Reveal>
+          <div>
+<HeroBlock>
             <Eyebrow>La solution</Eyebrow>
             <Title2
               as="h1"
@@ -108,14 +109,15 @@ export default function SolutionPage() {
                 <a
                   key={c.id}
                   href={`#${c.id}`}
-                  className="inline-flex items-center gap-2 rounded-full border border-navy/20 bg-white px-4 py-2 text-sm font-semibold text-navy transition hover:border-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+                  className="inline-flex items-center gap-2 rounded-full border border-navy/20 bg-white px-4 py-2 text-sm font-semibold text-navy transition duration-200 hover:-translate-y-0.5 hover:border-navy hover:shadow-soft motion-reduce:hover:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
                 >
                   <span className="font-mono text-[11px] tracking-[0.12em] text-amber-ink">{c.stop.code}</span>
                   {c.title}
                 </a>
               ))}
             </nav>
-          </Reveal>
+          </HeroBlock>
+</div>
         </Container>
       </section>
 
@@ -124,8 +126,12 @@ export default function SolutionPage() {
           <RouteThread background="#fafafa">
             {chapters.map((c, i) => (
               <Stop key={c.id} id={c.id} code={c.stop.code} name={c.stop.name} align={i % 2 ? "right" : "left"}>
-                <ChapterFull c={c} />
-                <Visual id={c.id} />
+                <Enter x={i % 2 ? 28 : -28} duration={0.7}>
+                  <ChapterFull c={c} />
+                </Enter>
+                <Enter x={i % 2 ? -44 : 44} scale={0.96} duration={0.8} delay={0.12}>
+                  <Visual id={c.id} />
+                </Enter>
               </Stop>
             ))}
             <div className="h-6" />

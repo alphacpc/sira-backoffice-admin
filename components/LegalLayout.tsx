@@ -1,5 +1,5 @@
 import type { LegalSection } from "@/content/legal";
-import { Reveal } from "@/components/motion";
+import { HeroBlock, Reveal } from "@/components/motion";
 import { Eyebrow, Title2 } from "@/components/ui";
 
 export default function LegalLayout({
@@ -18,7 +18,8 @@ export default function LegalLayout({
     <main className="bg-white">
       <section className="border-b border-navy/10">
         <div className="mx-auto max-w-[70ch] px-6 pb-12 pt-16 lg:pt-24">
-          <Reveal>
+          <div>
+<HeroBlock>
             <Eyebrow>Légal</Eyebrow>
             <Title2
               as="h1"
@@ -27,7 +28,8 @@ export default function LegalLayout({
               className="mt-4 text-4xl sm:text-5xl"
             />
             <p className="mt-5 text-lg text-ink/70">{intro}</p>
-          </Reveal>
+          </HeroBlock>
+</div>
         </div>
       </section>
 

@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "motion/react";
+import { EASE, useReduce } from "@/components/motion";
 import Logo from "@/components/Logo";
 
 const links = [
@@ -16,6 +18,7 @@ export default function Nav() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
+  const reduce = useReduce();
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -57,8 +60,10 @@ export default function Nav() {
                 <Link
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${
-                    active ? "font-bold text-navy underline decoration-amber decoration-2 underline-offset-8" : "text-navy/75 hover:text-navy"
+                  className={`relative text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${
+                    active
+                      ? "font-bold text-navy underline decoration-amber decoration-2 underline-offset-8"
+                      : "text-navy/75 hover:text-navy after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-[7px] after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-amber after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100 focus-visible:after:scale-x-100 motion-reduce:after:transition-none"
                   }`}
                 >
                   {link.label}
@@ -89,8 +94,18 @@ export default function Nav() {
         </button>
       </nav>
 
-      {open && (
-        <div id="menu-mobile" className="border-t border-navy/10 bg-white px-6 py-4 md:hidden">
+      <AnimatePresence initial={false}>
+        {open && (
+          <motion.div
+            key="menu"
+            id="menu-mobile"
+            className="overflow-hidden border-t border-navy/10 bg-white md:hidden"
+            initial={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            animate={reduce ? { opacity: 1 } : { height: "auto", opacity: 1 }}
+            exit={reduce ? { opacity: 0 } : { height: 0, opacity: 0 }}
+            transition={{ duration: reduce ? 0.15 : 0.32, ease: EASE }}
+          >
+        <div className="px-6 py-4">
           <ul className="flex flex-col gap-1">
             {links.map((link) => (
               <li key={link.href}>
@@ -110,7 +125,9 @@ export default function Nav() {
             Demander une démo
           </Link>
         </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </header>
   );
 }
