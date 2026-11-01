@@ -19,6 +19,7 @@ export const audiences: Audience[] = [
       "Gère les équipes : employés, plannings, congés, paie",
       "Pilote le programme de fidélité, les avis et les campagnes",
       "Suit son abonnement, ses factures et la vérification de sa compagnie",
+      "Met ses bus en location depuis un lien de réservation et établit devis et factures",
       "Est limité à sa propre compagnie : les données des autres compagnies lui sont inaccessibles",
     ],
   },
@@ -61,6 +62,7 @@ export const audiences: Audience[] = [
       "Retrouve ses billets et peut annuler une réservation non payée",
       "Cumule des points de fidélité et parraine un proche",
       "Suit un colis par son numéro, sans compte",
+      "Demande la location d'un bus depuis le lien partagé par la compagnie",
     ],
   },
 ];

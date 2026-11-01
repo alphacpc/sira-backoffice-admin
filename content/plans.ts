@@ -25,6 +25,7 @@ export const plans: Plan[] = [
       "Tout l'Essentiel",
       "Colis : suivi public, ré-acheminement, documents",
       "Maintenance des bus, flottes et fournisseurs",
+      "Location de bus : lien de réservation, devis et factures",
       "Équipes : plannings, congés, incidents, bulletins de paie",
       "Programme de fidélité et parrainage",
     ],

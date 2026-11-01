@@ -6,6 +6,7 @@ import { RouteThread } from "@/components/route/RouteThread";
 import { Stop } from "@/components/route/Stop";
 import { ChapterFull } from "@/components/route/ChapterFull";
 import { FleetMapCard } from "@/components/screens/FleetMapCard";
+import { LocationComposition } from "@/components/screens/LocationComposition";
 import { ParcelScreen } from "@/components/screens/ParcelScreen";
 import { StaffScreen } from "@/components/screens/StaffScreen";
 import { SupervisionScreen } from "@/components/screens/SupervisionScreen";
@@ -16,7 +17,7 @@ import { faqItems } from "@/content/faq";
 export const metadata: Metadata = {
   title: "La solution",
   description:
-    "Flotte, billetterie, colis, équipes, clients et conformité : ce que Sira fait pour une compagnie de transport interurbain.",
+    "Flotte, billetterie, location de bus, colis, équipes, clients et conformité : ce que Sira fait pour une compagnie de transport interurbain.",
 };
 
 const fade = {
@@ -55,6 +56,8 @@ function Visual({ id }: { id: Chapter["id"] }) {
           </div>
         </div>
       );
+    case "location":
+      return <LocationComposition variant="stack" />;
     case "colis":
       return (
         <div className="rounded-[2rem] bg-navy px-3 py-8 sm:px-8">
@@ -96,7 +99,7 @@ export default function SolutionPage() {
             <Eyebrow>La solution</Eyebrow>
             <Title2
               as="h1"
-              lead="Cinq chapitres pour piloter"
+              lead="Six chapitres pour piloter"
               accent="une compagnie de transport."
               className="mt-5 max-w-3xl text-4xl sm:text-5xl lg:text-[3.4rem]"
             />

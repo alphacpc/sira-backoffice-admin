@@ -35,6 +35,11 @@ export const faqItems: FaqItem[] = [
       "Les places disponibles sont décomptées à chaque vente, au guichet comme en ligne. Lorsqu'un plan de sièges existe pour le trajet, un siège déjà pris est refusé. Une réservation répétée par erreur n'est pas dupliquée.",
   },
   {
+    question: "Une compagnie peut-elle louer ses bus ?",
+    answer:
+      "Oui. La compagnie met ses bus en location, partage un lien de réservation, reçoit les demandes de ses clients, les traite puis établit le devis ou la facture à leur remettre.",
+  },
+  {
     question: "Sira gère-t-elle les colis ?",
     answer:
       "Oui. Un colis reçoit un numéro de suivi consultable sans compte, suit des statuts stricts, peut être ré-acheminé sur plusieurs trajets via un hub et peut porter des documents joints.",

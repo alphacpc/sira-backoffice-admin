@@ -1,4 +1,4 @@
-export type ChapterId = "flotte" | "billetterie" | "colis" | "equipes" | "pilotage";
+export type ChapterId = "flotte" | "billetterie" | "location" | "colis" | "equipes" | "pilotage";
 
 export interface Chapter {
   id: ChapterId;
@@ -46,6 +46,23 @@ export const chapters: Chapter[] = [
       "Réservations en ligne non payées libérées automatiquement après un délai",
       "Une réservation répétée par erreur (double clic, réseau instable) n'est pas dupliquée",
       "Paiement par mobile money, carte ou espèces",
+    ],
+  },
+  {
+    id: "location",
+    stop: { code: "LOC", name: "Location" },
+    icon: "bus",
+    title: "Location de bus",
+    tagline: "Louer vos bus sur demande, avec un devis prêt à partager.",
+    description:
+      "Chaque compagnie met ses bus en location depuis un lien de réservation qu'elle partage. Le client choisit un bus et envoie sa demande ; la compagnie la traite, puis établit le devis ou la facture à lui transmettre.",
+    points: [
+      "Mise en location des bus de la compagnie, bus par bus",
+      "Un lien de réservation à partager : le client y découvre les bus de la compagnie",
+      "Demande de réservation du client : dates, trajet, nombre de passagers",
+      "Traitement de la demande par la compagnie : acceptation, ajustement ou refus",
+      "Devis ou facture établis pour le client, partageables par lien",
+      "Suivi de chaque demande, de la réception jusqu'au document remis au client",
     ],
   },
   {
