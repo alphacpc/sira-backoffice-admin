@@ -78,6 +78,9 @@ export default function Vue360Page() {
               </div>
             ))}
             {o.pastDue.length === 0 && <p className="text-sm text-muted-foreground">Aucun impayé.</p>}
+            <Link href="/facturation/impayes" className="inline-block pt-1 text-sm text-accent hover:underline">
+              Voir la file des impayés
+            </Link>
           </CardContent>
         </Card>
 

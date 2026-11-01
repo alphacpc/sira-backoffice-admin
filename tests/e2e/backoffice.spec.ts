@@ -214,6 +214,33 @@ test("an invoice can be read from the invoices list and links to its subscriptio
   await expect(page.getByText("Facture introuvable")).toBeVisible();
 });
 
+test("an unpaid subscription is relaunched from the queue; a refused payment keeps it unpaid", async ({ page }) => {
+  await login(page);
+  await page.getByRole("link", { name: "Voir la file des impayés" }).click();
+  await expect(page.getByRole("heading", { name: "Impayés", exact: true })).toBeVisible();
+  await expect(page.getByRole("row").nth(1)).toContainText("Saint-Louis Route");
+
+  // Saint-Louis Route: the seed makes its retry fail.
+  await page.getByRole("button", { name: "Relancer le paiement de Saint-Louis Route" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByRole("button", { name: "Relancer", exact: true }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Échec du paiement");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByRole("row", { name: /Saint-Louis Route/ })).toHaveCount(1);
+
+  // Baobab Lines: the seed makes its retry succeed.
+  await page.getByRole("button", { name: "Relancer le paiement de Baobab Lines" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Relancer", exact: true }).click();
+  await expect(page.getByRole("row", { name: /Baobab Lines/ })).toHaveCount(0);
+
+  await page.goto("/facturation/abonnements");
+  await page.getByPlaceholder("Rechercher un abonnement…").fill("baobab");
+  await page.getByRole("row", { name: /Baobab Lines/ }).click();
+  await expect(page.getByTestId("subscription-status")).toHaveText("Active");
+  await page.getByRole("tab", { name: "Tentatives de paiement" }).click();
+  await expect(page.getByRole("tabpanel").getByRole("cell", { name: "Payé", exact: true })).toHaveCount(2);
+});
+
 test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
   await page.goto("/compagnies");

@@ -15,12 +15,14 @@ export interface DataTableProps<T> {
   data: T[];
   searchPlaceholder?: string;
   rowHref?: (row: T) => string;
+  /** Stable row identity (TanStack `getRowId`); use it when rows can disappear after an action. */
+  rowId?: (row: T) => string;
   emptyMessage?: string;
   pageSize?: number;
 }
 
 export function DataTable<T>({
-  columns, data, searchPlaceholder = "Rechercher…", rowHref,
+  columns, data, searchPlaceholder = "Rechercher…", rowHref, rowId,
   emptyMessage = "Aucun résultat", pageSize = 15,
 }: DataTableProps<T>) {
   const router = useRouter();
@@ -30,6 +32,7 @@ export function DataTable<T>({
 
   const table = useReactTable({
     data, columns,
+    ...(rowId ? { getRowId: (row: T) => rowId(row) } : {}),
     state: { sorting, globalFilter, columnVisibility: visibility },
     onSortingChange: setSorting,
     onGlobalFilterChange: setGlobalFilter,

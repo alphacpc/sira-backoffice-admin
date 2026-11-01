@@ -83,3 +83,14 @@ export const featureKindLabel = (k: FeatureDef["kind"]): string => (k === "boole
 
 export const billingCycleLabel = (c: Subscription["billingCycle"]): string =>
   c === "MONTHLY" ? "Mensuel" : "Annuel";
+
+/** Urgency of an unpaid subscription; daysLeft comes from subscriptionsRepo.unpaidQueue(now). */
+export function urgencyBadge(deadline: "suspension" | "expiration", daysLeft: number): Badge {
+  const noun = deadline === "suspension" ? "Suspension" : "Expiration";
+  if (daysLeft < 0) return { label: `${noun} dépassée de ${-daysLeft} j`, tone: "danger" };
+  if (daysLeft === 0) return { label: `${noun} aujourd'hui`, tone: "danger" };
+  const label = `${daysLeft} j avant ${deadline}`;
+  if (daysLeft <= 2) return { label, tone: "danger" };
+  if (daysLeft <= 5) return { label, tone: "warning" };
+  return { label, tone: "neutral" };
+}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   billingCycleLabel, changeKindLabel, featureKindLabel, kycTypeStatusBadge, paymentStatusBadge,
-  planStatusBadge,
+  planStatusBadge, urgencyBadge,
 } from "@/lib/labels";
 
 describe("billing labels", () => {
@@ -26,5 +26,21 @@ describe("billing labels", () => {
     expect(featureKindLabel("quota")).toBe("Quota");
     expect(billingCycleLabel("MONTHLY")).toBe("Mensuel");
     expect(billingCycleLabel("YEARLY")).toBe("Annuel");
+  });
+});
+
+describe("urgencyBadge", () => {
+  it("is neutral when the deadline is more than five days away", () => {
+    expect(urgencyBadge("expiration", 17)).toEqual({ label: "17 j avant expiration", tone: "neutral" });
+  });
+  it("warns between three and five days and alarms at two days or less", () => {
+    expect(urgencyBadge("suspension", 5)).toEqual({ label: "5 j avant suspension", tone: "warning" });
+    expect(urgencyBadge("suspension", 2)).toEqual({ label: "2 j avant suspension", tone: "danger" });
+  });
+  it("says today on the deadline day", () => {
+    expect(urgencyBadge("suspension", 0)).toEqual({ label: "Suspension aujourd'hui", tone: "danger" });
+  });
+  it("reports an overdue deadline", () => {
+    expect(urgencyBadge("expiration", -3)).toEqual({ label: "Expiration dépassée de 3 j", tone: "danger" });
   });
 });
