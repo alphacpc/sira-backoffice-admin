@@ -27,7 +27,7 @@ export const faqItems: FaqItem[] = [
   {
     question: "Quels moyens de paiement sont pris en charge ?",
     answer:
-      "La billetterie accepte le paiement par mobile money, par carte et en espèces, dans les devises XOF, EUR et USD.",
+      "La billetterie accepte les paiements par Wave, par Orange Money et par carte bancaire, dans les devises XOF, EUR et USD.",
   },
   {
     question: "Comment la plateforme évite-t-elle la survente ?",

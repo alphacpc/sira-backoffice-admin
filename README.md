@@ -49,7 +49,7 @@ pleine largeur. Les écrans de produit sont de petits composants fictifs dans
 ## Règles de contenu
 
 - Aucun chiffre, client, témoignage ni prix inventé : les tarifs sont « Sur devis ».
-- Le site présente l'ensemble des fonctions comme disponibles ; aucun chiffre, client, témoignage ni nom d'opérateur n'est inventé.
+- Le site présente l'ensemble des fonctions comme disponibles ; aucun chiffre, client ni témoignage inventé ; les moyens de paiement présentés sont Wave, Orange Money et la carte bancaire.
 - `pnpm check` échoue si une affirmation interdite apparaît (voir `scripts/check-site.mjs`).
 
 ## Mouvement

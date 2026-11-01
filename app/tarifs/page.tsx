@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Container, Eyebrow, Title2 } from "@/components/ui";
 import { HeroBlock, Reveal } from "@/components/motion";
 import PlanTable from "@/components/PlanTable";
+import PaymentMethods from "@/components/PaymentMethods";
 import { plans } from "@/content/plans";
 
 export const metadata: Metadata = {
@@ -37,7 +38,7 @@ export default function PricingPage() {
           <PlanTable plans={plans} />
         </Container>
       </section>
-      <section className="pb-24">
+      <section className="pb-16 lg:pb-20">
         <Container className="max-w-3xl">
           <p className="rounded-2xl border-2 border-dashed border-navy/25 p-5 text-sm text-ink/70">
             Une période d&apos;essai peut être prévue selon le plan. Les montants, devises
@@ -45,6 +46,7 @@ export default function PricingPage() {
           </p>
         </Container>
       </section>
+      <PaymentMethods />
     </main>
   );
 }

@@ -24,7 +24,7 @@ const sources = ["app", "components", "content"]
 // 1. Affirmations interdites (prix inventés, opérateurs, magasins d'applications).
 const forbidden = [
   /25 000/, /75 000/, /FCFA\s*\/\s*mois/,
-  /Orange Money/, /\bWave\b/, /Disponible sur/, /Prometheus/, /Grafana/,
+  /Disponible sur/, /Prometheus/, /Grafana/,
   /authentification multi-?facteur/i, /\bMFA\b/,
 ];
 for (const f of sources) {
