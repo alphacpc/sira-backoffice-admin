@@ -9,7 +9,7 @@ export default function TicketMock() {
     <div className="rounded-2xl border border-ink/10 bg-white shadow-soft">
       <div className="rounded-t-2xl bg-forest px-4 py-3 text-white">
         <p className="text-[11px] uppercase tracking-wider text-white/70">Billet électronique</p>
-        <p className="font-serif text-lg">Dakar → Saint-Louis</p>
+        <p className="text-lg">Dakar → Saint-Louis</p>
       </div>
       <dl className="grid grid-cols-3 gap-2 px-4 py-3 text-xs">
         <div><dt className="text-ink/70">Départ</dt><dd className="font-semibold">06:30</dd></div>

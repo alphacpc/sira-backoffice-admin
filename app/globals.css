@@ -1,21 +1,31 @@
 @import "tailwindcss";
 
 @theme {
-  --color-cream: #fbf6ec;
-  --color-sand: #f3ead8;
-  --color-ink: #1b2233;
-  --color-forest: #1f4d3a;
-  --color-forest-deep: #143528;
+  --color-navy: #1e2749;
+  --color-navy-dark: #141a36;
+  --color-navy-deep: #0d1226;
+  --color-amber: #f5a524;
+  --color-amber-dark: #d6890a;
+  --color-amber-soft: #fde7c0;
+  --color-amber-ink: #8a5200;
+  --color-ink: #1e2749;
+  --color-paper: #fafafa;
+
+  /* Alias transitoires (supprimés à la Task 7) */
+  --color-cream: #fafafa;
+  --color-sand: #f1f2f6;
+  --color-forest: #1e2749;
+  --color-forest-deep: #0d1226;
   --color-accent: #f5a524;
   --color-accent-dark: #d6890a;
   --color-accent-soft: #fde7c0;
   --color-accent-ink: #8a5200;
 
   --font-sans: var(--font-gellix), ui-sans-serif, system-ui, sans-serif;
-  --font-serif: var(--font-fraunces), Georgia, "Times New Roman", serif;
+  --font-mono: ui-monospace, "SF Mono", Menlo, monospace;
 
-  --shadow-soft: 0 1px 2px rgb(27 34 51 / 0.04), 0 12px 32px -16px rgb(27 34 51 / 0.14);
-  --shadow-lift: 0 2px 4px rgb(27 34 51 / 0.05), 0 28px 60px -24px rgb(27 34 51 / 0.35);
+  --shadow-soft: 0 1px 2px rgb(30 39 73 / 0.04), 0 12px 32px -16px rgb(30 39 73 / 0.14);
+  --shadow-lift: 0 2px 4px rgb(30 39 73 / 0.05), 0 28px 60px -24px rgb(30 39 73 / 0.35);
 }
 
 html {
@@ -30,7 +40,7 @@ html {
 }
 
 body {
-  background-color: var(--color-cream);
+  background-color: #fafafa;
   color: var(--color-ink);
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
@@ -40,8 +50,8 @@ body {
 h1,
 h2,
 h3 {
-  font-family: var(--font-serif);
-  letter-spacing: -0.015em;
+  font-family: var(--font-sans);
+  letter-spacing: -0.02em;
 }
 
 /* Surlignage éditorial d'un mot clé. */

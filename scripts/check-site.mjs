@@ -42,6 +42,12 @@ for (const f of sources) {
   }
 }
 
+// 1c. Aucun serif : ni Fraunces ni font-serif.
+for (const f of sources) {
+  const text = readFileSync(f, "utf8");
+  if (/Fraunces|font-serif/.test(text)) fail(`${relative(root, f)} : serif interdit (Fraunces / font-serif)`);
+}
+
 // 2. Redirections des anciennes pages.
 const legacy = [
   "/pourquoi-sira", "/solutions", "/services", "/reservation", "/reseau",

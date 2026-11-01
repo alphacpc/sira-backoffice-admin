@@ -24,7 +24,7 @@ const groups = [
 
 export default function Footer() {
   return (
-    <footer className="bg-forest-deep text-white">
+    <footer className="border-t-2 border-amber bg-navy-deep text-white">
       <div className="mx-auto max-w-6xl px-6 py-16">
         <div className="grid gap-12 md:grid-cols-[1.6fr_1fr_1fr]">
           <div>
@@ -37,11 +37,11 @@ export default function Footer() {
           </div>
           {groups.map((group) => (
             <nav key={group.title} aria-label={group.title}>
-              <p className="text-sm font-semibold">{group.title}</p>
+              <p className="font-mono text-xs font-semibold uppercase tracking-[0.18em] text-amber">{group.title}</p>
               <ul className="mt-3 space-y-2">
                 {group.links.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="text-sm text-white/70 transition hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+                    <Link href={link.href} className="text-sm text-white/70 transition hover:text-amber focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
                       {link.label}
                     </Link>
                   </li>

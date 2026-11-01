@@ -6,7 +6,7 @@ const payslip = ["Brouillon", "Traité", "Payé"];
 export default function StaffMock() {
   return (
     <div className="space-y-4 bg-cream p-4 text-ink sm:p-5">
-      <p className="font-serif text-lg">Employés</p>
+      <p className="text-lg">Employés</p>
       <ul className="divide-y divide-ink/10 rounded-xl border border-ink/10 bg-white text-sm">
         {mockStaff.map((e) => (
           <li key={e.name} className="flex items-center justify-between gap-3 px-3 py-2.5">

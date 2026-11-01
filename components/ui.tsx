@@ -20,8 +20,8 @@ export function Eyebrow({
 }) {
   return (
     <p
-      className={`text-sm font-semibold uppercase tracking-[0.14em] ${
-        tone === "dark" ? "text-accent" : "text-accent-ink"
+      className={`font-mono text-xs font-semibold uppercase tracking-[0.18em] ${
+        tone === "dark" ? "text-amber" : "text-amber-ink"
       }`}
     >
       {children}
@@ -30,11 +30,32 @@ export function Eyebrow({
 }
 
 const variants = {
-  primary: "bg-forest text-white hover:bg-forest-deep focus-visible:outline-forest",
-  accent: "bg-accent text-ink hover:bg-accent-dark focus-visible:outline-forest",
-  outline: "border border-ink/25 text-ink hover:border-ink/60 focus-visible:outline-forest",
-  "outline-light": "border border-white/30 text-white hover:border-white/70 focus-visible:outline-white",
+  primary: "bg-navy text-white hover:bg-navy-dark focus-visible:outline-navy",
+  accent: "bg-amber text-navy hover:bg-amber-dark focus-visible:outline-navy",
+  outline: "border border-navy/30 text-navy hover:border-navy focus-visible:outline-navy",
+  "outline-light": "border border-white/40 text-white hover:border-white focus-visible:outline-white",
 } as const;
+
+export function Title2({
+  lead,
+  accent,
+  as: Tag = "h2",
+  tone = "light",
+  className = "",
+}: {
+  lead: string;
+  accent: string;
+  as?: "h1" | "h2" | "h3";
+  tone?: "light" | "dark";
+  className?: string;
+}) {
+  return (
+    <Tag className={`font-sans font-extrabold leading-[1.05] tracking-tight ${className}`}>
+      <span className={tone === "dark" ? "text-white" : "text-navy"}>{lead}</span>{" "}
+      <span className={tone === "dark" ? "text-amber" : "text-[#c27800]"}>{accent}</span>
+    </Tag>
+  );
+}
 
 export function ButtonLink({
   href,

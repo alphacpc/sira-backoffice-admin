@@ -33,7 +33,7 @@ export default function DashboardMock() {
           {kpis.map((k) => (
             <div key={k.label} className="rounded-xl border border-ink/10 bg-white p-3">
               <p className="text-[11px] text-ink/70">{k.label}</p>
-              <p className="mt-1 font-serif text-2xl">{k.value}</p>
+              <p className="mt-1 text-2xl">{k.value}</p>
             </div>
           ))}
         </div>

@@ -79,7 +79,7 @@ export default function ForWhoPage() {
                 {a.role}
               </p>
               <h2 className="mt-1 text-3xl font-semibold">{a.title}</h2>
-              <p className="mt-3 font-serif text-xl text-ink/80">{a.goal}</p>
+              <p className="mt-3 text-xl text-ink/80">{a.goal}</p>
               <ul className="mt-6 space-y-2.5 text-sm text-ink/85">
                 {a.does.map((d) => (
                   <li key={d} className="flex gap-2.5">

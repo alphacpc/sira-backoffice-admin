@@ -1,15 +1,8 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import { Fraunces } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
-
-const fraunces = Fraunces({
-  subsets: ["latin"],
-  variable: "--font-fraunces",
-  display: "swap",
-});
 
 const gellix = localFont({
   src: [
@@ -49,7 +42,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${gellix.variable} ${fraunces.variable}`}>
+    <html lang="fr" className={`${gellix.variable}`}>
       <body className="flex min-h-screen flex-col antialiased">
         <a
           href="#contenu"

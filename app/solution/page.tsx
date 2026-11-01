@@ -56,7 +56,7 @@ export default function SolutionPage() {
                 <Icon name={c.icon} className="h-6 w-6" />
               </span>
               <h2 className="mt-4 text-3xl font-semibold">{c.title}</h2>
-              <p className="mt-2 font-serif text-xl text-ink/80">{c.tagline}</p>
+              <p className="mt-2 text-xl text-ink/80">{c.tagline}</p>
               <p className="mt-4 text-ink/75">{c.description}</p>
               <ul className="mt-6 space-y-2.5 text-sm text-ink/85">
                 {c.points.map((p) => (

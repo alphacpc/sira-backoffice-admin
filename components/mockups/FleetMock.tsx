@@ -5,7 +5,7 @@ export default function FleetMock() {
   return (
     <div className="space-y-4 bg-cream p-4 text-ink sm:p-5">
       <div className="flex items-center justify-between">
-        <p className="font-serif text-lg">Flotte</p>
+        <p className="text-lg">Flotte</p>
         <span className="rounded-full bg-forest px-3 py-1 text-xs font-semibold text-white">
           Ajouter un bus
         </span>

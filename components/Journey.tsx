@@ -66,7 +66,7 @@ export default function Journey() {
                   {i + 1}
                 </span>
                 <span>
-                  <span className="block font-serif text-lg">{step.title}</span>
+                  <span className="block text-lg">{step.title}</span>
                   <span className="mt-1 block text-sm text-ink/70">
                     {step.text}
                   </span>

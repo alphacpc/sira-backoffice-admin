@@ -39,8 +39,8 @@ export default function Nav() {
     <header
       className={`sticky top-0 z-50 border-b transition-all duration-300 ${
         scrolled
-          ? "border-ink/10 bg-cream/90 backdrop-blur-md"
-          : "border-transparent bg-cream"
+          ? "border-navy/10 bg-white/90 backdrop-blur-md"
+          : "border-transparent bg-white"
       }`}
     >
       <nav
@@ -57,8 +57,8 @@ export default function Nav() {
                 <Link
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${
-                    active ? "text-forest underline decoration-accent decoration-2 underline-offset-8" : "text-ink/75 hover:text-ink"
+                  className={`text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${
+                    active ? "font-bold text-navy underline decoration-amber decoration-2 underline-offset-8" : "text-navy/75 hover:text-navy"
                   }`}
                 >
                   {link.label}
@@ -70,33 +70,33 @@ export default function Nav() {
 
         <Link
           href="/demo"
-          className="hidden rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-deep md:inline-block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          className="hidden rounded-full bg-amber px-5 py-2.5 text-sm font-semibold text-navy transition hover:bg-amber-dark md:inline-block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
         >
           Demander une démo
         </Link>
 
         <button
           type="button"
-          className="rounded-lg p-2 text-ink md:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          className="rounded-lg p-2 text-navy md:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls="menu-mobile"
           aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
         >
-          <span className="block h-0.5 w-6 bg-ink" />
-          <span className="mt-1.5 block h-0.5 w-6 bg-ink" />
-          <span className="mt-1.5 block h-0.5 w-6 bg-ink" />
+          <span className="block h-0.5 w-6 bg-navy" />
+          <span className="mt-1.5 block h-0.5 w-6 bg-navy" />
+          <span className="mt-1.5 block h-0.5 w-6 bg-navy" />
         </button>
       </nav>
 
       {open && (
-        <div id="menu-mobile" className="border-t border-ink/10 bg-cream px-6 py-4 md:hidden">
+        <div id="menu-mobile" className="border-t border-navy/10 bg-white px-6 py-4 md:hidden">
           <ul className="flex flex-col gap-1">
             {links.map((link) => (
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="block rounded-lg px-2 py-3 text-base font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                  className="block rounded-lg px-2 py-3 text-base font-medium text-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
                 >
                   {link.label}
                 </Link>
@@ -105,7 +105,7 @@ export default function Nav() {
           </ul>
           <Link
             href="/demo"
-            className="mt-3 block rounded-full bg-forest px-5 py-3 text-center text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            className="mt-3 block rounded-full bg-amber px-5 py-3 text-center text-sm font-semibold text-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
           >
             Demander une démo
           </Link>

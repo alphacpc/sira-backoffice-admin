@@ -4,7 +4,7 @@ import { mockServices } from "@/content/mock-data";
 export default function SupervisionMock() {
   return (
     <div className="space-y-4 bg-cream p-4 text-ink sm:p-5">
-      <p className="font-serif text-lg">Santé de la plateforme</p>
+      <p className="text-lg">Santé de la plateforme</p>
       <ul className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         {mockServices.map((s) => (
           <li key={s.name} className="rounded-xl border border-ink/10 bg-white p-3">

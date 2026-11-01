@@ -14,7 +14,7 @@ export default function PlanTable({ plans }: { plans: Plan[] }) {
         >
           <h2 className="text-2xl font-semibold">{p.name}</h2>
           <p className="mt-2 text-sm text-ink/70">{p.summary}</p>
-          <p className="mt-5 font-serif text-3xl">Sur devis</p>
+          <p className="mt-5 text-3xl">Sur devis</p>
           <ul className="mt-6 flex-1 space-y-2.5 text-sm text-ink/85">
             {p.features.map((f) => (
               <li key={f} className="flex gap-2.5">
