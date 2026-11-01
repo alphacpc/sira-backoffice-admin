@@ -75,10 +75,6 @@ export default function HomePage() {
             <Stop id="flotte" code={flotte.stop.code} name={flotte.stop.name}>
               <StopText c={flotte} />
               <Enter className="relative" x={44} scale={0.96} duration={0.8} delay={0.15}>
-                <div
-                  aria-hidden="true"
-                  className="absolute -inset-2 translate-x-1 translate-y-4 rounded-[2rem] bg-navy lg:-inset-4 lg:translate-x-5 lg:translate-y-6"
-                />
                 <FleetMapCard className="relative" />
               </Enter>
             </Stop>
