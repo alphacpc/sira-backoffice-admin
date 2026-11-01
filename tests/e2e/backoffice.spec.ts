@@ -176,6 +176,28 @@ test("deactivating KYC types lets a company activate without those documents", a
   await expect(page.getByTestId("kyc-type-status-ID_MANAGER")).toHaveText("Actif");
 });
 
+test("canceling a subscription requires a reason and records the change", async ({ page }) => {
+  await login(page);
+  await page.goto("/facturation/abonnements");
+  await page.getByPlaceholder("Rechercher un abonnement…").fill("touba");
+  await page.getByRole("row", { name: /Touba Liaison/ }).click();
+  await expect(page.getByRole("heading", { name: "Abonnement de Touba Liaison" })).toBeVisible();
+  await expect(page.getByTestId("subscription-status")).toHaveText("Active");
+
+  await page.getByRole("button", { name: "Annuler l'abonnement" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Confirmer l'annulation" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Fin de contrat demandée par la compagnie");
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+
+  await expect(page.getByTestId("subscription-status")).toHaveText("Annulée");
+  await expect(page.getByRole("button", { name: "Annuler l'abonnement" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Historique des changements de plan" }).click();
+  await expect(page.getByRole("cell", { name: "Annulation" })).toBeVisible();
+});
+
 test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
   await page.goto("/compagnies");
