@@ -1,0 +1,6 @@
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="Sira — symbole">
+  <path d="M70 30 C70 18 36 18 36 34 C36 48 70 46 70 64 C70 82 32 82 32 68" fill="none" stroke="#F4A521" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"></path>
+  <path d="M70 30 C70 18 36 18 36 34 C36 48 70 46 70 64 C70 82 32 82 32 68" fill="none" stroke="#FBFAF6" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="2 7"></path>
+  <circle cx="70" cy="30" r="7.5" fill="#103C63"></circle><circle cx="70" cy="30" r="2.6" fill="#FBFAF6"></circle>
+  <circle cx="32" cy="68" r="7.5" fill="#103C63"></circle><circle cx="32" cy="68" r="2.6" fill="#FBFAF6"></circle>
+</svg>

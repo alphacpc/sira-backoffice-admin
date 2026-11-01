@@ -1,0 +1,78 @@
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #1e2749;
+  --color-primary-dark: #141a36;
+  --color-primary-deep: #0d1226;
+  --color-accent: #f5a524;
+  --color-accent-dark: #d6890a;
+  --color-accent-soft: #fde7c0;
+
+  --font-sans: var(--font-gellix), ui-sans-serif, system-ui, sans-serif;
+  --font-display: var(--font-gellix), ui-sans-serif, system-ui, sans-serif;
+
+  --shadow-soft: 0 1px 2px rgb(13 18 38 / 0.04),
+    0 12px 32px -16px rgb(13 18 38 / 0.14);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 132px;
+}
+
+body {
+  background-color: #ffffff;
+  color: #1e2749;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-family: var(--font-display);
+  letter-spacing: -0.02em;
+}
+
+/* Mot-clé en dégradé ambre (inspiré du hero TerraPay) */
+.text-gradient {
+  background: linear-gradient(90deg, #f5a524 0%, #f7b955 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Bande défilante infinie */
+@keyframes marquee {
+  to {
+    transform: translateX(-50%);
+  }
+}
+.animate-marquee {
+  animation: marquee 32s linear infinite;
+}
+
+/* Pulsation douce des anneaux du scrollytelling */
+@keyframes ring-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.07);
+  }
+}
+
+/* Élévation douce au survol des cartes */
+.card-hover {
+  transition: transform 0.25s ease, box-shadow 0.25s ease,
+    border-color 0.25s ease;
+}
+.card-hover:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-soft);
+}
