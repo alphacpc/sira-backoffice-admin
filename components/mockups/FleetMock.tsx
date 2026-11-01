@@ -12,7 +12,7 @@ export default function FleetMock() {
       </div>
       <div className="overflow-x-auto rounded-xl border border-ink/10 bg-white">
         <table className="w-full min-w-[420px] text-left text-sm">
-          <thead className="border-b border-ink/10 text-xs text-ink/55">
+          <thead className="border-b border-ink/10 text-xs text-ink/70">
             <tr>
               <th className="px-3 py-2 font-medium">Immatriculation</th>
               <th className="px-3 py-2 font-medium">Modèle</th>
@@ -39,12 +39,12 @@ export default function FleetMock() {
             <li key={s} className="flex flex-1 items-center gap-2">
               <span
                 className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-semibold ${
-                  i <= 1 ? "bg-forest text-white" : "bg-ink/10 text-ink/60"
+                  i <= 1 ? "bg-forest text-white" : "bg-ink/10 text-ink/70"
                 }`}
               >
                 {i + 1}
               </span>
-              <span className={i <= 1 ? "font-medium" : "text-ink/60"}>{s}</span>
+              <span className={i <= 1 ? "font-medium" : "text-ink/70"}>{s}</span>
             </li>
           ))}
         </ol>

@@ -14,7 +14,7 @@ export default function DashboardMock() {
   return (
     <div className="grid min-h-[360px] grid-cols-1 bg-cream text-ink md:grid-cols-[150px_1fr]">
       <aside className="hidden border-r border-ink/10 bg-white p-4 md:block">
-        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-ink/50">
+        <p className="mb-4 text-xs font-semibold uppercase tracking-wider text-ink/70">
           Transports Exemple
         </p>
         <ul className="space-y-1 text-sm">
@@ -32,7 +32,7 @@ export default function DashboardMock() {
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {kpis.map((k) => (
             <div key={k.label} className="rounded-xl border border-ink/10 bg-white p-3">
-              <p className="text-[11px] text-ink/55">{k.label}</p>
+              <p className="text-[11px] text-ink/70">{k.label}</p>
               <p className="mt-1 font-serif text-2xl">{k.value}</p>
             </div>
           ))}
@@ -45,7 +45,7 @@ export default function DashboardMock() {
                 <li key={t.id} className="flex items-center justify-between gap-2 py-2">
                   <span>
                     <span className="font-medium">{t.departure}</span>{" "}
-                    <span className="text-ink/60">{t.route}</span>
+                    <span className="text-ink/70">{t.route}</span>
                   </span>
                   <Badge tone={t.tone}>{t.status}</Badge>
                 </li>

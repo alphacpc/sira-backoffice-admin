@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import type { Tone } from "@/content/mock-data";
 
 const caption = (
-  <figcaption className="mt-3 text-center text-xs text-ink/55">
+  <figcaption className="mt-3 text-center text-xs text-ink/70">
     Maquette — données fictives
   </figcaption>
 );
@@ -23,7 +23,7 @@ export function BrowserFrame({
           <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-ink/20" />
           <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-ink/20" />
           <span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-ink/20" />
-          <span className="ml-3 truncate rounded-md bg-white px-3 py-1 text-xs text-ink/55">
+          <span className="ml-3 truncate rounded-md bg-white px-3 py-1 text-xs text-ink/70">
             {url}
           </span>
         </div>

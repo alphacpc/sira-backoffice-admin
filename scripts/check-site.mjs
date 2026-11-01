@@ -34,6 +34,14 @@ for (const f of sources) {
   }
 }
 
+// 1b. Contraste du texte secondaire : text-ink/NN avec NN < 65 est trop pâle (minimum text-ink/70).
+for (const f of sources) {
+  const text = readFileSync(f, "utf8");
+  for (const m of text.matchAll(/text-ink\/(\d+)/g)) {
+    if (Number(m[1]) < 65) fail(`${relative(root, f)} : texte trop pâle (text-ink/${m[1]}), minimum text-ink/70`);
+  }
+}
+
 // 2. Redirections des anciennes pages.
 const legacy = [
   "/pourquoi-sira", "/solutions", "/services", "/reservation", "/reseau",
