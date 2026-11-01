@@ -11,6 +11,7 @@ import { Hero } from "@/components/hero/Hero";
 import { PhotoCard } from "@/components/PhotoCard";
 import ParcoursVoyageur from "@/components/ParcoursVoyageur";
 import { FleetMapCard } from "@/components/screens/FleetMapCard";
+import { LocationComposition } from "@/components/screens/LocationComposition";
 import { ParcelScreen } from "@/components/screens/ParcelScreen";
 import { StaffScreen } from "@/components/screens/StaffScreen";
 import { SupervisionScreen } from "@/components/screens/SupervisionScreen";
@@ -50,6 +51,7 @@ function Terminus({ code, label, arrival = false }: { code: string; label: strin
 export default function HomePage() {
   const flotte = chapter("flotte");
   const billetterie = chapter("billetterie");
+  const location = chapter("location");
   const colis = chapter("colis");
   const equipes = chapter("equipes");
   const pilotage = chapter("pilotage");
@@ -59,12 +61,12 @@ export default function HomePage() {
       {/* 1. Hero */}
       <Hero />
 
-      {/* 2. Cinq arrêts sur la route */}
+      {/* 2. Six arrêts sur la route */}
       <section className="bg-paper pb-10 pt-10 lg:pt-14">
         <Container>
           <Reveal>
             <p className="max-w-2xl text-balance text-2xl font-extrabold leading-tight tracking-tight text-navy sm:text-3xl">
-              <span className="text-[#c27800]">Cinq arrêts</span> sur la route de votre exploitation.
+              <span className="text-[#c27800]">Six arrêts</span> sur la route de votre exploitation.
             </p>
           </Reveal>
           <RouteThread background="#fafafa" className="mt-10">
@@ -120,6 +122,17 @@ export default function HomePage() {
                 </div>
               </Enter>
               <StopText c={billetterie} side="right" />
+            </Stop>
+
+            <Stop id="location" code={location.stop.code} name={location.stop.name}>
+              <Enter className="lg:col-span-2" y={40} scale={0.97} duration={0.8}>
+                <div className="relative rounded-[2rem] bg-mist px-4 py-10 sm:px-10 lg:px-8 lg:py-14">
+                  <div className="relative grid grid-cols-1 items-center gap-10 [&>*]:min-w-0 lg:grid-cols-[0.82fr_1.18fr] lg:gap-8">
+                    <StopText c={location} />
+                    <LocationComposition variant="side" panel={false} />
+                  </div>
+                </div>
+              </Enter>
             </Stop>
 
             <Stop id="colis" code={colis.stop.code} name={colis.stop.name}>
