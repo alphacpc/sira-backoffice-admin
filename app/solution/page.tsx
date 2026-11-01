@@ -28,7 +28,7 @@ function Visual({ id }: { id: Chapter["id"] }) {
   switch (id) {
     case "flotte":
       return (
-        <div className="rounded-[2rem] bg-sand p-3 sm:p-6">
+        <div className="rounded-[2rem] bg-mist p-3 sm:p-6">
           <FleetMapCard />
         </div>
       );
@@ -63,7 +63,7 @@ function Visual({ id }: { id: Chapter["id"] }) {
       );
     case "equipes":
       return (
-        <div className="rounded-[2rem] bg-sand px-3 py-8 [&_figcaption]:font-semibold [&_figcaption]:text-navy sm:px-8">
+        <div className="rounded-[2rem] bg-mist px-3 py-8 [&_figcaption]:font-semibold [&_figcaption]:text-navy sm:px-8">
           <StaffScreen />
         </div>
       );
@@ -133,7 +133,7 @@ export default function SolutionPage() {
         </Container>
       </section>
 
-      <section id="faq" className="bg-sand py-20 lg:py-24">
+      <section id="faq" className="bg-mist py-20 lg:py-24">
         <Container className="max-w-3xl">
           <Reveal>
             <Eyebrow>Questions fréquentes</Eyebrow>

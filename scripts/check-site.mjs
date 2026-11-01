@@ -48,6 +48,13 @@ for (const f of sources) {
   if (/Fraunces|font-serif/.test(text)) fail(`${relative(root, f)} : serif interdit (Fraunces / font-serif)`);
 }
 
+// 1d. Aucun token transitoire de l'ancienne identité.
+for (const f of sources) {
+  const text = readFileSync(f, "utf8");
+  const m = text.match(/bg-cream|bg-sand|bg-forest|text-forest|border-forest/);
+  if (m) fail(`${relative(root, f)} : token de l'ancienne identité (${m[0]})`);
+}
+
 // 2. Redirections des anciennes pages.
 const legacy = [
   "/pourquoi-sira", "/solutions", "/services", "/reservation", "/reseau",
