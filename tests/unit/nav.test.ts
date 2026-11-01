@@ -6,9 +6,13 @@ describe("nav", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1 pages as implemented", () => {
+  it("marks only lot 1 and lot 2 pages as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
-    expect(done).toEqual(["/", "/compagnies", "/compagnies/kyc"]);
+    expect(done).toEqual([
+      "/", "/compagnies", "/compagnies/kyc",
+      "/facturation/abonnements", "/facturation/factures", "/facturation/impayes", "/facturation/paiements",
+      "/offre/fonctionnalites", "/offre/paliers-partenaires", "/offre/plans", "/offre/types-documents-kyc",
+    ]);
   });
   it("covers every sitemap section", () => {
     expect(NAV.map((s) => s.label)).toEqual([
@@ -38,5 +42,15 @@ describe("isLinkablePath", () => {
     expect(isLinkablePath("/offre")).toBe(false);
     expect(isLinkablePath("/facturation")).toBe(false);
     expect(isLinkablePath("/flotte")).toBe(false);
+  });
+});
+
+describe("isLinkablePath for lot 2 detail pages", () => {
+  it("links the parent list of plan, subscription and invoice details, nothing else", () => {
+    expect(isLinkablePath("/offre/plans/abc")).toBe(true);
+    expect(isLinkablePath("/facturation/abonnements/abc")).toBe(true);
+    expect(isLinkablePath("/facturation/factures/abc")).toBe(true);
+    expect(isLinkablePath("/facturation/paiements/abc")).toBe(false);
+    expect(isLinkablePath("/facturation")).toBe(false);
   });
 });

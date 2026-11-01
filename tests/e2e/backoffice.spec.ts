@@ -243,21 +243,39 @@ test("an unpaid subscription is relaunched from the queue; a refused payment kee
 
 test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
-  await page.goto("/compagnies");
-  await page.getByPlaceholder("Rechercher une compagnie…").fill("matam");
-  await page.getByRole("row", { name: /Matam Express/ }).click();
-  await expect(page.getByRole("heading", { name: /Matam Express/ })).toBeVisible();
-  const companyPath = new URL(page.url()).pathname;
 
-  const EMAIL = /contact@[a-z0-9-]+\.sn/;
+  async function detailPath(listPath: string, search: string, placeholder: string, row: RegExp): Promise<string> {
+    await page.goto(listPath);
+    await page.getByPlaceholder(placeholder).fill(search);
+    await page.getByRole("row", { name: row }).first().click();
+    await expect(page).not.toHaveURL(new RegExp(`${listPath}$`));
+    return new URL(page.url()).pathname;
+  }
+
+  const companyPath = await detailPath("/compagnies", "matam", "Rechercher une compagnie…", /Matam Express/);
+  const planPath = await detailPath("/offre/plans", "Enterprise", "Rechercher un plan…", /Enterprise/);
+  const subscriptionPath = await detailPath("/facturation/abonnements", "matam", "Rechercher un abonnement…", /Matam Express/);
+  const invoicePath = await detailPath("/facturation/factures", "matam", "Rechercher une facture…", /Matam Express/);
+
+  const CONTACT_EMAIL = /contact@[a-z0-9-]+\.sn/;
+  const ANY_SN_EMAIL = /[a-z0-9._-]+@[a-z0-9-]+\.sn/;
   const PHONES = [/\+2217712\d{5}/, /\+2217865\d{5}/];
-  for (const path of ["/compagnies", "/compagnies?statut=draft", "/compagnies/kyc", "/", companyPath]) {
+  const paths = [
+    "/compagnies", "/compagnies?statut=draft", "/compagnies/kyc", "/", companyPath,
+    "/offre/plans", planPath, "/offre/fonctionnalites", "/offre/paliers-partenaires", "/offre/types-documents-kyc",
+    "/facturation/abonnements", "/facturation/abonnements?statut=past_due", subscriptionPath,
+    "/facturation/paiements", "/facturation/paiements?statut=failed",
+    "/facturation/factures", invoicePath, "/facturation/impayes",
+  ];
+  for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
-    expect(raw, `raw ${path}`).not.toMatch(EMAIL);
+    expect(raw, `raw ${path}`).not.toMatch(CONTACT_EMAIL);
+    expect(raw, `raw ${path}`).not.toMatch(ANY_SN_EMAIL);
     for (const re of PHONES) expect(raw, `raw ${path}`).not.toMatch(re);
     await page.goto(path);
     const rendered = await page.content();
-    expect(rendered, `dom ${path}`).not.toMatch(EMAIL);
+    expect(rendered, `dom ${path}`).not.toMatch(CONTACT_EMAIL);
+    expect(rendered, `dom ${path}`).not.toMatch(ANY_SN_EMAIL);
     for (const re of PHONES) expect(rendered, `dom ${path}`).not.toMatch(re);
   }
 });

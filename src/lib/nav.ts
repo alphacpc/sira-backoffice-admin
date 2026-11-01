@@ -13,14 +13,14 @@ export const NAV: NavSection[] = [
     { label: "File de revue KYC", href: "/compagnies/kyc", implemented: true },
   ] },
   { label: "Offre et facturation", items: [
-    todo("Plans", "/offre/plans"),
-    todo("Fonctionnalités", "/offre/fonctionnalites"),
-    todo("Paliers partenaires", "/offre/paliers-partenaires"),
-    todo("Types de documents KYC", "/offre/types-documents-kyc"),
-    todo("Abonnements", "/facturation/abonnements"),
-    todo("Paiements", "/facturation/paiements"),
-    todo("Factures", "/facturation/factures"),
-    todo("Impayés", "/facturation/impayes"),
+    { label: "Plans", href: "/offre/plans", implemented: true },
+    { label: "Fonctionnalités", href: "/offre/fonctionnalites", implemented: true },
+    { label: "Paliers partenaires", href: "/offre/paliers-partenaires", implemented: true },
+    { label: "Types de documents KYC", href: "/offre/types-documents-kyc", implemented: true },
+    { label: "Abonnements", href: "/facturation/abonnements", implemented: true },
+    { label: "Paiements", href: "/facturation/paiements", implemented: true },
+    { label: "Factures", href: "/facturation/factures", implemented: true },
+    { label: "Impayés", href: "/facturation/impayes", implemented: true },
   ] },
   { label: "Utilisateurs et accès", items: [
     todo("Utilisateurs", "/utilisateurs"),
@@ -100,7 +100,7 @@ export function labelForSegment(segment: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-const ROUTE_PREFIXES = ["/compagnies"];
+const ROUTE_PREFIXES = ["/compagnies", "/offre/plans", "/facturation/abonnements", "/facturation/factures"];
 
 /** True when a breadcrumb path leads to a real screen (a nav item or a company route), so it may be a link. */
 export function isLinkablePath(path: string): boolean {
