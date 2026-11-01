@@ -37,6 +37,7 @@ export const trustSections: TrustSection[] = [
     points: [
       "Création de compte, connexion, changement de rôle, réservation, paiement, maintenance, embauche, dépôt de documents confidentiels…",
       "Écriture en ajout seul : le compte applicatif de la base ne peut ni modifier ni supprimer une ligne",
+      "Seule exception : l'anonymisation des adresses IP après la durée de conservation",
       "Une action dont la trace ne peut pas être écrite est annulée",
       "Les consultations de données personnelles par l'équipe de conformité sont aussi tracées",
     ],
@@ -59,7 +60,7 @@ export const trustSections: TrustSection[] = [
     points: [
       "Comptes de base de données séparés pour les migrations et pour l'exécution, avec un mot de passe distinct par base",
       "Limitation du débit sur les routes publiques sensibles",
-      "Écriture en base et publication d'événement toujours cohérentes (outbox transactionnel)",
+      "Aucune perte entre l'écriture en base et la publication de l'événement (outbox transactionnel)",
       "Supervision de la santé des services et suivi des incidents",
     ],
   },

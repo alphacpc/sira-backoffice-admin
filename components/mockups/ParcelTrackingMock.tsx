@@ -9,7 +9,7 @@ export default function ParcelTrackingMock({ active = 2 }: { active?: number }) 
         {mockParcelSteps.map((s, i) => {
           const done = i <= active;
           return (
-            <li key={s.label} className="relative flex gap-3">
+            <li key={s.label} aria-current={i === active ? "step" : undefined} className="relative flex gap-3">
               {i < mockParcelSteps.length - 1 && (
                 <span
                   aria-hidden="true"
@@ -22,6 +22,7 @@ export default function ParcelTrackingMock({ active = 2 }: { active?: number }) 
                 }`}
               >
                 {i + 1}
+                <span className="sr-only">{done ? " étape atteinte" : " étape à venir"}</span>
               </span>
               <span className="flex-1">
                 <span className={`block text-sm ${done ? "font-semibold" : "text-ink/70"}`}>{s.label}</span>

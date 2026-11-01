@@ -26,6 +26,15 @@ export default function Nav() {
 
   useEffect(() => setOpen(false), [pathname]);
 
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setOpen(false);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [open]);
+
   return (
     <header
       className={`sticky top-0 z-50 border-b transition-all duration-300 ${
@@ -48,7 +57,7 @@ export default function Nav() {
                 <Link
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`text-sm font-medium transition ${
+                  className={`text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${
                     active ? "text-forest underline decoration-accent decoration-2 underline-offset-8" : "text-ink/75 hover:text-ink"
                   }`}
                 >
@@ -61,14 +70,14 @@ export default function Nav() {
 
         <Link
           href="/demo"
-          className="hidden rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-deep md:inline-block"
+          className="hidden rounded-full bg-forest px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-forest-deep md:inline-block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
         >
           Demander une démo
         </Link>
 
         <button
           type="button"
-          className="rounded-lg p-2 text-ink md:hidden"
+          className="rounded-lg p-2 text-ink md:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
           aria-controls="menu-mobile"
@@ -87,7 +96,7 @@ export default function Nav() {
               <li key={link.href}>
                 <Link
                   href={link.href}
-                  className="block rounded-lg px-2 py-3 text-base font-medium text-ink"
+                  className="block rounded-lg px-2 py-3 text-base font-medium text-ink focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
                 >
                   {link.label}
                 </Link>
@@ -96,7 +105,7 @@ export default function Nav() {
           </ul>
           <Link
             href="/demo"
-            className="mt-3 block rounded-full bg-forest px-5 py-3 text-center text-sm font-semibold text-white"
+            className="mt-3 block rounded-full bg-forest px-5 py-3 text-center text-sm font-semibold text-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
           >
             Demander une démo
           </Link>

@@ -30,10 +30,10 @@ export function Eyebrow({
 }
 
 const variants = {
-  primary: "bg-forest text-white hover:bg-forest-deep",
-  accent: "bg-accent text-ink hover:bg-accent-dark",
-  outline: "border border-ink/25 text-ink hover:border-ink/60",
-  "outline-light": "border border-white/30 text-white hover:border-white/70",
+  primary: "bg-forest text-white hover:bg-forest-deep focus-visible:outline-forest",
+  accent: "bg-accent text-ink hover:bg-accent-dark focus-visible:outline-forest",
+  outline: "border border-ink/25 text-ink hover:border-ink/60 focus-visible:outline-forest",
+  "outline-light": "border border-white/30 text-white hover:border-white/70 focus-visible:outline-white",
 } as const;
 
 export function ButtonLink({
@@ -48,7 +48,7 @@ export function ButtonLink({
   return (
     <Link
       href={href}
-      className={`inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest ${variants[variant]}`}
+      className={`inline-flex items-center justify-center rounded-full px-6 py-3 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 ${variants[variant]}`}
     >
       {children}
     </Link>

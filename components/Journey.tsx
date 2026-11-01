@@ -42,48 +42,48 @@ export default function Journey() {
       }}
     >
       <div>
-      <ol className="space-y-3">
-        {journeySteps.map((step, i) => (
-          <li key={step.title}>
-            <button
-              type="button"
-              onClick={() => {
-                setActive(i);
-                setUserPaused(true);
-              }}
-              aria-current={i === active ? "step" : undefined}
-              className={`flex w-full gap-4 rounded-2xl border p-5 text-left transition ${
-                i === active
-                  ? "border-forest/40 bg-white shadow-soft"
-                  : "border-transparent hover:bg-white/60"
-              }`}
-            >
-              <span
-                className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
-                  i === active ? "bg-forest text-white" : "bg-ink/10 text-ink/70"
+        <ol className="space-y-3">
+          {journeySteps.map((step, i) => (
+            <li key={step.title}>
+              <button
+                type="button"
+                onClick={() => {
+                  setActive(i);
+                  setUserPaused(true);
+                }}
+                aria-current={i === active ? "step" : undefined}
+                className={`flex w-full gap-4 rounded-2xl border p-5 text-left transition ${
+                  i === active
+                    ? "border-forest/40 bg-white shadow-soft"
+                    : "border-transparent hover:bg-white/60"
                 }`}
               >
-                {i + 1}
-              </span>
-              <span>
-                <span className="block font-serif text-lg">{step.title}</span>
-                <span className="mt-1 block text-sm text-ink/70">
-                  {step.text}
+                <span
+                  className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-sm font-bold ${
+                    i === active ? "bg-forest text-white" : "bg-ink/10 text-ink/70"
+                  }`}
+                >
+                  {i + 1}
                 </span>
-              </span>
-            </button>
-          </li>
-        ))}
-      </ol>
-      {!reduce && (
-        <button
-          type="button"
-          onClick={() => setUserPaused((v) => !v)}
-          className="mt-4 text-sm text-ink/70 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
-        >
-          {userPaused ? "Reprendre l'animation" : "Mettre en pause l'animation"}
-        </button>
-      )}
+                <span>
+                  <span className="block font-serif text-lg">{step.title}</span>
+                  <span className="mt-1 block text-sm text-ink/70">
+                    {step.text}
+                  </span>
+                </span>
+              </button>
+            </li>
+          ))}
+        </ol>
+        {!reduce && (
+          <button
+            type="button"
+            onClick={() => setUserPaused((v) => !v)}
+            className="mt-4 text-sm text-ink/70 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+          >
+            {userPaused ? "Reprendre l'animation" : "Mettre en pause l'animation"}
+          </button>
+        )}
       </div>
       <PhoneShell>
         <div key={active} className="animate-fade-in">

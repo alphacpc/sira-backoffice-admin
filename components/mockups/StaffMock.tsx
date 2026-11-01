@@ -22,7 +22,7 @@ export default function StaffMock() {
         <p className="text-xs font-semibold">Bulletin de paie</p>
         <ol className="mt-3 flex items-center gap-2 text-xs">
           {payslip.map((s, i) => (
-            <li key={s} className="flex flex-1 items-center gap-2">
+            <li key={s} aria-current={i === 0 ? "step" : undefined} className="flex flex-1 items-center gap-2">
               <span className={`flex h-6 w-6 items-center justify-center rounded-full font-semibold ${i === 0 ? "bg-forest text-white" : "bg-ink/10 text-ink/70"}`}>
                 {i + 1}
               </span>

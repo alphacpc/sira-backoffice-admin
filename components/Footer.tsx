@@ -33,7 +33,7 @@ export default function Footer() {
               La plateforme des compagnies de transport interurbain en Afrique
               de l&apos;Ouest : flotte, billetterie, colis, équipes et conformité.
             </p>
-            <p className="mt-4 text-sm text-white/60">contact@sira.app</p>
+            <p className="mt-4 text-sm text-white/70">contact@sira.app</p>
           </div>
           {groups.map((group) => (
             <nav key={group.title} aria-label={group.title}>
@@ -41,7 +41,7 @@ export default function Footer() {
               <ul className="mt-3 space-y-2">
                 {group.links.map((link) => (
                   <li key={link.href}>
-                    <Link href={link.href} className="text-sm text-white/70 transition hover:text-accent">
+                    <Link href={link.href} className="text-sm text-white/70 transition hover:text-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
                       {link.label}
                     </Link>
                   </li>
@@ -50,7 +50,7 @@ export default function Footer() {
             </nav>
           ))}
         </div>
-        <p className="mt-12 border-t border-white/10 pt-6 text-xs text-white/50">
+        <p className="mt-12 border-t border-white/10 pt-6 text-xs text-white/70">
           © {new Date().getFullYear()} Sira. Tous droits réservés.
         </p>
       </div>

@@ -1,8 +1,8 @@
 export const underTheHood = {
   principles: [
-    { title: "Une base de données par service", text: "Aucune base partagée entre deux services; les références entre services passent par des identifiants." },
+    { title: "Une base de données par service", text: "Aucune base partagée entre deux services ; les références entre services passent par des identifiants." },
     { title: "Événements pour les données partagées", text: "Un service garde une copie légère des données dont il a besoin, mise à jour par événement." },
-    { title: "Backend d'abord", text: "Chaque service expose une API stable avant tout écran; ce contrat guide les clients web." },
+    { title: "Backend d'abord", text: "Chaque service expose une API stable avant tout écran ; ce contrat guide les clients web." },
   ],
   services: [
     { name: "Identité", role: "Comptes, jetons, rôles et permissions" },
