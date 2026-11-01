@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import { useEffect, useState, type ReactNode } from "react";
-import { useReducedMotion } from "motion/react";
+import { AnimatePresence, motion } from "motion/react";
+import { EASE, useReduce } from "@/components/motion";
 import { journeySteps } from "@/content/home";
 import { Check, PhoneScreen, Pill } from "@/components/screens/PhoneScreen";
 
@@ -118,7 +119,7 @@ export default function ParcoursVoyageur() {
   const [hovered, setHovered] = useState(false);
   const [focused, setFocused] = useState(false);
   const [userPaused, setUserPaused] = useState(false);
-  const reduce = useReducedMotion();
+  const reduce = useReduce();
   const running = !reduce && !userPaused && !hovered && !focused;
 
   useEffect(() => {
@@ -182,9 +183,23 @@ export default function ParcoursVoyageur() {
                     ) : null}
                   </span>
                   {on ? (
-                    <span
+                    <motion.span
                       aria-hidden="true"
-                      className="absolute -left-px top-0 h-full w-1 rounded-full bg-amber"
+                      className="absolute -left-px top-0 h-full w-1 origin-top rounded-full bg-amber"
+                      initial={reduce ? false : { scaleY: 0 }}
+                      animate={{ scaleY: 1 }}
+                      transition={{ duration: 0.45, ease: EASE }}
+                    />
+                  ) : null}
+                  {on && running ? (
+                    /* Progress of the 4.5 s auto-advance; hidden with the pause control and under reduced motion. */
+                    <motion.span
+                      key={`progress-${active}`}
+                      aria-hidden="true"
+                      className="absolute bottom-0 left-4 right-0 h-0.5 origin-left bg-amber/70"
+                      initial={{ scaleX: 0 }}
+                      animate={{ scaleX: 1 }}
+                      transition={{ duration: 4.5, ease: "linear" }}
                     />
                   ) : null}
                 </button>
@@ -213,9 +228,18 @@ export default function ParcoursVoyageur() {
           aria-hidden="true"
           className="absolute -right-10 -top-10 h-44 w-44 rounded-full border border-amber/25"
         />
-        <div key={active} className="animate-fade-in relative flex h-full items-center justify-center pt-0">
-          <div className={`flex ${active === 3 ? "h-full items-end" : "items-center"}`}>{stages[active]}</div>
-        </div>
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={active}
+            className="relative flex h-full items-center justify-center pt-0"
+            initial={reduce ? { opacity: 0 } : { opacity: 0, x: 28 }}
+            animate={reduce ? { opacity: 1 } : { opacity: 1, x: 0 }}
+            exit={reduce ? { opacity: 0 } : { opacity: 0, x: -28, transition: { duration: 0.22, ease: EASE } }}
+            transition={{ duration: reduce ? 0.15 : 0.38, ease: EASE }}
+          >
+            <div className={`flex ${active === 3 ? "h-full items-end" : "items-center"}`}>{stages[active]}</div>
+          </motion.div>
+        </AnimatePresence>
       </div>
     </div>
   );

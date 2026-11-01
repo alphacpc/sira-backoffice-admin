@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import Image from "next/image";
-import Link from "next/link";
 import { Container, Eyebrow, ButtonLink, Title2 } from "@/components/ui";
-import { Reveal } from "@/components/motion";
+import { Reveal, Enter, Drift, ScrollZoom } from "@/components/motion";
 import { RouteThread } from "@/components/route/RouteThread";
 import { Stop } from "@/components/route/Stop";
+import { StopText } from "@/components/route/StopText";
+import { RouteLine } from "@/components/RouteLine";
 import { Coupon } from "@/components/Coupon";
 import { PhotoCard } from "@/components/PhotoCard";
 import ParcoursVoyageur from "@/components/ParcoursVoyageur";
@@ -31,46 +32,6 @@ const heroFade = {
   WebkitMaskImage: "linear-gradient(to bottom, #000 55%, transparent 84%)",
   maskImage: "linear-gradient(to bottom, #000 55%, transparent 84%)",
 } as const;
-
-/** Text side of a stop: title, description, at most three points, link. */
-function StopText({ c, dark = false }: { c: Chapter; dark?: boolean }) {
-  return (
-    <div>
-      <h3
-        className={`text-3xl font-extrabold leading-[1.05] tracking-tight sm:text-4xl lg:text-[2.6rem] ${
-          dark ? "text-white" : "text-navy"
-        }`}
-      >
-        {c.tagline}
-      </h3>
-      <p className={`mt-5 max-w-lg text-base leading-relaxed ${dark ? "text-white/80" : "text-ink/75"}`}>
-        {c.description}
-      </p>
-      <ul className="mt-6 max-w-lg space-y-3">
-        {c.points.slice(0, 3).map((p) => (
-          <li
-            key={p}
-            className={`flex gap-3 border-t pt-3 text-sm leading-relaxed ${
-              dark ? "border-white/15 text-white/85" : "border-navy/10 text-ink/80"
-            }`}
-          >
-            <span aria-hidden="true" className="mt-[7px] h-1.5 w-4 shrink-0 rounded-full bg-amber" />
-            {p}
-          </li>
-        ))}
-      </ul>
-      <Link
-        href={`/solution#${c.id}`}
-        className={`mt-7 inline-flex items-center gap-2 font-mono text-xs font-bold uppercase tracking-[0.16em] focus-visible:outline-2 focus-visible:outline-offset-4 ${
-          dark ? "text-amber focus-visible:outline-amber" : "text-navy focus-visible:outline-navy"
-        }`}
-      >
-        <span className="border-b-2 border-amber pb-0.5">Voir le détail</span>
-        <span aria-hidden="true">→</span>
-      </Link>
-    </div>
-  );
-}
 
 function Terminus({ code, label, arrival = false }: { code: string; label: string; arrival?: boolean }) {
   return (
@@ -102,6 +63,7 @@ export default function HomePage() {
     <main>
       {/* 1. Hero */}
       <section className="relative overflow-hidden bg-paper">
+        <Drift distance={-70}>
         <svg
           aria-hidden="true"
           className="pointer-events-none absolute -right-80 -top-64 h-[760px] w-[760px] text-amber opacity-25 lg:-right-40 lg:-top-40 lg:opacity-100"
@@ -112,6 +74,8 @@ export default function HomePage() {
             <circle key={r} cx="380" cy="380" r={r} stroke="currentColor" strokeOpacity="0.28" strokeWidth="1.5" />
           ))}
         </svg>
+        </Drift>
+        <Drift distance={-130}>
         <svg
           aria-hidden="true"
           className="pointer-events-none absolute -bottom-52 -left-52 h-[520px] w-[520px] text-amber opacity-25 lg:opacity-100"
@@ -122,38 +86,57 @@ export default function HomePage() {
             <circle key={r} cx="260" cy="260" r={r} stroke="currentColor" strokeOpacity="0.2" strokeWidth="1.5" />
           ))}
         </svg>
+        </Drift>
 
         <Container className="relative grid grid-cols-1 items-center gap-16 pb-16 pt-12 [&>*]:min-w-0 lg:grid-cols-[1fr_1.05fr] lg:gap-10 lg:pb-24 lg:pt-20">
-          <Reveal>
-            <Eyebrow>Pour les compagnies d&apos;autocars d&apos;Afrique de l&apos;Ouest</Eyebrow>
+          <div>
+            <Enter trigger="mount" y={14} duration={0.6}>
+              <Eyebrow>Pour les compagnies d&apos;autocars d&apos;Afrique de l&apos;Ouest</Eyebrow>
+            </Enter>
             <Title2
               as="h1"
               lead="Toute votre compagnie de transport, dans"
               accent="une seule plateforme."
+              animate="mount"
+              delay={0.12}
               className="mt-6 text-[2.5rem] sm:text-6xl lg:text-[3.9rem] xl:text-[4.5rem]"
             />
-            <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink/75">
-              Flotte, billetterie, colis, équipes et conformité. Sira remplace les cahiers de guichet
-              et les tableurs par un outil unique, pensé pour votre exploitation.
-            </p>
-            <div className="mt-9 flex flex-wrap gap-3">
-              <ButtonLink href="/demo" variant="accent">
-                Demander une démo
-              </ButtonLink>
-              <ButtonLink href="/solution" variant="outline">
-                Voir la solution
-              </ButtonLink>
-            </div>
-          </Reveal>
+            <Enter trigger="mount" y={18} delay={0.55} duration={0.6}>
+              <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink/75">
+                Flotte, billetterie, colis, équipes et conformité. Sira remplace les cahiers de guichet
+                et les tableurs par un outil unique, pensé pour votre exploitation.
+              </p>
+            </Enter>
+            <Enter trigger="mount" y={18} delay={0.68} duration={0.6}>
+              <div className="mt-9 flex flex-wrap gap-3">
+                <ButtonLink href="/demo" variant="accent">
+                  Demander une démo
+                </ButtonLink>
+                <ButtonLink href="/solution" variant="outline">
+                  Voir la solution
+                </ButtonLink>
+              </div>
+            </Enter>
+          </div>
 
-          <Reveal delay={0.1}>
+          <div>
             <div className="relative mx-auto aspect-[1/1.02] w-full max-w-[560px] lg:max-w-none">
-              <div
+              <Enter
+                trigger="mount"
                 aria-hidden="true"
+                clip="left"
+                fade={false}
+                delay={0.1}
+                duration={0.85}
                 className="absolute inset-x-0 bottom-[6%] top-[14%] rounded-[2.25rem] bg-navy lg:left-[6%]"
               />
-              <div
+              <Enter
+                trigger="mount"
                 aria-hidden="true"
+                clip="left"
+                fade={false}
+                delay={0.75}
+                duration={0.5}
                 className="absolute right-[10%] top-[8%] h-3 w-24 rounded-full bg-amber lg:right-[14%]"
               />
               <PhotoCard
@@ -163,6 +146,8 @@ export default function HomePage() {
                 height={1356}
                 rotate="right"
                 priority
+                enter={{ delay: 0.3, x: 56, y: 24, rotate: 6 }}
+                parallax="page"
                 sizes="(min-width: 1024px) 34vw, 70vw"
                 className="absolute right-[3%] top-0 w-[68%]"
               />
@@ -172,10 +157,16 @@ export default function HomePage() {
                 width={1920}
                 height={1959}
                 rotate="left"
+                enter={{ delay: 0.45, x: -36, y: 48, rotate: -6 }}
+                parallax="page"
                 sizes="(min-width: 1024px) 22vw, 42vw"
                 className="absolute bottom-[0%] left-[0%] w-[42%]"
               />
-              <div
+              <Enter
+                trigger="mount"
+                y={70}
+                delay={0.6}
+                duration={0.8}
                 className="absolute -bottom-[1%] right-[4%] w-[33%] drop-shadow-[0_24px_30px_rgba(13,18,38,0.45)]"
                 style={heroFade}
               >
@@ -187,9 +178,9 @@ export default function HomePage() {
                   sizes="(min-width: 1024px) 18vw, 34vw"
                   className="block h-auto w-full rounded-[1.5rem]"
                 />
-              </div>
+              </Enter>
             </div>
-          </Reveal>
+          </div>
         </Container>
       </section>
 
@@ -206,17 +197,17 @@ export default function HomePage() {
 
             <Stop id="flotte" code={flotte.stop.code} name={flotte.stop.name}>
               <StopText c={flotte} />
-              <div className="relative">
+              <Enter className="relative" x={44} scale={0.96} duration={0.8} delay={0.15}>
                 <div
                   aria-hidden="true"
                   className="absolute -inset-2 translate-x-1 translate-y-4 rounded-[2rem] bg-navy lg:-inset-4 lg:translate-x-5 lg:translate-y-6"
                 />
                 <FleetMapCard className="relative" />
-              </div>
+              </Enter>
             </Stop>
 
             <Stop id="billetterie" code={billetterie.stop.code} name={billetterie.stop.name} align="right">
-              <div className="relative mx-auto w-full max-w-[580px] pb-[14%] pt-4">
+              <Enter className="relative mx-auto w-full max-w-[580px] pb-[14%] pt-4" x={-44} scale={0.96} duration={0.8} delay={0.15}>
                 <div
                   aria-hidden="true"
                   className="absolute inset-x-0 bottom-0 top-[18%] rounded-[2rem] bg-navy"
@@ -252,23 +243,23 @@ export default function HomePage() {
                     className="block h-auto w-full rounded-[1.5rem]"
                   />
                 </div>
-              </div>
-              <StopText c={billetterie} />
+              </Enter>
+              <StopText c={billetterie} side="right" />
             </Stop>
 
             <Stop id="colis" code={colis.stop.code} name={colis.stop.name}>
-              <div className="lg:col-span-2">
+              <Enter className="lg:col-span-2" y={40} scale={0.97} duration={0.8}>
                 <div className="relative overflow-hidden rounded-[2rem] bg-amber-soft px-6 py-10 sm:px-10 lg:px-14 lg:py-14">
                   <div className="relative grid grid-cols-1 items-center gap-10 [&>*]:min-w-0 lg:grid-cols-[1.1fr_0.9fr] lg:gap-14">
                     <StopText c={colis} />
                     <ParcelScreen />
                   </div>
                 </div>
-              </div>
+              </Enter>
             </Stop>
 
             <Stop id="equipes" code={equipes.stop.code} name={equipes.stop.name} align="right">
-              <div className="relative mx-auto w-full max-w-[460px]">
+              <Enter className="relative mx-auto w-full max-w-[460px]" x={-44} scale={0.96} duration={0.8} delay={0.15}>
                 <div
                   aria-hidden="true"
                   className="absolute -bottom-5 -left-5 right-10 top-12 rounded-[2rem] bg-amber"
@@ -276,12 +267,12 @@ export default function HomePage() {
                 <div className="relative [&_figcaption]:font-semibold [&_figcaption]:text-navy">
                   <StaffScreen />
                 </div>
-              </div>
-              <StopText c={equipes} />
+              </Enter>
+              <StopText c={equipes} side="right" />
             </Stop>
 
             <Stop id="pilotage" code={pilotage.stop.code} name={pilotage.stop.name}>
-              <div className="lg:col-span-2">
+              <Enter className="lg:col-span-2" y={40} scale={0.97} duration={0.8}>
                 <div className="relative overflow-hidden rounded-[2rem] bg-navy px-3 py-10 sm:px-10 lg:px-14 lg:py-14">
                   <svg
                     aria-hidden="true"
@@ -298,7 +289,7 @@ export default function HomePage() {
                     <SupervisionScreen />
                   </div>
                 </div>
-              </div>
+              </Enter>
             </Stop>
 
             <Terminus code="TBA" label="Arrivée" arrival />
@@ -309,33 +300,38 @@ export default function HomePage() {
       {/* 3. Bandeau photo */}
       <section className="relative mt-16 bg-paper pb-0 lg:mt-24">
         <div className="relative overflow-hidden bg-navy-deep">
-          <Image
-            src="/images/bus-sunset.png"
-            alt=""
-            fill
-            sizes="100vw"
-            className="origin-bottom scale-[1.5] object-cover object-bottom lg:origin-center lg:scale-100 lg:object-[50%_64%]"
-          />
+          <ScrollZoom>
+            <Image
+              src="/images/bus-sunset.png"
+              alt=""
+              fill
+              sizes="100vw"
+              className="origin-bottom scale-[1.5] object-cover object-bottom lg:origin-center lg:scale-100 lg:object-[50%_64%]"
+            />
+          </ScrollZoom>
           {/* Same treatment as the /securite hero: photo anchored at the bottom, burned-in logo out of frame. */}
           <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-navy-deep/85 via-navy/45 to-navy/10" />
           <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-navy-deep/60 to-transparent" />
           <Container className="relative pb-44 pt-20 lg:pb-52 lg:pt-28">
-            <Reveal>
+            <Enter y={14}>
               <Eyebrow tone="dark">Confiance</Eyebrow>
-              <Title2
-                tone="dark"
-                lead="Voyagez"
-                accent="ensemble."
-                className="mt-5 text-5xl sm:text-6xl lg:text-8xl"
-              />
-            </Reveal>
+            </Enter>
+            <Title2
+              tone="dark"
+              lead="Voyagez"
+              accent="ensemble."
+              animate="view"
+              delay={0.1}
+              stagger={0.12}
+              className="mt-5 text-5xl sm:text-6xl lg:text-8xl"
+            />
           </Container>
         </div>
         <Container className="relative -mt-32 pb-20 lg:-mt-36">
           <ul className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:gap-6">
             {trustPoints.map((t, i) => (
               <li key={t.title}>
-                <Reveal delay={i * 0.07} className="h-full">
+                <Reveal delay={i * 0.1} y={48} className="h-full">
                   <div
                     className={`h-full rounded-3xl bg-white p-7 shadow-lift ${
                       i === 1 ? "lg:-translate-y-6" : ""
@@ -398,9 +394,10 @@ export default function HomePage() {
           <ul className="mt-12 grid grid-cols-1 gap-6 lg:grid-cols-3">
             {planPreview.map((p, i) => (
               <li key={p.name}>
-                <Reveal delay={i * 0.07} className="h-full">
+                <Reveal delay={i * 0.09} className="h-full">
                   <Coupon
                     notch="#fafafa"
+                    interactive
                     className="h-full"
                     stub={
                       <p className="flex items-center justify-between font-mono text-xs font-bold uppercase tracking-[0.16em] text-navy">
@@ -443,7 +440,7 @@ export default function HomePage() {
                     className="flex items-center gap-3 font-mono text-sm font-bold tracking-[0.12em] text-white"
                   >
                     DKR
-                    <span className="h-0 flex-1 border-t-2 border-dashed border-amber sm:w-40 sm:flex-none" />
+                    <RouteLine className="flex-1 sm:w-40 sm:flex-none" />
                     <span className="text-amber">TBA</span>
                   </p>
                   <ButtonLink href="/demo" variant="accent">

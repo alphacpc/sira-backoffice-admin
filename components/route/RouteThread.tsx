@@ -86,6 +86,7 @@ export function RouteThread({
           />
         </svg>
         <motion.svg
+          data-motion=""
           className="absolute inset-0 h-full w-full overflow-visible"
           fill="none"
           style={reduce ? undefined : { clipPath: clip }}
