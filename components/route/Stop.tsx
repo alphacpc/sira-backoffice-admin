@@ -22,11 +22,11 @@ export function Stop({
   children: ReactNode;
 }) {
   return (
-    <section id={id} className="relative py-14 lg:py-20">
+    <section id={id} className="relative py-10 lg:py-14">
       {/* Node: centred on the line (mobile x=12, lg x=32). */}
       <span
         aria-hidden="true"
-        className="absolute top-[3.7rem] -left-[42px] flex h-7 w-7 items-center justify-center rounded-full bg-navy lg:top-[5.2rem] lg:-left-[76px] lg:h-10 lg:w-10"
+        className="absolute top-[2.7rem] -left-[42px] flex h-7 w-7 items-center justify-center rounded-full bg-navy lg:top-[3.7rem] lg:-left-[76px] lg:h-10 lg:w-10"
         style={{ boxShadow: "0 0 0 4px var(--route-bg, #fafafa), 0 0 0 7px #f5a524" }}
       >
         <span className="h-2 w-2 rounded-full bg-amber lg:h-2.5 lg:w-2.5" />
@@ -42,7 +42,7 @@ export function Stop({
           </span>
         </header>
         <div
-          className={`mt-8 grid grid-cols-1 items-center gap-10 [&>*]:min-w-0 lg:grid-cols-2 lg:gap-16 ${
+          className={`mt-5 grid grid-cols-1 items-center gap-8 [&>*]:min-w-0 lg:grid-cols-2 lg:gap-14 ${
             align === "right" ? "lg:[&>*:first-child]:order-2" : ""
           }`}
         >

@@ -167,7 +167,18 @@ export default function ParcoursVoyageur() {
                       {on ? <span className="sr-only"> (étape en cours)</span> : null}
                     </span>
                     {on ? (
-                      <span className="mt-2 block text-sm leading-relaxed text-white/80">{step.text}</span>
+                      <span className="mt-2 grid text-sm leading-relaxed text-white/80">
+                        {/* All texts are stacked in one cell so the list keeps the height of the longest one. */}
+                        {journeySteps.map((s2, j) => (
+                          <span
+                            key={s2.title}
+                            aria-hidden={j !== i ? "true" : undefined}
+                            className={`col-start-1 row-start-1 ${j === i ? "" : "invisible"}`}
+                          >
+                            {s2.text}
+                          </span>
+                        ))}
+                      </span>
                     ) : null}
                   </span>
                   {on ? (

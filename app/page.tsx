@@ -26,6 +26,12 @@ const fade = {
   maskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
 } as const;
 
+/** Hero ticket: fully transparent before it leaves the navy panel, so no bezel ghost remains on the paper. */
+const heroFade = {
+  WebkitMaskImage: "linear-gradient(to bottom, #000 55%, transparent 84%)",
+  maskImage: "linear-gradient(to bottom, #000 55%, transparent 84%)",
+} as const;
+
 /** Text side of a stop: title, description, at most three points, link. */
 function StopText({ c, dark = false }: { c: Chapter; dark?: boolean }) {
   return (
@@ -98,7 +104,7 @@ export default function HomePage() {
       <section className="relative overflow-hidden bg-paper">
         <svg
           aria-hidden="true"
-          className="pointer-events-none absolute -right-40 -top-40 h-[760px] w-[760px] text-amber"
+          className="pointer-events-none absolute -right-80 -top-64 h-[760px] w-[760px] text-amber opacity-25 lg:-right-40 lg:-top-40 lg:opacity-100"
           viewBox="0 0 760 760"
           fill="none"
         >
@@ -108,7 +114,7 @@ export default function HomePage() {
         </svg>
         <svg
           aria-hidden="true"
-          className="pointer-events-none absolute -bottom-52 -left-52 h-[520px] w-[520px] text-amber"
+          className="pointer-events-none absolute -bottom-52 -left-52 h-[520px] w-[520px] text-amber opacity-25 lg:opacity-100"
           viewBox="0 0 520 520"
           fill="none"
         >
@@ -170,8 +176,8 @@ export default function HomePage() {
                 className="absolute bottom-[0%] left-[0%] w-[42%]"
               />
               <div
-                className="absolute -bottom-[7%] right-[4%] w-[33%] drop-shadow-[0_24px_30px_rgba(13,18,38,0.45)]"
-                style={fade}
+                className="absolute -bottom-[1%] right-[4%] w-[33%] drop-shadow-[0_24px_30px_rgba(13,18,38,0.45)]"
+                style={heroFade}
               >
                 <Image
                   src="/images/clean/billet.png"
@@ -210,11 +216,12 @@ export default function HomePage() {
             </Stop>
 
             <Stop id="billetterie" code={billetterie.stop.code} name={billetterie.stop.name} align="right">
-              <div className="relative mx-auto w-full max-w-[580px] pb-12 pt-4 lg:pb-16">
+              <div className="relative mx-auto w-full max-w-[580px] pb-[14%] pt-4">
                 <div
                   aria-hidden="true"
-                  className="absolute inset-x-0 bottom-0 top-[20%] rounded-[2rem] bg-navy"
+                  className="absolute inset-x-0 bottom-0 top-[18%] rounded-[2rem] bg-navy"
                 />
+                {/* Face sits bottom-right of the photo: the phones overlap only its left (tree) side. */}
                 <PhotoCard
                   src="/images/clean/voyageuse.jpg"
                   alt="Une voyageuse serre contre elle l'arbre de son village, un billet confirmé Dakar-Touba affiché à l'écran."
@@ -222,27 +229,28 @@ export default function HomePage() {
                   height={1368}
                   rotate="left"
                   sizes="(min-width: 1024px) 34vw, 90vw"
-                  className="relative w-[82%]"
+                  className="relative ml-auto w-[86%]"
                 />
-                <div className="relative -mt-24 flex items-end justify-end gap-3 pr-3 sm:-mt-36">
+                <Image
+                  src="/images/sieges.png"
+                  alt="Plan des sièges du bus, deux places choisies."
+                  width={820}
+                  height={1576}
+                  sizes="(min-width: 1024px) 10vw, 30vw"
+                  className="absolute bottom-0 left-[1%] h-auto w-[30%] -rotate-3 rounded-[1.5rem] drop-shadow-[0_20px_28px_rgba(13,18,38,0.5)]"
+                />
+                <div
+                  className="absolute bottom-[-3%] left-[27%] w-[26%] rotate-2 drop-shadow-[0_20px_28px_rgba(13,18,38,0.5)]"
+                  style={fade}
+                >
                   <Image
-                    src="/images/sieges.png"
-                    alt="Plan des sièges du bus, deux places choisies."
+                    src="/images/clean/billet.png"
+                    alt="Billet électronique avec code QR."
                     width={820}
-                    height={1576}
-                    sizes="(min-width: 1024px) 14vw, 38vw"
-                    className="h-auto w-[40%] -rotate-3 rounded-[1.5rem] drop-shadow-[0_20px_28px_rgba(13,18,38,0.5)]"
+                    height={1323}
+                    sizes="(min-width: 1024px) 10vw, 26vw"
+                    className="block h-auto w-full rounded-[1.5rem]"
                   />
-                  <div className="w-[38%] translate-y-4 rotate-2 drop-shadow-[0_20px_28px_rgba(13,18,38,0.5)]" style={fade}>
-                    <Image
-                      src="/images/clean/billet.png"
-                      alt="Billet électronique avec code QR."
-                      width={820}
-                      height={1323}
-                      sizes="(min-width: 1024px) 14vw, 38vw"
-                      className="block h-auto w-full rounded-[1.5rem]"
-                    />
-                  </div>
                 </div>
               </div>
               <StopText c={billetterie} />
@@ -306,10 +314,11 @@ export default function HomePage() {
             alt=""
             fill
             sizes="100vw"
-            className="object-cover object-[50%_72%]"
+            className="origin-bottom scale-[1.5] object-cover object-bottom lg:origin-center lg:scale-100 lg:object-[50%_64%]"
           />
-          <div aria-hidden="true" className="absolute inset-0 bg-navy/70" />
-          <div aria-hidden="true" className="absolute inset-x-0 top-0 h-2/3 bg-gradient-to-b from-navy-deep to-transparent" />
+          {/* Same treatment as the /securite hero: photo anchored at the bottom, burned-in logo out of frame. */}
+          <div aria-hidden="true" className="absolute inset-0 bg-gradient-to-r from-navy-deep/85 via-navy/45 to-navy/10" />
+          <div aria-hidden="true" className="absolute inset-x-0 top-0 h-1/4 bg-gradient-to-b from-navy-deep/60 to-transparent" />
           <Container className="relative pb-44 pt-20 lg:pb-52 lg:pt-28">
             <Reveal>
               <Eyebrow tone="dark">Confiance</Eyebrow>

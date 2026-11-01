@@ -42,7 +42,7 @@ export default function DemoPage() {
             </ol>
             <PhotoCard
               src="/images/clean/voyageuse.jpg"
-              alt="Une voyageuse souriante, téléphone à la main, assise dans un autocar"
+              alt="Une voyageuse serre contre elle l'arbre de son village, un billet confirmé Dakar-Touba affiché à l'écran."
               width={1920}
               height={1368}
               rotate="left"
