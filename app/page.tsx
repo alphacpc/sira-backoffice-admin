@@ -5,7 +5,6 @@ import { Reveal, Enter, ScrollZoom } from "@/components/motion";
 import { RouteThread } from "@/components/route/RouteThread";
 import { Stop } from "@/components/route/Stop";
 import { StopText } from "@/components/route/StopText";
-import { RouteLine } from "@/components/RouteLine";
 import { Coupon } from "@/components/Coupon";
 import { Hero } from "@/components/hero/Hero";
 import { PhotoCard } from "@/components/PhotoCard";
@@ -278,7 +277,6 @@ export default function HomePage() {
           </div>
         </Container>
       </section>
-
     </main>
   );
 }
