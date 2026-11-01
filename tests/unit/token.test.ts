@@ -30,4 +30,19 @@ describe("token", () => {
     expect(await verifyToken("abc", SECRET)).toBeNull();
     expect(await verifyToken("a.b.c", SECRET)).toBeNull();
   });
+  it("round-trips attempts and rejects invalid attempts", async () => {
+    const t = await signToken({ sub: "a", stage: "pre", exp: NOW + 60, attempts: 2 }, SECRET);
+    expect((await verifyToken(t, SECRET, NOW * 1000))?.attempts).toBe(2);
+    for (const bad of [-1, 1.5, "2" as unknown as number]) {
+      const x = await signToken({ sub: "a", stage: "pre", exp: NOW + 60, attempts: bad }, SECRET);
+      expect(await verifyToken(x, SECRET, NOW * 1000)).toBeNull();
+    }
+  });
+  it("cannot turn a pre token into full by swapping the payload", async () => {
+    const t = await signToken({ sub: "a", stage: "pre", exp: NOW + 60 }, SECRET);
+    const [, sig] = t.split(".");
+    const body = btoa(JSON.stringify({ sub: "a", stage: "full", exp: NOW + 60 }))
+      .replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+    expect(await verifyToken(`${body}.${sig}`, SECRET, NOW * 1000)).toBeNull();
+  });
 });

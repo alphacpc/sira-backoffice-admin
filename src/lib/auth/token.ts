@@ -2,6 +2,7 @@ export interface TokenPayload {
   sub: string;
   stage: "pre" | "full";
   exp: number;
+  attempts?: number;
 }
 
 const enc = new TextEncoder();
@@ -43,6 +44,10 @@ export async function verifyToken(
     const payload = JSON.parse(new TextDecoder().decode(fromB64url(parts[0]))) as TokenPayload;
     if (typeof payload.exp !== "number" || payload.exp * 1000 <= now) return null;
     if (payload.stage !== "pre" && payload.stage !== "full") return null;
+    if (
+      payload.attempts !== undefined &&
+      (!Number.isInteger(payload.attempts) || payload.attempts < 0)
+    ) return null;
     return payload;
   } catch {
     return null;

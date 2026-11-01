@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import {
-  DEMO_ID, DEMO_PASSWORD, DEMO_TOTP, PRE_COOKIE, PRE_TTL_S, SESSION_COOKIE,
+  DEMO_ID, DEMO_PASSWORD, DEMO_TOTP, MAX_TOTP_ATTEMPTS, PRE_COOKIE, PRE_TTL_S, SESSION_COOKIE,
   SESSION_TTL_S, getSecret,
 } from "@/lib/auth/constants";
 import { signToken, verifyToken } from "@/lib/auth/token";
@@ -45,6 +45,14 @@ export async function verifyTotp(code: string): Promise<Result> {
   const payload = pre ? await verifyToken(pre, getSecret()) : null;
   if (!payload || payload.stage !== "pre") return { ok: false, error: "Session de connexion expirée" };
   if (!totpSchema.safeParse(code).success || code !== DEMO_TOTP) {
+    const attempts = (payload.attempts ?? 0) + 1;
+    if (attempts >= MAX_TOTP_ATTEMPTS) {
+      jar.delete(PRE_COOKIE);
+      return { ok: false, error: "Trop de tentatives, reconnecte-toi" };
+    }
+    const remaining = Math.max(1, payload.exp - now());
+    const bumped = await signToken({ ...payload, attempts }, getSecret());
+    jar.set(PRE_COOKIE, bumped, cookieOptions(remaining));
     return { ok: false, error: "Code incorrect" };
   }
   const token = await signToken(
