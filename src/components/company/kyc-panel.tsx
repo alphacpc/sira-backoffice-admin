@@ -12,7 +12,10 @@ import { kycStatusBadge } from "@/lib/labels";
 import type { Company, KycDocument } from "@/lib/types";
 import { KYC_TYPES } from "@/lib/types/kyc";
 
-export function KycPanel({ company, documents }: { company: Company; documents: KycDocument[] }) {
+/** Only the fields the panel needs: this is a client component, so nothing personal may cross the boundary. */
+export type KycPanelCompany = Pick<Company, "id" | "name" | "status" | "forceActivated">;
+
+export function KycPanel({ company, documents }: { company: KycPanelCompany; documents: KycDocument[] }) {
   const router = useRouter();
   const [forcing, setForcing] = useState(false);
   const approved = KYC_TYPES.filter((t) =>

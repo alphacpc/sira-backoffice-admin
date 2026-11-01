@@ -63,12 +63,24 @@ export async function forceActivateCompany(companyId: string, reason: string): P
   });
 }
 
-export async function revealContact(companyId: string, field: "email" | "phone"): Promise<ActionResult> {
-  return run((actor) => {
+export type RevealResult = { ok: true; value: string } | { ok: false; error: string };
+
+export async function revealContact(companyId: string, field: "email" | "phone"): Promise<RevealResult> {
+  let actor: string;
+  try {
+    actor = (await requireSession()).sub;
+  } catch {
+    return { ok: false, error: SESSION_EXPIRED };
+  }
+  try {
     requireString(companyId, "Compagnie");
     if (field !== "email" && field !== "phone") throw new Error("Champ invalide");
-    if (!getStore().companies.some((c) => c.id === companyId)) throw new Error("Compagnie introuvable");
+    const company = getStore().companies.find((c) => c.id === companyId);
+    if (!company) throw new Error("Compagnie introuvable");
     companiesRepo.logReveal(companyId, field, actor);
     revalidatePath(`/compagnies/${companyId}`);
-  });
+    return { ok: true, value: field === "email" ? company.contactEmail : company.contactPhone };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error && e.message ? e.message : "Action impossible" };
+  }
 }

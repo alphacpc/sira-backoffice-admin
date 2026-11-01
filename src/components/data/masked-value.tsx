@@ -2,23 +2,22 @@
 
 import { Eye, EyeOff } from "lucide-react";
 import { useState } from "react";
-import { maskEmail, maskPhone } from "@/lib/mask";
 
 export function MaskedValue({
-  value, kind, onReveal,
-}: { value: string; kind: "email" | "phone"; onReveal?: () => void | Promise<void> }) {
-  const [shown, setShown] = useState(false);
+  masked, kind, reveal,
+}: { masked: string; kind: "email" | "phone"; reveal?: () => Promise<string> }) {
+  const [revealed, setRevealed] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
 
   async function toggle() {
     if (busy) return;
-    if (shown) { setShown(false); return; }
+    if (revealed !== null) { setRevealed(null); return; }
+    if (!reveal) return;
     setBusy(true);
     setFailed(false);
     try {
-      await onReveal?.();
-      setShown(true);
+      setRevealed(await reveal());
     } catch {
       setFailed(true);
     } finally {
@@ -26,11 +25,10 @@ export function MaskedValue({
     }
   }
 
+  const shown = revealed !== null;
   return (
     <span className="inline-flex items-center gap-2">
-      <span data-testid={`masked-${kind}`}>
-        {shown ? value : kind === "email" ? maskEmail(value) : maskPhone(value)}
-      </span>
+      <span data-testid={`masked-${kind}`}>{shown ? revealed : masked}</span>
       <button
         type="button" onClick={toggle}
         aria-label={shown ? "Masquer la donnée" : "Révéler la donnée"}

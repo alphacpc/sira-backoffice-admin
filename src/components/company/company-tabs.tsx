@@ -5,6 +5,7 @@ import { TabsWithUrl } from "@/components/data/tabs-with-url";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/format";
 import { companyStatusBadge, invoiceStatusBadge, subscriptionStatusBadge } from "@/lib/labels";
+import { maskEmail, maskPhone } from "@/lib/mask";
 import type { CompanyDetail } from "@/lib/types";
 
 const TAB_VALUES = ["profil", "kyc", "abonnement", "fonctionnalites", "utilisation", "parrainage", "retention", "equipe", "flotte", "activite"];
@@ -23,7 +24,7 @@ function Empty({ children }: { children: React.ReactNode }) {
 }
 
 function Meter({ label, used, max }: { label: string; used: number; max: number }) {
-  const pct = Math.min(100, Math.round((used / max) * 100));
+  const pct = max > 0 ? Math.min(100, Math.round((used / max) * 100)) : 0;
   return (
     <div>
       <div className="flex justify-between text-sm"><span>{label}</span><span className="tabular-nums">{used} / {max}</span></div>
@@ -48,18 +49,18 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
             <Row label="Identifiant">{c.slug}</Row>
             <Row label="Statut"><StatusBadge tone={status.tone}>{status.label}</StatusBadge></Row>
             <Row label="Pays / devise">{c.country} · {c.currency}</Row>
-            <Row label="E-mail de contact"><ContactField companyId={c.id} field="email" value={c.contactEmail} /></Row>
-            <Row label="Téléphone"><ContactField companyId={c.id} field="phone" value={c.contactPhone} /></Row>
-            <Row label="Registre du commerce">{c.registrationNumber}</Row>
-            <Row label="NINEA">{c.ninea}</Row>
-            <Row label="Palier partenaire">{c.partnerTier}</Row>
+            <Row label="E-mail de contact"><ContactField companyId={c.id} field="email" masked={maskEmail(c.contactEmail)} /></Row>
+            <Row label="Téléphone"><ContactField companyId={c.id} field="phone" masked={maskPhone(c.contactPhone)} /></Row>
+            <Row label="Registre du commerce">{c.registrationNumber || "—"}</Row>
+            <Row label="NINEA">{c.ninea || "—"}</Row>
+            <Row label="Palier partenaire">{c.partnerTier || "—"}</Row>
             <Row label="Créée le">{formatDate(c.createdAt)}</Row>
             <Row label="Activée le">{c.activatedAt ? formatDate(c.activatedAt) : "—"}</Row>
           </dl>
         </CardContent></Card>
       ),
     },
-    { value: "kyc", label: "Vérification KYC", content: <KycPanel company={c} documents={detail.documents} /> },
+    { value: "kyc", label: "Vérification KYC", content: <KycPanel company={{ id: c.id, name: c.name, status: c.status, forceActivated: c.forceActivated }} documents={detail.documents} /> },
     {
       value: "abonnement", label: "Abonnement et paiements",
       content: (
@@ -117,9 +118,13 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
     {
       value: "utilisation", label: "Utilisation",
       content: (
-        <Card><CardContent><dl>
-          {detail.usage.map((u) => <Row key={u.metricCode} label={u.label}>{formatNumber(u.value)}</Row>)}
-        </dl></CardContent></Card>
+        <Card><CardContent>
+          {detail.usage.length === 0 ? <Empty>Aucune donnée d&apos;utilisation.</Empty> : (
+            <dl>
+              {detail.usage.map((u) => <Row key={u.metricCode} label={u.label}>{formatNumber(u.value)}</Row>)}
+            </dl>
+          )}
+        </CardContent></Card>
       ),
     },
     {
@@ -155,14 +160,16 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
       value: "equipe", label: "Équipe",
       content: (
         <Card><CardContent>
+          {detail.employees.length === 0 ? <Empty>Aucun employé.</Empty> : (
           <table className="w-full text-left text-sm">
             <thead className="text-xs text-muted-foreground"><tr><th className="py-1 font-medium">Nom</th><th className="py-1 font-medium">Rôle</th><th className="py-1 font-medium">E-mail</th></tr></thead>
             <tbody>
               {detail.employees.map((e) => (
-                <tr key={e.id} className="border-t border-border"><td className="py-1.5 font-medium">{e.name}</td><td>{e.role}</td><td className="text-muted-foreground">{e.email.replace(/^(.).*(@.*)$/, "$1•••$2")}</td></tr>
+                <tr key={e.id} className="border-t border-border"><td className="py-1.5 font-medium">{e.name}</td><td>{e.role}</td><td className="text-muted-foreground">{maskEmail(e.email)}</td></tr>
               ))}
             </tbody>
           </table>
+          )}
         </CardContent></Card>
       ),
     },

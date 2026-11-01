@@ -49,6 +49,7 @@ describe("no session", () => {
     const n = getStore().activity.length;
     const r = await revealContact(c.id, "email");
     expect(r).toEqual({ ok: false, error: expect.stringMatching(/Session expirée/) });
+    expect("value" in r).toBe(false);
     expect(getStore().activity.length).toBe(n);
   });
 });
@@ -120,10 +121,24 @@ describe("revealContact", () => {
   it("logs an activity without the value, by session actor", async () => {
     const c = draft();
     const n = getStore().activity.length;
-    expect(await revealContact(c.id, "email")).toEqual({ ok: true });
+    expect(await revealContact(c.id, "email")).toEqual({ ok: true, value: c.contactEmail });
     const added = getStore().activity.slice(0, getStore().activity.length - n);
     expect(added).toHaveLength(1);
     expect(added[0]!.actor).toBe("tester@sira.app");
     expect(added[0]!.action).not.toContain(c.contactEmail);
+  });
+  it("returns the exact stored phone and logs without the value", async () => {
+    const c = draft();
+    const n = getStore().activity.length;
+    expect(await revealContact(c.id, "phone")).toEqual({ ok: true, value: c.contactPhone });
+    const added = getStore().activity.slice(0, getStore().activity.length - n);
+    expect(added).toHaveLength(1);
+    expect(added[0]!.action).not.toContain(c.contactPhone);
+  });
+  it("never returns a value on failure", async () => {
+    const a = await revealContact(draft().id, "address" as never);
+    const b = await revealContact("nope", "email");
+    expect("value" in a).toBe(false);
+    expect("value" in b).toBe(false);
   });
 });
