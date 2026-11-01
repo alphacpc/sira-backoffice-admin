@@ -32,7 +32,7 @@ export const trustPoints: TrustPoint[] = [
   {
     icon: "lock",
     title: "Chaque compagnie ne voit que ses données",
-    text: "Les accès sont filtrés par compagnie dans chaque service. Une donnée d'une autre compagnie répond comme si elle n'existait pas.",
+    text: "Dans les services métier, les accès d'un utilisateur rattaché à une compagnie sont limités à cette compagnie : les données des autres compagnies lui sont inaccessibles.",
   },
   {
     icon: "scroll",
@@ -42,12 +42,12 @@ export const trustPoints: TrustPoint[] = [
   {
     icon: "file-check",
     title: "RGPD pris en compte",
-    text: "Consentements par compagnie, demandes des personnes suivies sous 30 jours, adresses IP anonymisées après la durée de conservation.",
+    text: "Consentements marketing par compagnie, demandes des personnes suivies sous 30 jours, adresses IP anonymisées après la durée de conservation.",
   },
 ];
 
 export const planPreview = [
   { name: "Essentiel", text: "Flotte, trajets et billetterie au guichet et en ligne." },
-  { name: "Exploitation", text: "Ajoute les colis, la maintenance, les équipes et la fidélité." },
-  { name: "Pilotage", text: "Ajoute les campagnes, les avis, le partenariat et le suivi de conformité." },
+  { name: "Exploitation", text: "Colis, maintenance, équipes et fidélité en plus." },
+  { name: "Pilotage", text: "Avis clients, campagnes dans l'application, partenariat et suivi de conformité en plus." },
 ];

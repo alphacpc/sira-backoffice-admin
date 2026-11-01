@@ -21,7 +21,7 @@ export default function HomePage() {
     <main>
       {/* 1. Hero */}
       <section className="relative overflow-hidden">
-        <Container className="grid items-center gap-14 pb-20 pt-16 lg:grid-cols-[1fr_1.15fr] lg:pt-24">
+        <Container className="grid grid-cols-1 items-center gap-14 [&>*]:min-w-0 pb-20 pt-16 lg:grid-cols-[1fr_1.15fr] lg:pt-24">
           <Reveal>
             <Eyebrow>Pour les compagnies d&apos;autocars d&apos;Afrique de l&apos;Ouest</Eyebrow>
             <h1 className="mt-4 text-4xl font-semibold leading-[1.08] sm:text-5xl lg:text-6xl">
@@ -56,13 +56,13 @@ export default function HomePage() {
               Tout ce qu&apos;un exploitant gère chaque jour, au même endroit.
             </h2>
           </Reveal>
-          <ul className="mt-12 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+          <ul className="mt-12 grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {chapters.map((c, i) => (
               <li key={c.id}>
                 <Reveal delay={Math.min(i, 3) * 0.05} className="h-full">
                   <Link
                     href={`/solution#${c.id}`}
-                    className="group flex h-full flex-col rounded-2xl border border-ink/10 bg-white p-6 transition hover:-translate-y-1 hover:shadow-soft"
+                    className="group flex h-full flex-col rounded-2xl border border-ink/10 bg-white p-6 transition hover:-translate-y-1 hover:shadow-soft focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
                   >
                     <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-forest/10 text-forest">
                       <Icon name={c.icon} className="h-5 w-5" />
@@ -103,7 +103,7 @@ export default function HomePage() {
             return (
               <div
                 key={id}
-                className={`grid grid-cols-1 items-center gap-12 lg:grid-cols-2 [&>*]:min-w-0${i % 2 ? "lg:[&>*:first-child]:order-2" : ""}`}
+                className={`grid grid-cols-1 items-center gap-12 lg:grid-cols-2 [&>*]:min-w-0 ${i % 2 ? "lg:[&>*:first-child]:order-2" : ""}`}
               >
                 <Reveal>
                   <Eyebrow>{c.title}</Eyebrow>
@@ -117,7 +117,7 @@ export default function HomePage() {
                       </li>
                     ))}
                   </ul>
-                  <Link href={`/solution#${c.id}`} className="mt-6 inline-block text-sm font-semibold text-forest hover:underline">
+                  <Link href={`/solution#${c.id}`} className="mt-6 inline-block text-sm font-semibold text-forest hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest">
                     Voir le détail →
                   </Link>
                 </Reveal>
@@ -139,7 +139,7 @@ export default function HomePage() {
               Vos données et celles de vos voyageurs, protégées par conception.
             </h2>
           </Reveal>
-          <ul className="mt-12 grid gap-6 md:grid-cols-3">
+          <ul className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-3">
             {trustPoints.map((t, i) => (
               <li key={t.title}>
                 <Reveal delay={i * 0.06} className="h-full">
@@ -173,7 +173,7 @@ export default function HomePage() {
               compagnie. Les tarifs sont établis sur devis.
             </p>
           </Reveal>
-          <ul className="mt-10 grid gap-5 md:grid-cols-3">
+          <ul className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3">
             {planPreview.map((p) => (
               <li key={p.name} className="rounded-2xl border border-ink/10 bg-white p-6">
                 <h3 className="text-xl font-semibold">{p.name}</h3>
