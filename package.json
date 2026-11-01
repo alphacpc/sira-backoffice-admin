@@ -5,7 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "check": "node scripts/check-site.mjs"
   },
   "dependencies": {
     "lucide-react": "^1.49.0",

@@ -1,9 +1,15 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
+import { Fraunces } from "next/font/google";
 import "./globals.css";
-import AnnouncementBar from "@/components/AnnouncementBar";
 import Nav from "@/components/Nav";
 import Footer from "@/components/Footer";
+
+const fraunces = Fraunces({
+  subsets: ["latin"],
+  variable: "--font-fraunces",
+  display: "swap",
+});
 
 const gellix = localFont({
   src: [
@@ -29,9 +35,12 @@ const gellix = localFont({
 });
 
 export const metadata: Metadata = {
-  title: "Sira — Plateforme SaaS pour le transport interurbain",
+  title: {
+    default: "Sira — La plateforme des compagnies de transport interurbain",
+    template: "%s · Sira",
+  },
   description:
-    "Sira est la plateforme SaaS multi-tenant qui unifie flotte, billetterie, colis, RH et facturation pour les compagnies de transport interurbain en Afrique de l'Ouest.",
+    "Sira réunit flotte, billetterie, colis, équipes et conformité dans une seule plateforme pour les compagnies d'autocars d'Afrique de l'Ouest.",
 };
 
 export default function RootLayout({
@@ -40,11 +49,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr" className={`${gellix.variable}`}>
+    <html lang="fr" className={`${gellix.variable} ${fraunces.variable}`}>
       <body className="flex min-h-screen flex-col antialiased">
-        <AnnouncementBar />
+        <a
+          href="#contenu"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2"
+        >
+          Aller au contenu
+        </a>
         <Nav />
-        <div className="flex-1">{children}</div>
+        <div id="contenu" className="flex-1">
+          {children}
+        </div>
         <Footer />
       </body>
     </html>
