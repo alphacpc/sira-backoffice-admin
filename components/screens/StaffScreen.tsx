@@ -12,7 +12,7 @@ export function StaffScreen() {
       label="Équipes"
       title="Transports Exemple"
       subtitle="Employés de la compagnie"
-      className="max-w-[300px]"
+      className="max-w-[360px]"
     >
       <div className="space-y-2">
         {people.map((p) => (

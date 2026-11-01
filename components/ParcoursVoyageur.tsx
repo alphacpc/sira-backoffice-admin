@@ -83,8 +83,8 @@ function SeatsStage() {
       alt="Plan des sièges d'un bus Dakar-Touba, deux sièges choisis (9A et 9B)."
       width={820}
       height={1576}
-      sizes="280px"
-      className="h-auto w-[260px] rounded-[1.75rem] shadow-lift"
+      sizes="(min-width: 1024px) 340px, 86vw"
+      className="h-auto w-[min(340px,86%)] rounded-[1.75rem] shadow-lift"
     />
   );
 }
@@ -96,8 +96,8 @@ function TicketStage() {
       alt="Billet électronique Dakar-Touba avec son code QR, siège 12A."
       width={820}
       height={1323}
-      sizes="320px"
-      className="h-auto w-[300px] self-end rounded-t-[1.75rem]"
+      sizes="(min-width: 1024px) 380px, 92vw"
+      className="h-auto w-[min(380px,92%)] self-end rounded-t-[1.75rem]"
       style={{
         WebkitMaskImage: "linear-gradient(to bottom, #000 72%, transparent 100%)",
         maskImage: "linear-gradient(to bottom, #000 72%, transparent 100%)",
@@ -218,7 +218,7 @@ export default function ParcoursVoyageur() {
         )}
       </div>
 
-      <div className="relative flex h-[560px] items-center justify-center overflow-hidden">
+      <div className="relative flex h-[660px] items-center justify-center overflow-hidden lg:h-[700px]">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={active}

@@ -26,7 +26,7 @@ export function PhoneScreen({
 }) {
   return (
     <figure
-      className={`mx-auto w-full ${variant === "phone" ? "max-w-[300px]" : "max-w-[420px]"} ${className}`}
+      className={`mx-auto w-full ${variant === "phone" ? "max-w-[360px]" : "max-w-[420px]"} ${className}`}
     >
       <div className="overflow-hidden rounded-[2.5rem] border-[9px] border-navy-deep bg-[#fcfaf5] shadow-lift">
         <div className="flex items-center justify-between px-6 pb-1 pt-3 font-mono text-[10px] font-semibold text-navy/40">

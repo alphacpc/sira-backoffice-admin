@@ -75,7 +75,7 @@ export default function HomePage() {
             </Stop>
 
             <Stop id="billetterie" code={billetterie.stop.code} name={billetterie.stop.name} align="right">
-              <Enter className="relative mx-auto w-full max-w-[520px]" x={-44} scale={0.96} duration={0.8} delay={0.15}>
+              <Enter className="relative mx-auto w-full max-w-[600px]" x={-44} scale={0.96} duration={0.8} delay={0.15}>
                 <PhotoCard
                   src="/images/clean/voyageuse.jpg"
                   alt="Une voyageuse serre contre elle l'arbre de son village, un billet confirmé Dakar-Touba affiché à l'écran."
@@ -112,7 +112,7 @@ export default function HomePage() {
             </Stop>
 
             <Stop id="equipes" code={equipes.stop.code} name={equipes.stop.name} align="right">
-              <Enter className="relative mx-auto w-full max-w-[460px]" x={-44} scale={0.96} duration={0.8} delay={0.15}>
+              <Enter className="relative mx-auto w-full max-w-[540px]" x={-44} scale={0.96} duration={0.8} delay={0.15}>
                 <div
                   aria-hidden="true"
                   className="absolute -bottom-5 -left-5 right-10 top-12 rounded-[2rem] bg-amber"

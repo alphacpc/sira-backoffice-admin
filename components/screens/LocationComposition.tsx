@@ -34,8 +34,8 @@ export function LocationComposition({
   if (!quote) {
     return (
       <div className={`relative ${panel ? "rounded-[2rem] bg-mist px-4 py-10 sm:px-8 lg:px-10 lg:py-14" : ""} ${className}`}>
-        <Enter x={36} duration={0.8} delay={0.1} className="relative mx-auto max-w-[300px]">
-          <RentalRequestScreen className="max-w-[300px]" />
+        <Enter x={36} duration={0.8} delay={0.1} className="relative mx-auto max-w-[360px]">
+          <RentalRequestScreen className="max-w-[360px]" />
         </Enter>
       </div>
     );
