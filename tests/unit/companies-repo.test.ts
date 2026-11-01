@@ -95,10 +95,16 @@ describe("forceActivate", () => {
     expect(out.activatedAt).not.toBeNull();
   });
   it("is a no-op on an already active company (keeps its real activation)", () => {
-    const active = companiesRepo.list({ status: "active" })[0]!;
-    const out = companiesRepo.forceActivate(active.id, "test");
-    expect(out.activatedAt).toBe(active.activatedAt);
-    expect(out.forceActivated).toBe(active.forceActivated);
+    const active = companiesRepo.list({ status: "active" }).find((c) => c.forceActivated)!;
+    expect(active).toBeDefined();
+    const activatedAtBefore = active.activatedAt;
+    const forceActivatedBefore = active.forceActivated;
+    const activityCountBefore = companiesRepo.detail(active.id)!.activity.length;
+    companiesRepo.forceActivate(active.id, "test");
+    const after = companiesRepo.get(active.id)!;
+    expect(after.activatedAt).toBe(activatedAtBefore);
+    expect(after.forceActivated).toBe(forceActivatedBefore);
+    expect(companiesRepo.detail(active.id)!.activity.length).toBe(activityCountBefore);
   });
   it("throws for an unknown company", () => {
     expect(() => companiesRepo.forceActivate("nope", "x")).toThrow(/introuvable/i);
@@ -112,5 +118,18 @@ describe("logReveal", () => {
     const last = companiesRepo.detail(c.id)!.activity[0]!;
     expect(last.action).toMatch(/e-mail/i);
     expect(last.action).not.toContain(c.contactEmail);
+  });
+});
+
+describe("companiesRepo.detail activity order", () => {
+  it("returns activity newest first after a review", () => {
+    const c = companiesRepo.list({ status: "draft" })[0]!;
+    const d = companiesRepo.detail(c.id)!;
+    const pending = d.documents.find((x) => x.status === "pending")!;
+    companiesRepo.reviewDocument(pending.id, "rejected", "Flou");
+    const activity = companiesRepo.detail(c.id)!.activity;
+    const times = activity.map((a) => a.at);
+    expect(times).toEqual([...times].sort((a, b) => b.localeCompare(a)));
+    expect(activity[0]!.action).toMatch(/rejeté/);
   });
 });

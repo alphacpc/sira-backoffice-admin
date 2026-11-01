@@ -62,7 +62,9 @@ export const companiesRepo = {
       employees: s.employees.filter((e) => e.companyId === id),
       buses: s.buses.filter((b) => b.companyId === id),
       trips: s.trips.filter((t) => t.companyId === id),
-      activity: s.activity.filter((a) => a.companyId === id),
+      activity: s.activity
+        .filter((a) => a.companyId === id)
+        .sort((a, b) => b.at.localeCompare(a.at)),
     };
   },
 
