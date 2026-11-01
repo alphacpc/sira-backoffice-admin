@@ -8,10 +8,22 @@ export function MaskedValue({
   value, kind, onReveal,
 }: { value: string; kind: "email" | "phone"; onReveal?: () => void | Promise<void> }) {
   const [shown, setShown] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [failed, setFailed] = useState(false);
 
   async function toggle() {
-    if (!shown) await onReveal?.();
-    setShown((s) => !s);
+    if (busy) return;
+    if (shown) { setShown(false); return; }
+    setBusy(true);
+    setFailed(false);
+    try {
+      await onReveal?.();
+      setShown(true);
+    } catch {
+      setFailed(true);
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -26,6 +38,7 @@ export function MaskedValue({
       >
         {shown ? <EyeOff size={14} /> : <Eye size={14} />}
       </button>
+      {failed && <span role="alert" className="text-xs text-danger">Impossible de révéler</span>}
     </span>
   );
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { formatDate, formatMoney, formatNumber } from "@/lib/format";
 
-const norm = (s: string) => s.replace(/[  ]/g, " ");
+const norm = (s: string) => s.replace(/[\u00a0\u202f]/g, " ");
 
 describe("format", () => {
   it("formats XOF without decimals", () => {

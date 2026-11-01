@@ -20,4 +20,17 @@ describe("maskPhone", () => {
     expect(maskPhone("771230000")).toBe("•••••••00");
     expect(maskPhone("")).toBe("••••");
   });
+  it("ignores formatting characters", () => {
+    expect(maskPhone("+221 77 123 00 00")).toBe("+221•••••••00");
+    expect(maskPhone("(77) 123-00.00")).toBe("•••••••00");
+  });
+  it("never reveals more than two digits of short numbers", () => {
+    expect(maskPhone("+1234")).toBe("••34");
+    expect(maskPhone("+12345")).toBe("•••45");
+    expect(maskPhone("1234")).toBe("••34");
+    expect(maskPhone("123")).toBe("•23");
+  });
+  it("keeps a short country prefix without leaking a subscriber digit", () => {
+    expect(maskPhone("+33612345678")).toBe("+336••••••78");
+  });
 });

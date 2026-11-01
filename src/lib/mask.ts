@@ -5,10 +5,13 @@ export function maskEmail(value: string): string {
 }
 
 export function maskPhone(value: string): string {
-  const digits = value.replace(/\D/g, "");
+  const cleaned = value.replace(/[\s\-.()]/g, "");
+  const digits = cleaned.replace(/\D/g, "");
   if (digits.length < 3) return "••••";
-  const prefix = value.startsWith("+") ? value.slice(0, 4) : "";
-  const rest = value.startsWith("+") ? value.slice(4) : value;
-  const restDigits = rest.replace(/\D/g, "");
-  return `${prefix}${"•".repeat(Math.max(restDigits.length - 2, 1))}${restDigits.slice(-2)}`;
+  const tail = digits.slice(-2);
+  if (cleaned.startsWith("+") && digits.length - 3 >= 6) {
+    const prefix = digits.slice(0, 3);
+    return `+${prefix}${"•".repeat(digits.length - 3 - 2)}${tail}`;
+  }
+  return `${"•".repeat(digits.length - 2)}${tail}`;
 }

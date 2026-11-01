@@ -89,13 +89,20 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {table.getRowModel().rows.length === 0 ? (
-              <tr><td colSpan={columns.length} className="px-3 py-8 text-center text-muted-foreground">{emptyMessage}</td></tr>
+              <tr><td colSpan={table.getVisibleLeafColumns().length} className="px-3 py-8 text-center text-muted-foreground">{emptyMessage}</td></tr>
             ) : (
               table.getRowModel().rows.map((row) => (
                 <tr
                   key={row.id}
-                  onClick={rowHref ? () => router.push(rowHref(row.original)) : undefined}
-                  className={`border-b border-border last:border-0 ${rowHref ? "cursor-pointer hover:bg-muted/50" : ""}`}
+                  onClick={rowHref ? (e) => {
+                    if ((e.target as HTMLElement).closest("a,button,input,select,textarea,label,[role=button]")) return;
+                    router.push(rowHref(row.original));
+                  } : undefined}
+                  tabIndex={rowHref ? 0 : undefined}
+                  onKeyDown={rowHref ? (e) => {
+                    if (e.key === "Enter" && e.target === e.currentTarget) router.push(rowHref(row.original));
+                  } : undefined}
+                  className={`border-b border-border last:border-0 ${rowHref ? "cursor-pointer hover:bg-muted/50 focus-visible:outline-2 focus-visible:outline-accent" : ""}`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-3 py-2">

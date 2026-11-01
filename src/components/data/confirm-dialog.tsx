@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "@/components/ui/dialog";
 
@@ -23,6 +23,16 @@ export function ConfirmDialog({
   const [error, setError] = useState<string | null>(null);
   const missing = requireReason && reason.trim().length === 0;
 
+  useEffect(() => {
+    if (!open) { setReason(""); setError(null); }
+  }, [open]);
+
+  function handleOpenChange(o: boolean) {
+    if (busy && !o) return;
+    if (!o) { setReason(""); setError(null); }
+    onOpenChange(o);
+  }
+
   async function confirm() {
     setBusy(true);
     setError(null);
@@ -38,7 +48,7 @@ export function ConfirmDialog({
   }
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setReason(""); setError(null); } onOpenChange(o); }}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent>
         <DialogTitle>{title}</DialogTitle>
         {description && <DialogDescription>{description}</DialogDescription>}
@@ -53,7 +63,7 @@ export function ConfirmDialog({
         )}
         {error && <p role="alert" className="mt-3 text-sm text-danger">{error}</p>}
         <div className="mt-5 flex justify-end gap-2">
-          <Button variant="secondary" onClick={() => onOpenChange(false)} disabled={busy}>Annuler</Button>
+          <Button variant="secondary" onClick={() => handleOpenChange(false)} disabled={busy}>Annuler</Button>
           <Button variant={destructive ? "danger" : "primary"} onClick={confirm} disabled={busy || !!missing}>
             {confirmLabel}
           </Button>
