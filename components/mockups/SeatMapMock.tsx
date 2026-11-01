@@ -44,7 +44,7 @@ export default function SeatMapMock({
       </div>
       <ul className="mt-3 flex justify-center gap-3 text-[10px] text-ink/70">
         <li className="flex items-center gap-1"><span className="h-3 w-3 rounded border border-ink/20 bg-white" />Libre</li>
-        <li className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-ink/15" />Pris</li>
+        <li className="flex items-center gap-1"><span aria-hidden="true" className="relative h-3 w-3 rounded bg-ink/15"><span className="absolute left-0 right-0 top-1/2 h-px bg-ink/70" /></span>Pris</li>
         <li className="flex items-center gap-1"><span className="h-3 w-3 rounded bg-accent" />Choisi</li>
       </ul>
     </div>

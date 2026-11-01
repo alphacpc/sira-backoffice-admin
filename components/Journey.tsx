@@ -15,34 +15,42 @@ const screens = [TripsScreen, SeatsScreen, PaymentScreen, TicketScreen];
 
 export default function Journey() {
   const [active, setActive] = useState(0);
-  const [paused, setPaused] = useState(false);
+  const [hovered, setHovered] = useState(false);
+  const [focused, setFocused] = useState(false);
+  const [userPaused, setUserPaused] = useState(false);
   const reduce = useReducedMotion();
 
   useEffect(() => {
-    if (reduce || paused) return;
+    if (reduce || userPaused || hovered || focused) return;
     const timer = setInterval(
       () => setActive((a) => (a + 1) % journeySteps.length),
       4500
     );
     return () => clearInterval(timer);
-  }, [reduce, paused]);
+  }, [reduce, userPaused, hovered, focused]);
 
   const Screen = screens[active];
 
   return (
     <div
       className="grid items-center gap-12 lg:grid-cols-[1.1fr_0.9fr]"
-      onMouseEnter={() => setPaused(true)}
-      onMouseLeave={() => setPaused(false)}
-      onFocus={() => setPaused(true)}
-      onBlur={() => setPaused(false)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      onFocus={() => setFocused(true)}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget as Node | null)) setFocused(false);
+      }}
     >
+      <div>
       <ol className="space-y-3">
         {journeySteps.map((step, i) => (
           <li key={step.title}>
             <button
               type="button"
-              onClick={() => setActive(i)}
+              onClick={() => {
+                setActive(i);
+                setUserPaused(true);
+              }}
               aria-current={i === active ? "step" : undefined}
               className={`flex w-full gap-4 rounded-2xl border p-5 text-left transition ${
                 i === active
@@ -59,7 +67,7 @@ export default function Journey() {
               </span>
               <span>
                 <span className="block font-serif text-lg">{step.title}</span>
-                <span className={`mt-1 block text-sm text-ink/70 ${i === active ? "" : "hidden sm:block"}`}>
+                <span className="mt-1 block text-sm text-ink/70">
                   {step.text}
                 </span>
               </span>
@@ -67,6 +75,16 @@ export default function Journey() {
           </li>
         ))}
       </ol>
+      {!reduce && (
+        <button
+          type="button"
+          onClick={() => setUserPaused((v) => !v)}
+          className="mt-4 text-sm text-ink/70 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+        >
+          {userPaused ? "Reprendre l'animation" : "Mettre en pause l'animation"}
+        </button>
+      )}
+      </div>
       <PhoneShell>
         <div key={active} className="animate-fade-in">
           <Screen />
