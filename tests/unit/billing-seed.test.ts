@@ -59,7 +59,7 @@ describe("billing seed", () => {
 
   it("links every invoice to a subscription of the same company and to exactly one matching attempt", () => {
     const s = getStore();
-    expect(s.invoices).toHaveLength(30);
+    expect(s.invoices).toHaveLength(26);
     for (const inv of s.invoices) {
       expect(s.subscriptions.find((x) => x.id === inv.subscriptionId)?.companyId).toBe(inv.companyId);
       const attempts = s.paymentAttempts.filter((a) => a.invoiceId === inv.id);
@@ -71,7 +71,7 @@ describe("billing seed", () => {
 
   it("records failed attempts without invoice for every unpaid or suspended subscription", () => {
     const s = getStore();
-    expect(s.paymentAttempts).toHaveLength(34);
+    expect(s.paymentAttempts).toHaveLength(30);
     for (const sub of s.subscriptions.filter((x) => x.status === "past_due" || x.status === "suspended")) {
       expect(s.paymentAttempts.some((a) =>
         a.subscriptionId === sub.id && a.status === "failed" && a.invoiceId === null && !!a.reason,
@@ -99,5 +99,27 @@ describe("billing seed", () => {
     expect(outcomes[subOf("Saint-Louis Route").id]).toBe("failure");
     expect(outcomes[subOf("Fatick Lines").id]).toBe("success");
     expect(Object.keys(outcomes)).toHaveLength(3);
+  });
+});
+
+describe("billing seed coherence", () => {
+  it("gives trial subscriptions no invoice and no attempt, activated trialDays before the trial end", () => {
+    const s = getStore();
+    for (const sub of s.subscriptions.filter((x) => x.status === "trial")) {
+      expect(s.invoices.filter((i) => i.subscriptionId === sub.id)).toHaveLength(0);
+      expect(s.paymentAttempts.filter((a) => a.subscriptionId === sub.id)).toHaveLength(0);
+      const plan = s.plans.find((p) => p.id === sub.planId)!;
+      const activation = s.subscriptionHistory.find((h) => h.subscriptionId === sub.id && h.kind === "ACTIVATION")!;
+      expect(new Date(sub.trialEndDate!).getTime() - new Date(activation.at).getTime()).toBe(plan.trialDays * 86400000);
+    }
+  });
+
+  it("dates the failed invoice of an unpaid subscription on its pastDueSince day", () => {
+    const s = getStore();
+    for (const sub of s.subscriptions.filter((x) => x.status === "past_due")) {
+      const failed = s.invoices.filter((i) => i.subscriptionId === sub.id && i.status === "failed");
+      expect(failed).toHaveLength(1);
+      expect(failed[0]!.issuedAt).toBe(sub.pastDueSince);
+    }
   });
 });

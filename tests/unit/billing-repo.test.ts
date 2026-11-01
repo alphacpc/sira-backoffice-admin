@@ -114,7 +114,7 @@ describe("subscriptionsRepo.retryPayment", () => {
     const invoice = getStore().invoices.find((i) => i.id === attempt.invoiceId)!;
     expect(invoice).toMatchObject({
       status: "paid", subscriptionId: sub.id, companyId: sub.companyId, amount: 25000,
-      number: "INV-2026-0032", issuedAt: at.toISOString(),
+      number: "INV-2026-0028", issuedAt: at.toISOString(),
     });
     expect(sub.status).toBe("active");
     expect(sub.pastDueSince).toBeNull();
@@ -199,7 +199,7 @@ describe("invoicesRepo", () => {
 
   it("lists invoices newest first, filters by status and projects exactly the allowed keys", () => {
     const all = invoicesRepo.listRows();
-    expect(all).toHaveLength(30);
+    expect(all).toHaveLength(26);
     expect(all.map((i) => i.issuedAt)).toEqual([...all.map((i) => i.issuedAt)].sort().reverse());
     for (const r of all) expect(Object.keys(r).sort()).toEqual(ALLOWED);
     expect(invoicesRepo.list({ status: "failed" })).toHaveLength(2);
@@ -220,11 +220,27 @@ describe("paymentsRepo", () => {
 
   it("lists attempts newest first, filters by status and projects exactly the allowed keys", () => {
     const all = paymentsRepo.listRows();
-    expect(all).toHaveLength(34);
+    expect(all).toHaveLength(30);
     expect(all.map((p) => p.at)).toEqual([...all.map((p) => p.at)].sort().reverse());
     for (const r of all) expect(Object.keys(r).sort()).toEqual(ALLOWED);
     const failed = paymentsRepo.listRows({ status: "failed" });
     expect(failed).toHaveLength(6);
     expect(failed.filter((p) => p.invoiceId === null).every((p) => p.invoiceNumber === null)).toBe(true);
+  });
+});
+
+describe("next billing date after a successful retry (one month, clamped to month end)", () => {
+  it.each([
+    ["2027-01-31T08:00:00.000Z", "2027-02-28T08:00:00.000Z"],
+    ["2028-01-31T08:00:00.000Z", "2028-02-29T08:00:00.000Z"],
+    ["2027-03-30T08:00:00.000Z", "2027-04-30T08:00:00.000Z"],
+    ["2027-03-31T08:00:00.000Z", "2027-04-30T08:00:00.000Z"],
+    ["2027-12-15T08:00:00.000Z", "2028-01-15T08:00:00.000Z"],
+    ["2027-12-31T08:00:00.000Z", "2028-01-31T08:00:00.000Z"],
+  ])("%s -> %s", (from, to) => {
+    const sub = subOf("Baobab Lines");
+    sub.nextBillingDate = from;
+    subscriptionsRepo.retryPayment(sub.id);
+    expect(sub.nextBillingDate).toBe(to);
   });
 });

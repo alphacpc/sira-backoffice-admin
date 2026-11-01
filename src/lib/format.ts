@@ -26,3 +26,8 @@ export function formatDateTime(iso: string): string {
     hour: "2-digit", minute: "2-digit", timeZone: "UTC",
   }).format(d);
 }
+
+/** Next billing date to display: none once the subscription is canceled or expired. */
+export function nextBillingLabel(status: string, date: string): string {
+  return status === "canceled" || status === "expired" ? "—" : formatDate(date);
+}

@@ -4,7 +4,7 @@ import { DetailRow } from "@/components/data/detail-row";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { formatDate, formatMoney, formatNumber } from "@/lib/format";
+import { formatDate, formatMoney, formatNumber, nextBillingLabel } from "@/lib/format";
 import { featureKindLabel, planStatusBadge, subscriptionStatusBadge } from "@/lib/labels";
 import { plansRepo } from "@/lib/repos/billing";
 
@@ -87,7 +87,7 @@ export default async function PlanPage({ params }: { params: Promise<{ id: strin
                         </td>
                         <td><StatusBadge tone={b.tone}>{b.label}</StatusBadge></td>
                         <td className="tabular-nums">{formatMoney(s.price, s.currency)}</td>
-                        <td>{formatDate(s.nextBillingDate)}</td>
+                        <td>{nextBillingLabel(s.status, s.nextBillingDate)}</td>
                       </tr>
                     );
                   })}

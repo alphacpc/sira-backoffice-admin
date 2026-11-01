@@ -4,7 +4,7 @@ import { KycPanel } from "@/components/company/kyc-panel";
 import { StatusBadge } from "@/components/data/status-badge";
 import { TabsWithUrl } from "@/components/data/tabs-with-url";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDate, formatDateTime, formatMoney, formatNumber } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney, formatNumber, nextBillingLabel } from "@/lib/format";
 import { companyStatusBadge, invoiceStatusBadge, subscriptionStatusBadge } from "@/lib/labels";
 import { maskEmail, maskPhone } from "@/lib/mask";
 import type { CompanyDetail } from "@/lib/types";
@@ -71,7 +71,7 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
               <Row label="Plan">{sub.planName}</Row>
               <Row label="Statut">{(() => { const b = subscriptionStatusBadge(sub.status); return <StatusBadge tone={b.tone}>{b.label}</StatusBadge>; })()}</Row>
               <Row label="Prix">{formatMoney(sub.price, sub.currency)} / {sub.billingCycle === "MONTHLY" ? "mois" : "an"}</Row>
-              <Row label="Prochaine échéance">{formatDate(sub.nextBillingDate)}</Row>
+              <Row label="Prochaine échéance">{nextBillingLabel(sub.status, sub.nextBillingDate)}</Row>
               <Row label="Détail"><Link href={`/facturation/abonnements/${sub.id}`} className="text-accent hover:underline">Voir l&apos;abonnement</Link></Row>
             </dl></CardContent></Card>
           ) : <Empty>Aucun abonnement.</Empty>}

@@ -190,7 +190,10 @@ export function buildSeed(now: Date = new Date()): Store {
         pastDueSince: pastDueDays === undefined ? null : iso(-pastDueDays),
       });
 
-      const invoices: Invoice[] = [
+      const isTrial = subStatus === "trial";
+      // A trial has not been billed yet: no invoice and no payment attempt.
+      const failedAt = pastDueDays === undefined ? iso(-30) : iso(-pastDueDays);
+      const invoices: Invoice[] = isTrial ? [] : [
         {
           id: uid(4, invSeq++), companyId: id, subscriptionId: subId,
           number: `INV-2026-${String(invSeq).padStart(4, "0")}`,
@@ -200,7 +203,8 @@ export function buildSeed(now: Date = new Date()): Store {
           id: uid(4, invSeq++), companyId: id, subscriptionId: subId,
           number: `INV-2026-${String(invSeq).padStart(4, "0")}`,
           amount: plan.price, currency: "XOF",
-          status: subStatus === "past_due" ? "failed" : "paid", issuedAt: iso(-30),
+          status: subStatus === "past_due" ? "failed" : "paid",
+          issuedAt: subStatus === "past_due" ? failedAt : iso(-30),
         },
       ];
       for (const inv of invoices) {
@@ -231,7 +235,8 @@ export function buildSeed(now: Date = new Date()): Store {
       const change = PLAN_CHANGES[i];
       store.subscriptionHistory.push({
         id: uid(14, histSeq++), subscriptionId: subId, kind: "ACTIVATION",
-        fromPlan: null, toPlan: change ? change.from : plan.name, at: iso(-120),
+        fromPlan: null, toPlan: change ? change.from : plan.name,
+        at: isTrial ? iso(5 + i - plan.trial) : iso(-120),
       });
       if (change) {
         store.subscriptionHistory.push({

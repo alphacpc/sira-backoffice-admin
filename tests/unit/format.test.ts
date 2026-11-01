@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { formatDate, formatMoney, formatNumber } from "@/lib/format";
+import { formatDate, formatMoney, formatNumber, nextBillingLabel } from "@/lib/format";
 
 const norm = (s: string) => s.replace(/[\u00a0\u202f]/g, " ");
 
@@ -15,5 +15,16 @@ describe("format", () => {
   });
   it("returns a dash for an invalid date", () => {
     expect(formatDate("nope")).toBe("—");
+  });
+});
+
+describe("nextBillingLabel", () => {
+  it("hides the date for canceled and expired subscriptions", () => {
+    expect(nextBillingLabel("canceled", "2026-11-10T00:00:00.000Z")).toBe("—");
+    expect(nextBillingLabel("expired", "2026-11-10T00:00:00.000Z")).toBe("—");
+  });
+  it("shows the date otherwise", () => {
+    for (const st of ["active", "trial", "past_due", "suspended"])
+      expect(nextBillingLabel(st, "2026-11-10T00:00:00.000Z")).toBe("10/11/2026");
   });
 });

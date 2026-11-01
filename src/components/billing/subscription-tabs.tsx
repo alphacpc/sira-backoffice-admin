@@ -3,7 +3,7 @@ import { DetailRow } from "@/components/data/detail-row";
 import { StatusBadge } from "@/components/data/status-badge";
 import { TabsWithUrl } from "@/components/data/tabs-with-url";
 import { Card, CardContent } from "@/components/ui/card";
-import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
+import { formatDate, formatDateTime, formatMoney, nextBillingLabel } from "@/lib/format";
 import {
   billingCycleLabel, changeKindLabel, invoiceStatusBadge, paymentStatusBadge, subscriptionStatusBadge,
 } from "@/lib/labels";
@@ -34,7 +34,7 @@ export function SubscriptionTabs({ detail, initialTab }: { detail: SubscriptionD
           <DetailRow label="Statut"><StatusBadge tone={status.tone}>{status.label}</StatusBadge></DetailRow>
           <DetailRow label="Cycle de facturation">{billingCycleLabel(sub.billingCycle)}</DetailRow>
           <DetailRow label="Prix">{formatMoney(sub.price, sub.currency)}</DetailRow>
-          <DetailRow label="Prochaine échéance">{formatDate(sub.nextBillingDate)}</DetailRow>
+          <DetailRow label="Prochaine échéance">{nextBillingLabel(sub.status, sub.nextBillingDate)}</DetailRow>
           <DetailRow label="Fin de l'essai">{sub.trialEndDate ? formatDate(sub.trialEndDate) : "—"}</DetailRow>
           <DetailRow label="Impayé depuis">{sub.pastDueSince ? formatDate(sub.pastDueSince) : "—"}</DetailRow>
         </dl></CardContent></Card>

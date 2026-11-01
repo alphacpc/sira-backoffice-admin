@@ -3,7 +3,7 @@
 import type { ColumnDef } from "@tanstack/react-table";
 import { DataTable } from "@/components/data/data-table";
 import { StatusBadge } from "@/components/data/status-badge";
-import { formatDate, formatMoney } from "@/lib/format";
+import { formatDate, formatMoney, nextBillingLabel } from "@/lib/format";
 import { billingCycleLabel, subscriptionStatusBadge } from "@/lib/labels";
 import type { SubscriptionRow } from "@/lib/repos/billing";
 
@@ -22,7 +22,7 @@ const columns: ColumnDef<SubscriptionRow, unknown>[] = [
     accessorKey: "price", header: "Prix",
     cell: ({ row }) => <span className="tabular-nums">{formatMoney(row.original.price, row.original.currency)}</span>,
   },
-  { accessorKey: "nextBillingDate", header: "Prochaine échéance", cell: ({ row }) => formatDate(row.original.nextBillingDate) },
+  { accessorKey: "nextBillingDate", header: "Prochaine échéance", cell: ({ row }) => nextBillingLabel(row.original.status, row.original.nextBillingDate) },
 ];
 
 export function SubscriptionsTable({ subscriptions }: { subscriptions: SubscriptionRow[] }) {
