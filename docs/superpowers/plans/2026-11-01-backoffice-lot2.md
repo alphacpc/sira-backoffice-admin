@@ -4097,7 +4097,7 @@ Lot 1 : socle, Vue 360, Compagnies. Lot 2 : offre (plans, fonctionnalités, pali
 2. Dans « Architecture », ajouter après la puce `src/app/(admin)` :
 
 ```markdown
-- `src/lib/actions/run.ts` : point d'entrée commun des Server Actions (session vérifiée avant toute lecture ou écriture, résultat `ok`/erreur, motif ≤ 500 caractères). Les actions vivent dans `compagnies/actions.ts`, `facturation/actions.ts` et `offre/actions.ts`.
+- `src/lib/actions/run.ts` : point d'entrée commun des Server Actions (session vérifiée avant toute lecture ou écriture, résultat `ok`/erreur, motif refusé au-delà de 500 caractères). Les actions vivent dans `compagnies/actions.ts`, `facturation/actions.ts` et `offre/actions.ts`.
 - `src/lib/repos/billing.ts` : plans, fonctionnalités, paliers, registre des types KYC (source de l'activation automatique), abonnements, factures, paiements et file des impayés. Les composants clients ne reçoivent que des projections (`PlanRow`, `SubscriptionRow`, `InvoiceRow`, `PaymentRow`, `UnpaidRow`).
 ```
 

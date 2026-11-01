@@ -6,7 +6,7 @@ Date : 2026-11-01. Statut : en attente de validation. Référence : `docs/sitema
 
 - Style C (clair et sombre), français uniquement, données **statiques typées** en mémoire, aucun appel réseau, aucune connexion au backend.
 - Pages = Server Components lisant des dépôts (`src/lib/repos`). Mutations = Server Actions qui appellent `requireSession()` en premier et renvoient un `ActionResult` (`{ ok: true } | { ok: false; error: string }`), jamais d'exception pour un échec attendu.
-- Actions sensibles : confirmation et motif obligatoire (≤ 500 caractères), tracées dans l'activité. Aucune donnée personnelle envoyée au client : les composants clients ne reçoivent que des projections sans contact (règle vérifiée par un test E2E sur le HTML de production).
+- Actions sensibles : confirmation et motif obligatoire (refusé au-delà de 500 caractères), tracées dans l'activité. Aucune donnée personnelle envoyée au client : les composants clients ne reçoivent que des projections sans contact (règle vérifiée par un test E2E sur le HTML de production).
 - Composants réutilisés : `DataTable`, `StatusBadge`, `KpiCard`, `PageHeader`, `ConfirmDialog`, `TabsWithUrl`, `Card*`, badges de `labels.ts`.
 
 ## Périmètre
@@ -51,7 +51,7 @@ Graine : 3 plans (Starter, Pro, Enterprise) plus 1 plan inactif (« Legacy »), 
 
 ## Tests
 
-- Vitest : dépôts (filtres, règles de relance et d'annulation, bascule KYC, calcul des jours avant suspension), actions (session d'abord, `ActionResult`, motif tronqué à 500, aucune écriture si la session échoue), cohérence de la graine (chaque abonnement a un plan, chaque facture une tentative, totaux).
+- Vitest : dépôts (filtres, règles de relance et d'annulation, bascule KYC, calcul des jours avant suspension), actions (session d'abord, `ActionResult`, motif refusé au-delà de 500 caractères, aucune écriture si la session échoue), cohérence de la graine (chaque abonnement a un plan, chaque facture une tentative, totaux).
 - Playwright : parcours « impayé → relance réussie → abonnement actif », « annuler avec motif obligatoire », « désactiver un type KYC puis activer une compagnie sans ce document », lecture d'une facture ; test `@prod` étendu aux nouvelles pages pour vérifier l'absence de coordonnées de contact dans le HTML.
 - Une revue de sécurité des frontières serveur/client pour chaque nouveau composant client (tableaux, boutons d'action).
 

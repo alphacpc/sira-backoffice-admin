@@ -19,6 +19,8 @@ export async function retrySubscriptionPayment(subscriptionId: string): Promise<
     requireString(subscriptionId, "Abonnement");
     const attempt = subscriptionsRepo.retryPayment(subscriptionId, actor);
     refreshBilling(subscriptionId, attempt.companyId);
+    // The failure is signalled by throwing inside run()'s body, AFTER the failed attempt
+    // has been persisted and the pages revalidated: run() turns it into an error result.
     if (attempt.status === "failed") {
       throw new Error(`Échec du paiement : ${attempt.reason ?? "motif inconnu"}`);
     }

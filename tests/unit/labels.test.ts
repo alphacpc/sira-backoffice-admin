@@ -37,6 +37,16 @@ describe("urgencyBadge", () => {
     expect(urgencyBadge("suspension", 5)).toEqual({ label: "5 j avant suspension", tone: "warning" });
     expect(urgencyBadge("suspension", 2)).toEqual({ label: "2 j avant suspension", tone: "danger" });
   });
+  it("has exact tone boundaries", () => {
+    const t = (d: number) => urgencyBadge("suspension", d);
+    expect(t(6)).toEqual({ label: "6 j avant suspension", tone: "neutral" });
+    expect(t(5).tone).toBe("warning");
+    expect(t(3)).toEqual({ label: "3 j avant suspension", tone: "warning" });
+    expect(t(2).tone).toBe("danger");
+    expect(t(1)).toEqual({ label: "1 j avant suspension", tone: "danger" });
+    expect(t(0)).toEqual({ label: "Suspension aujourd'hui", tone: "danger" });
+    expect(t(-1)).toEqual({ label: "Suspension dépassée de 1 j", tone: "danger" });
+  });
   it("says today on the deadline day", () => {
     expect(urgencyBadge("suspension", 0)).toEqual({ label: "Suspension aujourd'hui", tone: "danger" });
   });
