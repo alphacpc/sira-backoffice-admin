@@ -8,6 +8,7 @@ import { EASE, useReduce } from "@/components/motion";
 import Logo from "@/components/Logo";
 
 const links = [
+  { href: "/", label: "Accueil" },
   { href: "/solution", label: "La solution" },
   { href: "/pour-qui", label: "Pour qui" },
   { href: "/securite", label: "Sécurité" },
@@ -52,7 +53,7 @@ export default function Nav() {
       >
         <Logo />
 
-        <ul className="hidden items-center gap-8 md:flex">
+        <ul className="hidden items-center gap-5 lg:gap-8 md:flex">
           {links.map((link) => {
             const active = pathname === link.href;
             return (
@@ -60,7 +61,7 @@ export default function Nav() {
                 <Link
                   href={link.href}
                   aria-current={active ? "page" : undefined}
-                  className={`relative text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${
+                  className={`relative whitespace-nowrap text-sm font-medium transition focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy ${
                     active
                       ? "font-bold text-navy underline decoration-amber decoration-2 underline-offset-8"
                       : "text-navy/75 hover:text-navy after:pointer-events-none after:absolute after:inset-x-0 after:-bottom-[7px] after:h-0.5 after:origin-left after:scale-x-0 after:rounded-full after:bg-amber after:transition-transform after:duration-300 after:ease-out hover:after:scale-x-100 focus-visible:after:scale-x-100 motion-reduce:after:transition-none"
@@ -75,7 +76,7 @@ export default function Nav() {
 
         <Link
           href="/demo"
-          className="hidden rounded-full bg-amber px-5 py-2.5 text-sm font-semibold text-navy transition hover:bg-amber-dark md:inline-block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
+          className="hidden rounded-full bg-amber px-4 py-2.5 text-sm font-semibold text-navy transition hover:bg-amber-dark md:inline-block lg:px-5 whitespace-nowrap focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
         >
           Demander une démo
         </Link>
