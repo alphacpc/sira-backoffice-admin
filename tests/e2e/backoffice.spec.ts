@@ -198,6 +198,22 @@ test("canceling a subscription requires a reason and records the change", async 
   await expect(page.getByRole("cell", { name: "Annulation" })).toBeVisible();
 });
 
+test("an invoice can be read from the invoices list and links to its subscription", async ({ page }) => {
+  await login(page);
+  await page.goto("/facturation/factures");
+  await page.getByPlaceholder("Rechercher une facture…").fill("INV-2026-0003");
+  await page.getByRole("row", { name: /INV-2026-0003/ }).click();
+  await expect(page.getByRole("heading", { name: "Facture INV-2026-0003" })).toBeVisible();
+  await expect(page.getByTestId("invoice-status")).toHaveText("Payée");
+  await expect(page.getByRole("link", { name: "Sahel Express" })).toBeVisible();
+
+  await page.getByRole("link", { name: "Voir l'abonnement" }).click();
+  await expect(page.getByRole("heading", { name: "Abonnement de Sahel Express" })).toBeVisible();
+
+  await page.goto("/facturation/factures/00000000-0000-4000-8000-00000000dead");
+  await expect(page.getByText("Facture introuvable")).toBeVisible();
+});
+
 test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
   await page.goto("/compagnies");
