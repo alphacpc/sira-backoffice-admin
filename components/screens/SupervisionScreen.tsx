@@ -20,7 +20,7 @@ export function SupervisionScreen() {
       subtitle="État des services"
       badge={<Pill tone="navy">Interne</Pill>}
     >
-      <div className="grid grid-cols-2 gap-2">
+      <div className="grid grid-cols-1 gap-2 min-[420px]:grid-cols-2">
         {services.map((s) => (
           <div key={s} className="flex items-center justify-between gap-2 rounded-2xl bg-white px-3 py-2.5 shadow-[0_0_0_1px_rgb(30_39_73/0.06)]">
             <span className="text-[13px] font-extrabold text-navy">{s}</span>

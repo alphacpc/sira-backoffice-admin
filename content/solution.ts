@@ -2,6 +2,7 @@ export type ChapterId = "flotte" | "billetterie" | "colis" | "equipes" | "pilota
 
 export interface Chapter {
   id: ChapterId;
+  stop: { code: string; name: string };
   icon: string;
   title: string;
   tagline: string;
@@ -13,6 +14,7 @@ export interface Chapter {
 export const chapters: Chapter[] = [
   {
     id: "flotte",
+    stop: { code: "FLO", name: "Flotte" },
     icon: "bus",
     title: "Flotte et trajets",
     tagline: "Savoir où est chaque bus et ce qu'il devient.",
@@ -30,6 +32,7 @@ export const chapters: Chapter[] = [
   },
   {
     id: "billetterie",
+    stop: { code: "BIL", name: "Billetterie" },
     icon: "ticket",
     title: "Billetterie et paiement",
     tagline: "Vendre au guichet et en ligne, sans vendre deux fois le même siège.",
@@ -50,6 +53,7 @@ export const chapters: Chapter[] = [
   },
   {
     id: "colis",
+    stop: { code: "COL", name: "Colis" },
     icon: "package",
     title: "Colis",
     tagline: "Un colis suivi à chaque étape, par son expéditeur comme par son destinataire.",
@@ -66,6 +70,7 @@ export const chapters: Chapter[] = [
   },
   {
     id: "equipes",
+    stop: { code: "EQP", name: "Équipes" },
     icon: "users",
     title: "Équipes (RH)",
     tagline: "Vos employés, leurs plannings, leurs congés et leur paie.",
@@ -82,6 +87,7 @@ export const chapters: Chapter[] = [
   },
   {
     id: "pilotage",
+    stop: { code: "PIL", name: "Pilotage" },
     icon: "shield",
     title: "Clients, abonnement et conformité",
     tagline: "Fidéliser, facturer et rester en règle.",
