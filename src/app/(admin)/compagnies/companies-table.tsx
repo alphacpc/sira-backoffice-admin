@@ -5,9 +5,9 @@ import { DataTable } from "@/components/data/data-table";
 import { StatusBadge } from "@/components/data/status-badge";
 import { formatDate } from "@/lib/format";
 import { companyStatusBadge } from "@/lib/labels";
-import type { Company } from "@/lib/types";
+import type { CompanyRow } from "@/lib/repos/companies";
 
-const columns: ColumnDef<Company, unknown>[] = [
+const columns: ColumnDef<CompanyRow, unknown>[] = [
   { accessorKey: "name", header: "Nom", cell: ({ row }) => <span className="font-medium">{row.original.name}</span> },
   { accessorKey: "slug", header: "Identifiant", cell: ({ row }) => <span className="text-muted-foreground">{row.original.slug}</span> },
   {
@@ -25,7 +25,7 @@ const columns: ColumnDef<Company, unknown>[] = [
   },
 ];
 
-export function CompaniesTable({ companies }: { companies: Company[] }) {
+export function CompaniesTable({ companies }: { companies: CompanyRow[] }) {
   return (
     <DataTable
       columns={columns} data={companies} rowHref={(c) => `/compagnies/${c.id}`}

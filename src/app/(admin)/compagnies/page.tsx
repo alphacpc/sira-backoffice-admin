@@ -21,7 +21,7 @@ export default async function CompagniesPage({
   const { statut } = await searchParams;
   const status = FILTERS.some((f) => f.value === statut && f.value !== "all")
     ? (statut as CompanyStatus) : undefined;
-  const companies = companiesRepo.list({ status });
+  const companies = companiesRepo.listRows({ status });
   return (
     <>
       <PageHeader title="Compagnies" description="Les compagnies de transport clientes de la plateforme." />

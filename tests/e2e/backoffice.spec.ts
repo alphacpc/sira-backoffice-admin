@@ -138,3 +138,24 @@ test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await page.goto("/facturation/factures");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
 });
+
+test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
+  await login(page);
+  await page.goto("/compagnies");
+  await page.getByPlaceholder("Rechercher une compagnie…").fill("matam");
+  await page.getByRole("row", { name: /Matam Express/ }).click();
+  await expect(page.getByRole("heading", { name: /Matam Express/ })).toBeVisible();
+  const companyPath = new URL(page.url()).pathname;
+
+  const EMAIL = /contact@[a-z0-9-]+\.sn/;
+  const PHONES = [/\+2217712\d{5}/, /\+2217865\d{5}/];
+  for (const path of ["/compagnies", "/compagnies?statut=draft", "/compagnies/kyc", "/", companyPath]) {
+    const raw = await (await page.request.get(path)).text();
+    expect(raw, `raw ${path}`).not.toMatch(EMAIL);
+    for (const re of PHONES) expect(raw, `raw ${path}`).not.toMatch(re);
+    await page.goto(path);
+    const rendered = await page.content();
+    expect(rendered, `dom ${path}`).not.toMatch(EMAIL);
+    for (const re of PHONES) expect(rendered, `dom ${path}`).not.toMatch(re);
+  }
+});

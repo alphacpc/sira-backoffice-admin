@@ -4,6 +4,9 @@ import type {
   ActivityEntry, Company, CompanyDetail, CompanyStatus, KycDocument,
 } from "@/lib/types";
 
+/** Projection safe to hand to a client component: no contact data. */
+export type CompanyRow = Pick<Company, "id" | "slug" | "name" | "status" | "partnerTier" | "createdAt" | "activatedAt">;
+
 export interface KycQueueItem extends KycDocument { companyName: string }
 
 let actCounter = 1;
@@ -36,6 +39,13 @@ export const companiesRepo = {
         (!filter.status || c.status === filter.status) &&
         (!q || c.name.toLowerCase().includes(q) || c.slug.includes(q)),
     );
+  },
+
+  listRows(filter: { status?: CompanyStatus; q?: string } = {}): CompanyRow[] {
+    return companiesRepo.list(filter).map((c) => ({
+      id: c.id, slug: c.slug, name: c.name, status: c.status,
+      partnerTier: c.partnerTier, createdAt: c.createdAt, activatedAt: c.activatedAt,
+    }));
   },
 
   get(id: string): Company | undefined {

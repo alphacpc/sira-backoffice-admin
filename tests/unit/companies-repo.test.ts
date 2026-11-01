@@ -133,3 +133,17 @@ describe("companiesRepo.detail activity order", () => {
     expect(activity[0]!.action).toMatch(/rejeté/);
   });
 });
+
+describe("companiesRepo.listRows", () => {
+  const ALLOWED = ["activatedAt", "createdAt", "id", "name", "partnerTier", "slug", "status"];
+  it("exposes exactly the allowed keys at runtime", () => {
+    const rows = companiesRepo.listRows();
+    expect(rows).toHaveLength(20);
+    for (const r of rows) expect(Object.keys(r).sort()).toEqual(ALLOWED);
+  });
+  it("filters like list()", () => {
+    expect(companiesRepo.listRows({ status: "draft" }).map((r) => r.id))
+      .toEqual(companiesRepo.list({ status: "draft" }).map((c) => c.id));
+    expect(companiesRepo.listRows({ q: "KOLDA" }).map((r) => r.name)).toEqual(["Kolda Voyages"]);
+  });
+});
