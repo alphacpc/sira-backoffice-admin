@@ -3,7 +3,6 @@ import { ButtonLink, Title2 } from "@/components/ui";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { chapters } from "@/content/solution";
 import { FooterLink } from "@/components/footer/FooterLink";
-import { FooterRoute } from "@/components/footer/FooterTop";
 
 const site = [
   { href: "/", label: "Accueil" },
@@ -28,22 +27,9 @@ export default function Footer() {
   return (
     <footer className="relative mt-4">
       <div className="relative overflow-hidden bg-gradient-to-b from-navy to-navy-deep text-white">
-        {/* Anneaux très discrets */}
-        <svg aria-hidden="true" className="pointer-events-none absolute -right-40 top-10 h-[520px] w-[520px] text-amber/[0.07]" viewBox="0 0 520 520" fill="none">
-          <circle cx="260" cy="260" r="255" stroke="currentColor" strokeWidth="1.5" />
-          <circle cx="260" cy="260" r="190" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 8" />
-          <circle cx="260" cy="260" r="125" stroke="currentColor" strokeWidth="1.5" />
-        </svg>
-        <svg aria-hidden="true" className="pointer-events-none absolute -left-44 bottom-24 h-[420px] w-[420px] text-amber/[0.05]" viewBox="0 0 420 420" fill="none">
-          <circle cx="210" cy="210" r="205" stroke="currentColor" strokeWidth="1.5" />
-          <circle cx="210" cy="210" r="140" stroke="currentColor" strokeWidth="1.5" strokeDasharray="4 8" />
-        </svg>
-
         <div className="relative mx-auto max-w-6xl px-6 pb-8 pt-12 lg:pt-14">
-          <FooterRoute />
-
           {/* Bande d'appel : un billet à souche */}
-          <div className="relative mt-10 overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-navy-dark to-navy-deep lg:mt-12">
+          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-navy-dark to-navy-deep">
             <Stagger className="flex flex-col md:flex-row md:items-stretch" stagger={0.07}>
               <StaggerItem className="flex-1 px-7 py-9 sm:px-10 sm:py-11">
                 <p className={heading}>DKR → TBA · Prochain départ</p>
