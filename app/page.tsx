@@ -279,43 +279,6 @@ export default function HomePage() {
         </Container>
       </section>
 
-      {/* 6. Bandeau final */}
-      <section className="bg-paper pb-20 lg:pb-28">
-        <Container>
-          <Reveal>
-            <Coupon
-              tone="navy"
-              notch="#fafafa"
-              stub={
-                <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
-                  <p
-                    aria-hidden="true"
-                    className="flex items-center gap-3 font-mono text-sm font-bold tracking-[0.12em] text-white"
-                  >
-                    DKR
-                    <RouteLine className="flex-1 sm:w-40 sm:flex-none" />
-                    <span className="text-amber">TBA</span>
-                  </p>
-                  <ButtonLink href="/demo" variant="accent">
-                    Demander une démo
-                  </ButtonLink>
-                </div>
-              }
-            >
-              <div className="px-2 py-6 lg:px-8 lg:py-10">
-                <Eyebrow tone="dark">Prochaine étape</Eyebrow>
-                <Title2
-                  tone="dark"
-                  as="h2"
-                  lead="Voyez Sira"
-                  accent="sur l'exploitation d'une compagnie."
-                  className="mt-4 max-w-3xl text-4xl sm:text-5xl lg:text-6xl"
-                />
-              </div>
-            </Coupon>
-          </Reveal>
-        </Container>
-      </section>
     </main>
   );
 }
