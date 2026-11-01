@@ -2,16 +2,6 @@ import Image from "next/image";
 import { Container, Eyebrow, ButtonLink, Title2 } from "@/components/ui";
 import { Enter, Drift } from "@/components/motion";
 import { PhotoCard } from "@/components/PhotoCard";
-import { chapters } from "@/content/solution";
-import { DeparturesBoard, type BoardRow } from "@/components/hero/DeparturesBoard";
-
-const rows: BoardRow[] = chapters.map((c, i) => ({
-  n: String(i + 1).padStart(2, "0"),
-  code: c.stop.code,
-  name: c.stop.name,
-  tagline: c.tagline,
-  href: `#${c.id}`,
-}));
 
 const fadeBottom = {
   WebkitMaskImage: "linear-gradient(to bottom, #000 62%, transparent 97%)",
@@ -51,7 +41,7 @@ function Rings() {
 
 function Collage() {
   return (
-    <div className="relative mx-auto mt-4 aspect-[1/0.92] w-full max-w-[520px] lg:absolute lg:inset-y-0 lg:right-0 lg:mx-0 lg:mt-0 lg:aspect-auto lg:w-[50%] lg:max-w-none">
+    <div className="relative mx-auto mt-4 aspect-[1/0.95] w-full max-w-[600px] lg:absolute lg:inset-y-0 lg:right-0 lg:mx-0 lg:mt-0 lg:aspect-auto lg:w-[52%] lg:max-w-none">
       {/* Route DKR → TBA qui traverse le collage */}
       <svg
         aria-hidden="true"
@@ -99,14 +89,14 @@ function Collage() {
         enter={{ delay: 0.3, x: -40, y: 50, rotate: -6 }}
         parallax="page"
         sizes="(min-width: 1024px) 22vw, 40vw"
-        className="absolute bottom-[3%] left-[12%] z-20 w-[36%] -rotate-3 [&>div]:rounded-[1.5rem]"
+        className="absolute bottom-[5%] left-[8%] z-20 w-[32%] -rotate-3 [&>div]:rounded-[1.5rem]"
       />
       <Enter
         trigger="mount"
         y={50}
         delay={0.5}
         duration={0.8}
-        className="absolute bottom-[5%] left-[44%] z-[24] w-[21%] -rotate-2 drop-shadow-[0_22px_28px_rgba(13,18,38,0.4)]"
+        className="absolute bottom-[5%] left-[41%] z-[24] w-[27%] -rotate-2 drop-shadow-[0_22px_28px_rgba(13,18,38,0.4)]"
         style={fadeBottom}
       >
         {/* Écran des sièges, recadré sur le plan comme à l'arrêt Billetterie. */}
@@ -116,7 +106,7 @@ function Collage() {
             alt="Plan des sièges du bus, deux places choisies."
             width={820}
             height={1576}
-            sizes="(min-width: 1024px) 10vw, 24vw"
+            sizes="(min-width: 1024px) 14vw, 30vw"
             className="block h-auto w-full"
           />
         </div>
@@ -126,7 +116,7 @@ function Collage() {
         y={70}
         delay={0.6}
         duration={0.8}
-        className="absolute bottom-[0%] right-[3%] z-30 w-[25%] rotate-2 drop-shadow-[0_24px_30px_rgba(13,18,38,0.4)]"
+        className="absolute bottom-[2%] right-[3%] z-30 w-[24%] rotate-2 drop-shadow-[0_24px_30px_rgba(13,18,38,0.4)]"
         style={fadeBottom}
       >
         <Image
@@ -143,7 +133,7 @@ function Collage() {
         delay={0.9}
         y={8}
         duration={0.5}
-        className="absolute bottom-[-1%] left-[0%] z-[32] rounded-full border border-amber bg-white px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-amber-ink"
+        className="absolute bottom-[1%] left-[0%] z-[32] rounded-full border border-amber bg-white px-3 py-1.5 font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-amber-ink"
       >
         <span aria-hidden="true">DKR → TBA</span>
       </Enter>
@@ -154,12 +144,12 @@ function Collage() {
 export function Hero() {
   return (
     <section
-      className="relative flex flex-col overflow-hidden bg-paper lg:min-h-[min(calc(100svh-4.75rem),860px)]"
+      className="relative flex flex-col overflow-hidden bg-paper lg:min-h-[calc(100svh-4.75rem)]"
     >
       <Rings />
 
-      <div className="relative flex flex-1 flex-col lg:flex-row lg:items-center">
-        <Container className="relative w-full pb-10 pt-12 lg:pb-8 lg:pt-10">
+      <div className="relative flex flex-1 flex-col lg:min-h-[640px] lg:flex-row lg:items-center">
+        <Container className="relative w-full pb-6 pt-12 lg:py-12">
           <div className="lg:max-w-[600px]">
             <Enter trigger="mount" y={14} duration={0.6}>
               <Eyebrow>Pour les compagnies d&apos;autocars d&apos;Afrique de l&apos;Ouest</Eyebrow>
@@ -194,9 +184,6 @@ export function Hero() {
         <div className="px-6 pb-4 lg:contents lg:p-0"><Collage /></div>
       </div>
 
-      <Container className="relative w-full pb-10 pt-3 lg:pb-10">
-        <DeparturesBoard rows={rows} />
-      </Container>
       <Container className="relative w-full">
         <div aria-hidden="true" className="border-t-2 border-dashed border-ink/20" />
       </Container>
