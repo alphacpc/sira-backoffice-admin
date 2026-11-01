@@ -1,50 +1,29 @@
 # Site vitrine Sira
 
-Site de présentation statique de la solution Sira — **ce n'est pas** le client SaaS du produit
-(celui-ci reste prévu pour la Phase 7 de `docs/implementation-roadmap.md`, une fois l'API stable
-et documentée). Ce site ne fait aucun appel réseau vers un microservice Sira.
+Site statique de présentation de la plateforme Sira, destiné aux compagnies de transport
+interurbain. Il ne fait aucun appel réseau vers un service Sira. Le client SaaS est l'application
+`web/` du dépôt principal.
 
-Voir `docs/superpowers/specs/2026-09-28-showcase-website-design.md` pour le design d'origine, et
-`docs/site-vitrine-synthese.md` pour la synthèse de la solution qui sert de source de contenu.
+Design : `docs/superpowers/specs/2026-11-01-website-redesign-design.md` (dépôt `sira`).
 
-## Démarrer en local
+## Démarrer
 
 ```bash
 pnpm install
-pnpm dev
-```
-
-Le site est servi sur `http://localhost:3000`.
-
-## Build de production
-
-```bash
+pnpm dev        # http://localhost:3000
 pnpm build
-pnpm start
+pnpm check      # règles de contenu, redirections, liens internes
 ```
 
-## Plan du site
+## Pages
 
-- `/` — Accueil
-- `/pourquoi-sira` — Ce qui rend la plateforme différente
-- `/solutions` — Ce que Sira permet, par rôle (compagnie, guichet, terrain, passager)
-- `/services` — Détail des 9 domaines métier
-- `/tarifs` — Plans et tarifs (indicatifs)
-- `/reservation` — Comment réserver un billet en ligne
-- `/reseau` — Le réseau (gares, lignes, hubs) et la couverture
-- `/applications` — Applications mobiles (à venir)
-- `/entreprises` — Ce que Sira change pour les compagnies de transport
-- `/architecture` — Architecture technique (services, composants transverses, stack)
-- `/methode` — Backend-first, microservices, qualité et observabilité
-- `/securite` — Sécurité & conformité (isolation, RGPD, secrets)
-- `/faq` — Questions fréquentes
-- `/contact` — Contact & demande de démonstration (sans envoi réel)
-- `/mentions-legales` — Mentions légales
-- `/confidentialite` — Politique de confidentialité
-- `/cgu` — Conditions générales d'utilisation
+`/` · `/solution` · `/pour-qui` · `/securite` · `/tarifs` · `/demo` · `/mentions-legales` ·
+`/confidentialite` · `/cgu`. Les anciennes adresses redirigent (voir `next.config.ts`).
 
-## Structure du contenu
+## Règles de contenu
 
-Le contenu est extrait dans `content/*.ts` (services, architecture, solutions, method, security,
-why-sira, companies, pricing, faq, reservation, network, apps, legal) pour rester facilement
-éditable, plutôt que codé en dur dans le JSX.
+- Aucun chiffre, client, témoignage ni prix inventé : les tarifs sont « Sur devis ».
+- Une fonction non livrée est étiquetée « à venir ».
+- Les maquettes sont des composants (`components/mockups`) alimentés par `content/mock-data.ts`
+  et légendées « Maquette — données fictives ».
+- `pnpm check` échoue si une affirmation interdite apparaît (voir `scripts/check-site.mjs`).

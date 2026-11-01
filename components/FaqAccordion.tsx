@@ -15,23 +15,23 @@ export default function FaqAccordion({ items }: { items: FaqItem[] }) {
           <div
             key={item.question}
             className={`overflow-hidden rounded-2xl border bg-white transition-colors ${
-              isOpen ? "border-accent/40" : "border-primary/10"
+              isOpen ? "border-forest/40" : "border-ink/10"
             }`}
           >
             <button
               type="button"
               onClick={() => setOpenIndex(isOpen ? null : index)}
-              className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left"
+              className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
               aria-expanded={isOpen}
             >
-              <span className="text-lg font-semibold text-primary">
+              <span className="text-lg font-semibold text-ink">
                 {item.question}
               </span>
               <span
                 className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg transition-colors ${
                   isOpen
-                    ? "bg-accent text-white"
-                    : "bg-primary/5 text-primary"
+                    ? "bg-forest text-white"
+                    : "bg-ink/10 text-ink"
                 }`}
               >
                 <motion.span
@@ -51,7 +51,7 @@ export default function FaqAccordion({ items }: { items: FaqItem[] }) {
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
                 >
-                  <p className="px-6 pb-6 text-primary/70">{item.answer}</p>
+                  <p className="px-6 pb-6 text-ink/75">{item.answer}</p>
                 </motion.div>
               )}
             </AnimatePresence>
