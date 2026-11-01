@@ -44,6 +44,10 @@ export default function RootLayout({
   return (
     <html lang="fr" className={`${gellix.variable}`}>
       <body className="flex min-h-screen flex-col antialiased">
+        {/* Sans JavaScript, aucun contenu ne reste caché par un état initial d'animation. */}
+        <noscript>
+          <style>{`[data-motion]{opacity:1!important;transform:none!important;clip-path:none!important;scale:none!important}`}</style>
+        </noscript>
         <a
           href="#contenu"
           className="sr-only focus:not-sr-only focus:fixed focus:left-4 focus:top-4 focus:z-[60] focus:rounded-lg focus:bg-white focus:px-4 focus:py-2"
