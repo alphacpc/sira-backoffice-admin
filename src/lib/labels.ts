@@ -1,6 +1,7 @@
 import type { Tone } from "@/components/data/status-badge";
 import type {
-  CompanyStatus, Incident, Invoice, KycDocumentStatus, ServiceHealth, SubscriptionStatus,
+  CompanyStatus, FeatureDef, Incident, Invoice, KycDocumentStatus, PaymentAttempt, Plan,
+  ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus,
 } from "@/lib/types";
 
 type Badge = { label: string; tone: Tone };
@@ -52,3 +53,33 @@ export const invoiceStatusBadge = (s: Invoice["status"]): Badge =>
     paid: { label: "Payée", tone: "success" },
     failed: { label: "Échouée", tone: "danger" },
   }, s);
+
+export const planStatusBadge = (s: Plan["status"]): Badge =>
+  pick({
+    active: { label: "Actif", tone: "success" },
+    inactive: { label: "Inactif", tone: "neutral" },
+  }, s);
+
+export const kycTypeStatusBadge = (active: boolean): Badge =>
+  active ? { label: "Actif", tone: "success" } : { label: "Inactif", tone: "neutral" };
+
+export const paymentStatusBadge = (s: PaymentAttempt["status"]): Badge =>
+  pick({
+    paid: { label: "Payé", tone: "success" },
+    failed: { label: "Échoué", tone: "danger" },
+  }, s);
+
+const CHANGE_KIND_LABELS: Record<SubscriptionChangeKind, string> = {
+  ACTIVATION: "Activation",
+  UPGRADE: "Montée en gamme",
+  DOWNGRADE: "Descente en gamme",
+  PLAN_CHANGE: "Changement de plan",
+  CANCELLATION: "Annulation",
+};
+
+export const changeKindLabel = (k: SubscriptionChangeKind): string => CHANGE_KIND_LABELS[k];
+
+export const featureKindLabel = (k: FeatureDef["kind"]): string => (k === "boolean" ? "Activable" : "Quota");
+
+export const billingCycleLabel = (c: Subscription["billingCycle"]): string =>
+  c === "MONTHLY" ? "Mensuel" : "Annuel";

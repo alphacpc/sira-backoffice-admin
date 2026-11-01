@@ -135,8 +135,45 @@ test("the command palette opens with the keyboard and navigates to a company", a
 
 test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await login(page);
-  await page.goto("/facturation/factures");
+  await page.goto("/flotte/bus");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
+});
+
+test("deactivating KYC types lets a company activate without those documents", async ({ page }) => {
+  await login(page);
+  const types = ["Licence de transport", "Pièce d'identité du dirigeant"];
+
+  await page.goto("/offre/types-documents-kyc");
+  for (const name of types) {
+    await page.getByRole("button", { name: `Désactiver ${name}` }).click();
+    const dialog = page.getByRole("dialog");
+    const confirm = dialog.getByRole("button", { name: "Désactiver", exact: true });
+    await expect(confirm).toBeDisabled();
+    await dialog.getByLabel("Motif (obligatoire)").fill("Document non exigé pour la démonstration");
+    await confirm.click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  }
+  await expect(page.getByTestId("kyc-type-status-TRANSPORT_LICENSE")).toHaveText("Inactif");
+  await expect(page.getByTestId("kyc-type-status-ID_MANAGER")).toHaveText("Inactif");
+
+  await openCompany(page, "louga", /Louga Trans/);
+  await page.getByRole("tab", { name: "Vérification KYC" }).click();
+  await expect(page.getByText("3 / 4")).toBeVisible();
+  await page.getByRole("button", { name: "Approuver Assurance flotte" }).click();
+  await expect(page.getByText("4 / 4")).toBeVisible();
+  await expect(page.getByTestId("company-status")).toHaveText("Active");
+
+  // Restore the registry so later tests see the seed configuration.
+  await page.goto("/offre/types-documents-kyc");
+  for (const name of types) {
+    await page.getByRole("button", { name: `Réactiver ${name}` }).click();
+    const dialog = page.getByRole("dialog");
+    await dialog.getByLabel("Motif (obligatoire)").fill("Retour à la configuration initiale");
+    await dialog.getByRole("button", { name: "Réactiver", exact: true }).click();
+    await expect(page.getByRole("dialog")).toHaveCount(0);
+  }
+  await expect(page.getByTestId("kyc-type-status-TRANSPORT_LICENSE")).toHaveText("Actif");
+  await expect(page.getByTestId("kyc-type-status-ID_MANAGER")).toHaveText("Actif");
 });
 
 test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {

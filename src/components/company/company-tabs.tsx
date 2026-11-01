@@ -60,7 +60,7 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
         </CardContent></Card>
       ),
     },
-    { value: "kyc", label: "Vérification KYC", content: <KycPanel company={{ id: c.id, name: c.name, status: c.status, forceActivated: c.forceActivated }} documents={detail.documents} /> },
+    { value: "kyc", label: "Vérification KYC", content: <KycPanel company={{ id: c.id, name: c.name, status: c.status, forceActivated: c.forceActivated }} documents={detail.documents} kycTypes={detail.kycTypes.map((t) => ({ code: t.code, name: t.name, required: t.required, active: t.active }))} /> },
     {
       value: "abonnement", label: "Abonnement et paiements",
       content: (

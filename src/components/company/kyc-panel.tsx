@@ -9,16 +9,18 @@ import { KycActions } from "@/components/company/kyc-actions";
 import { Button } from "@/components/ui/button";
 import { formatDate } from "@/lib/format";
 import { kycStatusBadge } from "@/lib/labels";
-import type { Company, KycDocument } from "@/lib/types";
-import { KYC_TYPES } from "@/lib/types/kyc";
+import type { Company, KycDocument, KycDocumentType } from "@/lib/types";
 
 /** Only the fields the panel needs: this is a client component, so nothing personal may cross the boundary. */
 export type KycPanelCompany = Pick<Company, "id" | "name" | "status" | "forceActivated">;
 
-export function KycPanel({ company, documents }: { company: KycPanelCompany; documents: KycDocument[] }) {
+export function KycPanel({
+  company, documents, kycTypes,
+}: { company: KycPanelCompany; documents: KycDocument[]; kycTypes: KycDocumentType[] }) {
   const router = useRouter();
   const [forcing, setForcing] = useState(false);
-  const approved = KYC_TYPES.filter((t) =>
+  const required = kycTypes.filter((t) => t.active && t.required);
+  const approved = required.filter((t) =>
     documents.some((d) => d.typeCode === t.code && d.status === "approved"),
   ).length;
 
@@ -26,7 +28,7 @@ export function KycPanel({ company, documents }: { company: KycPanelCompany; doc
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-sm">
-          <span className="font-medium">{approved} / {KYC_TYPES.length}</span> documents obligatoires approuvés.
+          <span className="font-medium">{approved} / {required.length}</span> documents obligatoires approuvés.
           {company.forceActivated && (
             <span className="ml-2"><StatusBadge tone="warning">Activée de force</StatusBadge></span>
           )}
@@ -48,12 +50,16 @@ export function KycPanel({ company, documents }: { company: KycPanelCompany; doc
             </tr>
           </thead>
           <tbody>
-            {KYC_TYPES.map((t) => {
+            {kycTypes.map((t) => {
               const doc = documents.find((d) => d.typeCode === t.code);
               const badge = doc ? kycStatusBadge(doc.status) : null;
+              const isRequired = t.active && t.required;
               return (
                 <tr key={t.code} className="border-b border-border last:border-0">
-                  <td className="px-3 py-2 font-medium">{t.name}</td>
+                  <td className="px-3 py-2 font-medium">
+                    {t.name}
+                    {!isRequired && <span className="ml-2"><StatusBadge>Non exigé</StatusBadge></span>}
+                  </td>
                   <td className="px-3 py-2">
                     {badge ? <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge> : <StatusBadge>Non déposé</StatusBadge>}
                   </td>
