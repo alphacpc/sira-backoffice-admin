@@ -37,23 +37,75 @@ export type SubscriptionStatus =
 export interface Subscription {
   id: string;
   companyId: string;
+  planId: string;
   planName: string;
   status: SubscriptionStatus;
   billingCycle: "MONTHLY" | "YEARLY";
   price: number;
   currency: string;
   nextBillingDate: string;
+  trialEndDate: string | null;
+  pastDueSince: string | null;
 }
 
 export interface Invoice {
   id: string;
   companyId: string;
+  subscriptionId: string;
   number: string;
   amount: number;
   currency: string;
   status: "paid" | "failed";
   issuedAt: string;
 }
+
+export interface Plan {
+  id: string;
+  code: string;
+  name: string;
+  priceMonthly: number;
+  priceYearly: number;
+  setupFee: number;
+  currency: string;
+  trialDays: number;
+  status: "active" | "inactive";
+  limits: { maxUsers: number; maxBuses: number };
+  featureCodes: string[];
+}
+
+export interface FeatureDef { code: string; name: string; kind: "boolean" | "quota" }
+
+export type PartnerTierCode = Company["partnerTier"];
+export interface PartnerTier { code: PartnerTierCode; minMonths: number; discountPercent: number }
+
+export interface KycDocumentType { code: string; name: string; required: boolean; active: boolean }
+
+export type SubscriptionChangeKind =
+  | "ACTIVATION" | "UPGRADE" | "DOWNGRADE" | "PLAN_CHANGE" | "CANCELLATION";
+
+export interface SubscriptionHistoryEntry {
+  id: string;
+  subscriptionId: string;
+  kind: SubscriptionChangeKind;
+  fromPlan: string | null;
+  toPlan: string | null;
+  at: string;
+}
+
+export interface PaymentAttempt {
+  id: string;
+  subscriptionId: string;
+  companyId: string;
+  amount: number;
+  currency: string;
+  status: "paid" | "failed";
+  at: string;
+  invoiceId: string | null;
+  reason: string | null;
+}
+
+/** Simulated, deterministic outcome of a payment retry (seed parameter, never random). */
+export type RetryOutcome = "success" | "failure";
 
 export interface PlanLimits {
   maxUsers: number;
@@ -102,6 +154,7 @@ export interface DsrRequest {
 export interface CompanyDetail {
   company: Company;
   documents: KycDocument[];
+  kycTypes: KycDocumentType[];
   subscription: Subscription | null;
   invoices: Invoice[];
   limits: PlanLimits | null;

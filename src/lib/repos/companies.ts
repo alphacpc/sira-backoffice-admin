@@ -1,27 +1,18 @@
+import { addActivity } from "@/lib/repos/activity";
+import { kycTypesRepo } from "@/lib/repos/billing";
 import { getStore } from "@/lib/repos/store";
-import { KYC_TYPES } from "@/lib/types/kyc";
-import type {
-  ActivityEntry, Company, CompanyDetail, CompanyStatus, KycDocument,
-} from "@/lib/types";
+import type { Company, CompanyDetail, CompanyStatus, KycDocument } from "@/lib/types";
 
 /** Projection safe to hand to a client component: no contact data. */
 export type CompanyRow = Pick<Company, "id" | "slug" | "name" | "status" | "partnerTier" | "createdAt" | "activatedAt">;
 
 export interface KycQueueItem extends KycDocument { companyName: string }
 
-let actCounter = 1;
-function addActivity(companyId: string | null, actor: string, action: string): void {
-  const entry: ActivityEntry = {
-    id: `act-${Date.now()}-${actCounter++}`, companyId,
-    at: new Date().toISOString(), actor, action,
-  };
-  getStore().activity.unshift(entry);
-}
-
 function activateIfKycComplete(company: Company): void {
   if (company.status !== "draft") return;
   const docs = getStore().documents.filter((d) => d.companyId === company.id);
-  const complete = KYC_TYPES.every((t) =>
+  const required = kycTypesRepo.requiredActive();
+  const complete = required.length > 0 && required.every((t) =>
     docs.some((d) => d.typeCode === t.code && d.status === "approved"),
   );
   if (!complete) return;
@@ -63,6 +54,7 @@ export const companiesRepo = {
     return {
       company,
       documents: s.documents.filter((d) => d.companyId === id),
+      kycTypes: kycTypesRepo.list(),
       subscription: s.subscriptions.find((x) => x.companyId === id) ?? null,
       invoices: s.invoices.filter((x) => x.companyId === id),
       limits: s.limits[id] ?? null,

@@ -1,8 +1,9 @@
 import { KYC_TYPES } from "@/lib/types/kyc";
 import type {
-  ActivityEntry, Company, CompanyStatus, DsrRequest, Employee, FeatureFlag,
-  FleetBus, FleetTrip, Incident, Invoice, KycDocument, PlanLimits, Referral,
-  ServiceHealth, Subscription, SubscriptionStatus, UsageMetric,
+  ActivityEntry, Company, CompanyStatus, DsrRequest, Employee, FeatureDef, FeatureFlag,
+  FleetBus, FleetTrip, Incident, Invoice, KycDocument, KycDocumentType, PartnerTier,
+  PaymentAttempt, Plan, PlanLimits, Referral, RetryOutcome, ServiceHealth, Subscription,
+  SubscriptionChangeKind, SubscriptionHistoryEntry, SubscriptionStatus, UsageMetric,
 } from "@/lib/types";
 
 const DAY = 86_400_000;
@@ -23,6 +24,13 @@ export interface Store {
   services: ServiceHealth[];
   incidents: Incident[];
   dsr: DsrRequest[];
+  plans: Plan[];
+  featureDefs: FeatureDef[];
+  partnerTiers: PartnerTier[];
+  kycTypes: KycDocumentType[];
+  subscriptionHistory: SubscriptionHistoryEntry[];
+  paymentAttempts: PaymentAttempt[];
+  retryOutcomes: Record<string, RetryOutcome>;
 }
 
 const NAMES = [
@@ -40,11 +48,50 @@ const SUBSCRIPTION_STATUS: Record<number, SubscriptionStatus> = {
   6: "active", 7: "past_due", 8: "active", 9: "trial", 10: "active", 11: "active",
   16: "suspended", 17: "expired", 18: "canceled",
 };
-const PLANS = [
-  { name: "Starter", price: 10000, users: 10, buses: 5 },
-  { name: "Pro", price: 25000, users: 50, buses: 25 },
-  { name: "Enterprise", price: 60000, users: 500, buses: 200 },
-] as const;
+/** Days since the first unpaid charge (Baobab Lines, Saint-Louis Route, Fatick Lines). */
+const PAST_DUE_SINCE_DAYS: Record<number, number> = { 4: 2, 7: 5, 16: 20 };
+/** Deterministic retry results: the demo shows one refused payment (Saint-Louis Route). */
+const RETRY_OUTCOMES: Record<number, RetryOutcome> = { 4: "success", 7: "failure", 16: "success" };
+/** Plan changes before the current plan (the current plan is PLANS[index % 3]). */
+const PLAN_CHANGES: Record<number, { kind: SubscriptionChangeKind; from: string }> = {
+  1: { kind: "UPGRADE", from: "Starter" },
+  5: { kind: "UPGRADE", from: "Pro" },
+  6: { kind: "DOWNGRADE", from: "Pro" },
+};
+
+interface PlanDef {
+  code: string; name: string; price: number; yearly: number; setup: number; trial: number;
+  users: number; buses: number; features: string[]; status: Plan["status"];
+}
+
+const PLANS: PlanDef[] = [
+  { code: "STARTER", name: "Starter", price: 10000, yearly: 100000, setup: 0, trial: 14, users: 10, buses: 5,
+    features: ["ONLINE_BOOKING", "FLEET", "API_CALLS"], status: "active" },
+  { code: "PRO", name: "Pro", price: 25000, yearly: 250000, setup: 50000, trial: 14, users: 50, buses: 25,
+    features: ["ONLINE_BOOKING", "FLEET", "PARCELS", "API_CALLS", "SMS_NOTIFICATIONS"], status: "active" },
+  { code: "ENTERPRISE", name: "Enterprise", price: 60000, yearly: 600000, setup: 150000, trial: 30, users: 500, buses: 200,
+    features: ["ONLINE_BOOKING", "FLEET", "PARCELS", "HR", "API_CALLS", "SMS_NOTIFICATIONS"], status: "active" },
+];
+const LEGACY_PLAN: PlanDef = {
+  code: "LEGACY", name: "Legacy", price: 8000, yearly: 80000, setup: 0, trial: 0, users: 5, buses: 3,
+  features: ["ONLINE_BOOKING", "FLEET"], status: "inactive",
+};
+
+const FEATURE_DEFS: FeatureDef[] = [
+  { code: "ONLINE_BOOKING", name: "Réservation en ligne", kind: "boolean" },
+  { code: "FLEET", name: "Gestion de flotte", kind: "boolean" },
+  { code: "PARCELS", name: "Colis", kind: "boolean" },
+  { code: "HR", name: "Ressources humaines", kind: "boolean" },
+  { code: "API_CALLS", name: "Appels API", kind: "quota" },
+  { code: "SMS_NOTIFICATIONS", name: "Notifications SMS", kind: "quota" },
+];
+
+const TIERS: PartnerTier[] = [
+  { code: "STANDARD", minMonths: 0, discountPercent: 0 },
+  { code: "SILVER", minMonths: 6, discountPercent: 5 },
+  { code: "GOLD", minMonths: 12, discountPercent: 10 },
+];
+
 const ROUTES = [
   "Dakar → Saint-Louis", "Dakar → Touba", "Dakar → Ziguinchor",
   "Thiès → Kaolack", "Mbour → Dakar",
@@ -73,8 +120,20 @@ export function buildSeed(now: Date = new Date()): Store {
     companies: [], documents: [], subscriptions: [], invoices: [], limits: {},
     features: {}, usage: {}, referrals: {}, employees: [], buses: [], trips: [],
     activity: [], services: [], incidents: [], dsr: [],
+    plans: [], featureDefs: [], partnerTiers: [], kycTypes: [],
+    subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
   };
   let docSeq = 1, subSeq = 1, invSeq = 1, empSeq = 1, busSeq = 1, tripSeq = 1, actSeq = 1;
+  let attSeq = 1, histSeq = 1;
+
+  store.plans = [...PLANS, LEGACY_PLAN].map((p, n) => ({
+    id: uid(12, n + 1), code: p.code, name: p.name, priceMonthly: p.price, priceYearly: p.yearly,
+    setupFee: p.setup, currency: "XOF", trialDays: p.trial, status: p.status,
+    limits: { maxUsers: p.users, maxBuses: p.buses }, featureCodes: [...p.features],
+  }));
+  store.featureDefs = FEATURE_DEFS.map((f) => ({ ...f }));
+  store.partnerTiers = TIERS.map((t) => ({ ...t }));
+  store.kycTypes = KYC_TYPES.map((t) => ({ code: t.code, name: t.name, required: true, active: true }));
 
   NAMES.forEach((name, i) => {
     const draftIdx = DRAFT_INDEXES.indexOf(i);
@@ -116,24 +175,77 @@ export function buildSeed(now: Date = new Date()): Store {
       });
     });
 
-    // Subscription, invoices, limits, features
+    // Subscription, invoices, payment attempts, history, limits, features
     const subStatus = SUBSCRIPTION_STATUS[i];
     if (subStatus) {
       const plan = PLANS[i % 3]!;
+      const planId = store.plans[i % 3]!.id;
+      const subId = uid(3, subSeq++);
+      const pastDueDays = PAST_DUE_SINCE_DAYS[i];
       store.subscriptions.push({
-        id: uid(3, subSeq++), companyId: id, planName: plan.name, status: subStatus,
+        id: subId, companyId: id, planId, planName: plan.name, status: subStatus,
         billingCycle: "MONTHLY", price: plan.price, currency: "XOF",
         nextBillingDate: iso(5 + i),
+        trialEndDate: subStatus === "trial" ? iso(5 + i) : null,
+        pastDueSince: pastDueDays === undefined ? null : iso(-pastDueDays),
       });
-      store.invoices.push({
-        id: uid(4, invSeq++), companyId: id, number: `INV-2026-${String(invSeq).padStart(4, "0")}`,
-        amount: plan.price, currency: "XOF", status: "paid", issuedAt: iso(-60),
+
+      const invoices: Invoice[] = [
+        {
+          id: uid(4, invSeq++), companyId: id, subscriptionId: subId,
+          number: `INV-2026-${String(invSeq).padStart(4, "0")}`,
+          amount: plan.price, currency: "XOF", status: "paid", issuedAt: iso(-60),
+        },
+        {
+          id: uid(4, invSeq++), companyId: id, subscriptionId: subId,
+          number: `INV-2026-${String(invSeq).padStart(4, "0")}`,
+          amount: plan.price, currency: "XOF",
+          status: subStatus === "past_due" ? "failed" : "paid", issuedAt: iso(-30),
+        },
+      ];
+      for (const inv of invoices) {
+        store.invoices.push(inv);
+        store.paymentAttempts.push({
+          id: uid(13, attSeq++), subscriptionId: subId, companyId: id,
+          amount: inv.amount, currency: inv.currency, status: inv.status, at: inv.issuedAt,
+          invoiceId: inv.id, reason: inv.status === "failed" ? "Solde insuffisant" : null,
+        });
+      }
+      if (pastDueDays !== undefined) {
+        store.paymentAttempts.push({
+          id: uid(13, attSeq++), subscriptionId: subId, companyId: id, amount: plan.price,
+          currency: "XOF", status: "failed", at: iso(-pastDueDays), invoiceId: null,
+          reason: "Solde insuffisant",
+        });
+        if (subStatus === "suspended") {
+          store.paymentAttempts.push({
+            id: uid(13, attSeq++), subscriptionId: subId, companyId: id, amount: plan.price,
+            currency: "XOF", status: "failed", at: iso(-pastDueDays + 7), invoiceId: null,
+            reason: "Moyen de paiement expiré",
+          });
+        }
+      }
+      const outcome = RETRY_OUTCOMES[i];
+      if (outcome) store.retryOutcomes[subId] = outcome;
+
+      const change = PLAN_CHANGES[i];
+      store.subscriptionHistory.push({
+        id: uid(14, histSeq++), subscriptionId: subId, kind: "ACTIVATION",
+        fromPlan: null, toPlan: change ? change.from : plan.name, at: iso(-120),
       });
-      store.invoices.push({
-        id: uid(4, invSeq++), companyId: id, number: `INV-2026-${String(invSeq).padStart(4, "0")}`,
-        amount: plan.price, currency: "XOF",
-        status: subStatus === "past_due" ? "failed" : "paid", issuedAt: iso(-30),
-      });
+      if (change) {
+        store.subscriptionHistory.push({
+          id: uid(14, histSeq++), subscriptionId: subId, kind: change.kind,
+          fromPlan: change.from, toPlan: plan.name, at: iso(-40),
+        });
+      }
+      if (subStatus === "canceled") {
+        store.subscriptionHistory.push({
+          id: uid(14, histSeq++), subscriptionId: subId, kind: "CANCELLATION",
+          fromPlan: plan.name, toPlan: null, at: iso(-10),
+        });
+      }
+
       store.limits[id] = {
         maxUsers: plan.users, usedUsers: Math.min(plan.users, 3 + i * 2),
         maxBuses: plan.buses, usedBuses: Math.min(plan.buses, 2 + (i % 4)),
