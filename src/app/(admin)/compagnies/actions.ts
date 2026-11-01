@@ -7,6 +7,9 @@ import { getStore } from "@/lib/repos/store";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
+const MAX_REASON = 500;
+const REASON_TOO_LONG = "Motif trop long (500 caractères maximum)";
+
 const SESSION_EXPIRED = "Session expirée, reconnecte-toi";
 
 function refresh(companyId: string | null) {
@@ -49,6 +52,7 @@ export async function rejectDocument(docId: string, reason: string): Promise<Act
   return run((actor) => {
     requireString(docId, "Document");
     requireString(reason, "Motif");
+    if (reason.trim().length > MAX_REASON) throw new Error(REASON_TOO_LONG);
     const doc = companiesRepo.reviewDocument(docId, "rejected", reason.trim(), actor);
     refresh(doc.companyId);
   });
@@ -58,6 +62,7 @@ export async function forceActivateCompany(companyId: string, reason: string): P
   return run((actor) => {
     requireString(companyId, "Compagnie");
     requireString(reason, "Motif");
+    if (reason.trim().length > MAX_REASON) throw new Error(REASON_TOO_LONG);
     companiesRepo.forceActivate(companyId, reason.trim(), actor);
     refresh(companyId);
   });

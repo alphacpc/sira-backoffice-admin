@@ -3,7 +3,7 @@
 import { ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { labelForSegment } from "@/lib/nav";
+import { isLinkablePath, labelForSegment } from "@/lib/nav";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-/i;
 
@@ -21,8 +21,10 @@ export function Breadcrumb() {
           <ChevronRight size={12} />
           {i === crumbs.length - 1 ? (
             <span className="text-foreground">{c.label}</span>
-          ) : (
+          ) : isLinkablePath(c.href) ? (
             <Link href={c.href} className="hover:text-foreground">{c.label}</Link>
+          ) : (
+            <span>{c.label}</span>
           )}
         </span>
       ))}

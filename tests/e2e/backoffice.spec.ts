@@ -61,7 +61,7 @@ test("login, dashboard, company KYC approval activates the company", async ({ pa
   await page.getByRole("button", { name: /^Approuver / }).click();
 
   await expect(page.getByText("6 / 6")).toBeVisible();
-  await expect(page.getByText("Active", { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("company-status")).toHaveText("Active");
 
   await page.getByRole("tab", { name: "Activité" }).click();
   await expect(page.getByText("Compagnie activée (KYC complet)")).toBeVisible();
@@ -94,7 +94,7 @@ test("forced activation requires a reason and marks the company", async ({ page 
   await confirm.click();
 
   await expect(page.getByText("Activée de force")).toBeVisible();
-  await expect(page.getByText("Active", { exact: true }).first()).toBeVisible();
+  await expect(page.getByTestId("company-status")).toHaveText("Active");
 });
 
 test("rejecting a document requires a reason", async ({ page }) => {

@@ -3,6 +3,8 @@ import { PageHeader } from "@/components/data/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { allNavItems, isKnownPath } from "@/lib/nav";
 
+export const dynamic = "force-dynamic";
+
 export default async function ComingSoonPage({ params }: { params: Promise<{ slug: string[] }> }) {
   const { slug } = await params;
   const path = "/" + slug.join("/");

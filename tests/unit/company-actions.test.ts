@@ -142,3 +142,23 @@ describe("revealContact", () => {
     expect("value" in b).toBe(false);
   });
 });
+
+describe("reason length cap", () => {
+  const TOO_LONG = { ok: false, error: "Motif trop long (500 caractères maximum)" };
+  it("rejectDocument refuses 501 characters and leaves the document pending", async () => {
+    const d = pendingDoc();
+    expect(await rejectDocument(d.id, "x".repeat(501))).toEqual(TOO_LONG);
+    expect(getStore().documents.find((x) => x.id === d.id)!.status).toBe("pending");
+  });
+  it("rejectDocument accepts exactly 500", async () => {
+    expect(await rejectDocument(pendingDoc().id, "x".repeat(500))).toEqual({ ok: true });
+  });
+  it("forceActivateCompany refuses 501 characters and leaves the company draft", async () => {
+    const c = draft();
+    expect(await forceActivateCompany(c.id, "x".repeat(501))).toEqual(TOO_LONG);
+    expect(getStore().companies.find((x) => x.id === c.id)!.status).toBe("draft");
+  });
+  it("forceActivateCompany accepts exactly 500", async () => {
+    expect(await forceActivateCompany(draft().id, "x".repeat(500))).toEqual({ ok: true });
+  });
+});

@@ -26,3 +26,17 @@ describe("nav", () => {
     expect(labelForSegment("inconnu-xyz")).toBe("Inconnu xyz");
   });
 });
+
+import { isLinkablePath } from "@/lib/nav";
+describe("isLinkablePath", () => {
+  it("links known pages and company routes, not bare section prefixes", () => {
+    expect(isLinkablePath("/")).toBe(true);
+    expect(isLinkablePath("/compagnies")).toBe(true);
+    expect(isLinkablePath("/compagnies/kyc")).toBe(true);
+    expect(isLinkablePath("/compagnies/abc")).toBe(true);
+    expect(isLinkablePath("/offre/plans")).toBe(true);
+    expect(isLinkablePath("/offre")).toBe(false);
+    expect(isLinkablePath("/facturation")).toBe(false);
+    expect(isLinkablePath("/flotte")).toBe(false);
+  });
+});

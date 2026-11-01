@@ -1,3 +1,5 @@
+// DEMONSTRATION ONLY: these credentials and the simulated TOTP are valid in every build, production included.
+// Never deploy this batch as is: replace them with the real authentication backend first.
 export const PRE_COOKIE = "sira_bo_pre";
 export const SESSION_COOKIE = "sira_bo_session";
 export const DEMO_ID = "admin@sira.app";

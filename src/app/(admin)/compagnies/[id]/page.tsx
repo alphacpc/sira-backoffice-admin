@@ -23,7 +23,7 @@ export default async function CompanyPage({
       <PageHeader
         title={detail.company.name}
         description={`Identifiant : ${detail.company.slug}`}
-        actions={<StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>}
+        actions={<span data-testid="company-status"><StatusBadge tone={badge.tone}>{badge.label}</StatusBadge></span>}
       />
       <CompanyTabs detail={detail} initialTab={onglet} />
     </>

@@ -37,3 +37,5 @@ Connexion de démonstration : `admin@sira.app` / `sira-demo`, puis le code `1234
 - CSP avec `'unsafe-inline'` pour les scripts (Next et next-themes) : à durcir avec des nonces avant la production.
 - Les sections autres que Vue 360 et Compagnies affichent « Bientôt disponible ».
 - Navigation latérale masquée sous 768 px (outil de bureau).
+
+> **Démonstration seulement : identifiants et TOTP simulés, ne jamais déployer ce lot tel quel.**

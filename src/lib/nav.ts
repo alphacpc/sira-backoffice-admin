@@ -99,3 +99,10 @@ export function labelForSegment(segment: string): string {
   const text = segment.replace(/-/g, " ");
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
+
+const ROUTE_PREFIXES = ["/compagnies"];
+
+/** True when a breadcrumb path leads to a real screen (a nav item or a company route), so it may be a link. */
+export function isLinkablePath(path: string): boolean {
+  return path === "/" || isKnownPath(path) || ROUTE_PREFIXES.some((p) => path === p || path.startsWith(p + "/"));
+}
