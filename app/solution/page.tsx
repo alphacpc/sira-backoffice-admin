@@ -1,10 +1,16 @@
 import type { Metadata } from "next";
-import { Container, Eyebrow, ButtonLink } from "@/components/ui";
+import Image from "next/image";
+import { Container, Eyebrow, ButtonLink, Title2 } from "@/components/ui";
 import { Reveal } from "@/components/motion";
-import { Icon } from "@/components/icons";
-import ChapterMock from "@/components/mockups/ChapterMock";
+import { RouteThread } from "@/components/route/RouteThread";
+import { Stop } from "@/components/route/Stop";
+import { ChapterFull } from "@/components/route/ChapterFull";
+import { FleetMapCard } from "@/components/screens/FleetMapCard";
+import { ParcelScreen } from "@/components/screens/ParcelScreen";
+import { StaffScreen } from "@/components/screens/StaffScreen";
+import { SupervisionScreen } from "@/components/screens/SupervisionScreen";
 import FaqAccordion from "@/components/FaqAccordion";
-import { chapters } from "@/content/solution";
+import { chapters, type Chapter } from "@/content/solution";
 import { faqItems } from "@/content/faq";
 
 export const metadata: Metadata = {
@@ -13,27 +19,98 @@ export const metadata: Metadata = {
     "Flotte, billetterie, colis, équipes, clients et conformité : ce que Sira fait pour une compagnie de transport interurbain.",
 };
 
+const fade = {
+  WebkitMaskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
+  maskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
+} as const;
+
+function Visual({ id }: { id: Chapter["id"] }) {
+  switch (id) {
+    case "flotte":
+      return (
+        <div className="rounded-[2rem] bg-sand p-3 sm:p-6">
+          <FleetMapCard />
+        </div>
+      );
+    case "billetterie":
+      return (
+        <div className="relative mx-auto flex w-full max-w-[520px] items-end justify-center gap-4 rounded-[2rem] bg-amber-soft px-6 pb-0 pt-8 sm:gap-6 sm:px-10">
+          <Image
+            src="/images/sieges.png"
+            alt="Plan des sièges du bus, deux places choisies."
+            width={820}
+            height={1576}
+            sizes="(min-width: 1024px) 18vw, 42vw"
+            className="mb-8 h-auto w-[48%] rounded-[1.5rem] shadow-lift"
+          />
+          <div className="w-[44%]" style={fade}>
+            <Image
+              src="/images/clean/billet.png"
+              alt="Billet électronique avec code QR."
+              width={820}
+              height={1323}
+              sizes="(min-width: 1024px) 18vw, 40vw"
+              className="block h-auto w-full rounded-[1.5rem] shadow-lift"
+            />
+          </div>
+        </div>
+      );
+    case "colis":
+      return (
+        <div className="rounded-[2rem] bg-navy px-3 py-8 sm:px-8">
+          <ParcelScreen />
+        </div>
+      );
+    case "equipes":
+      return (
+        <div className="rounded-[2rem] bg-sand px-3 py-8 [&_figcaption]:font-semibold [&_figcaption]:text-navy sm:px-8">
+          <StaffScreen />
+        </div>
+      );
+    case "pilotage":
+      return (
+        <div className="rounded-[2rem] bg-navy px-3 py-8 sm:px-8">
+          <SupervisionScreen />
+        </div>
+      );
+  }
+}
+
 export default function SolutionPage() {
   return (
     <main>
-      <section className="pb-6 pt-16 lg:pt-24">
-        <Container>
+      <section className="relative overflow-hidden bg-paper pb-6 pt-14 lg:pt-20">
+        <svg
+          aria-hidden="true"
+          className="pointer-events-none absolute -right-40 -top-52 h-[520px] w-[520px] text-amber"
+          viewBox="0 0 620 620"
+          fill="none"
+        >
+          {[310, 230, 150].map((r) => (
+            <circle key={r} cx="310" cy="310" r={r} stroke="currentColor" strokeOpacity="0.25" strokeWidth="1.5" />
+          ))}
+        </svg>
+        <Container className="relative">
           <Reveal>
             <Eyebrow>La solution</Eyebrow>
-            <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl">
-              Cinq chapitres pour piloter une compagnie de transport.
-            </h1>
-            <p className="mt-6 max-w-2xl text-lg text-ink/75">
+            <Title2
+              as="h1"
+              lead="Cinq chapitres pour piloter"
+              accent="une compagnie de transport."
+              className="mt-5 max-w-3xl text-4xl sm:text-5xl lg:text-[3.4rem]"
+            />
+            <p className="mt-6 max-w-2xl text-lg leading-relaxed text-ink/75">
               Chaque chapitre est utilisable seul et s&apos;appuie sur les mêmes données : un bus
               créé dans la flotte se retrouve dans la billetterie, un employé dans les accès.
             </p>
-            <nav aria-label="Chapitres" className="mt-8 flex flex-wrap gap-2">
+            <nav aria-label="Chapitres" className="mt-8 flex flex-wrap gap-2.5">
               {chapters.map((c) => (
                 <a
                   key={c.id}
                   href={`#${c.id}`}
-                  className="rounded-full border border-ink/20 px-4 py-2 text-sm font-medium transition hover:border-forest hover:text-forest focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+                  className="inline-flex items-center gap-2 rounded-full border border-navy/20 bg-white px-4 py-2 text-sm font-semibold text-navy transition hover:border-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-navy"
                 >
+                  <span className="font-mono text-[11px] tracking-[0.12em] text-amber-ink">{c.stop.code}</span>
                   {c.title}
                 </a>
               ))}
@@ -42,63 +119,37 @@ export default function SolutionPage() {
         </Container>
       </section>
 
-      {chapters.map((c, i) => (
-        <section
-          key={c.id}
-          id={c.id}
-          className={`py-16 ${i % 2 === 0 ? "" : "bg-sand/60"}`}
-        >
-          <Container
-            className={`grid grid-cols-1 items-start gap-12 lg:grid-cols-2 [&>*]:min-w-0 ${i % 2 ? "lg:[&>*:first-child]:order-2" : ""}`}
-          >
-            <Reveal>
-              <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-forest/10 text-forest">
-                <Icon name={c.icon} className="h-6 w-6" />
-              </span>
-              <h2 className="mt-4 text-3xl font-semibold">{c.title}</h2>
-              <p className="mt-2 text-xl text-ink/80">{c.tagline}</p>
-              <p className="mt-4 text-ink/75">{c.description}</p>
-              <ul className="mt-6 space-y-2.5 text-sm text-ink/85">
-                {c.points.map((p) => (
-                  <li key={p} className="flex gap-2.5">
-                    <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-forest" />
-                    {p}
-                  </li>
-                ))}
-              </ul>
-              {c.pending.length > 0 && (
-                <div className="mt-6 rounded-xl border border-dashed border-ink/25 p-4">
-                  <p className="text-xs font-semibold uppercase tracking-wider text-accent-ink">
-                    À venir
-                  </p>
-                  <ul className="mt-2 space-y-1 text-sm text-ink/70">
-                    {c.pending.map((p) => (
-                      <li key={p}>{p}</li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-            </Reveal>
-            <Reveal delay={0.08}>
-              <div className="lg:sticky lg:top-28">
-                <ChapterMock id={c.id} />
-              </div>
-            </Reveal>
-          </Container>
-        </section>
-      ))}
+      <section className="bg-paper pb-10">
+        <Container>
+          <RouteThread background="#fafafa">
+            {chapters.map((c, i) => (
+              <Stop key={c.id} id={c.id} code={c.stop.code} name={c.stop.name} align={i % 2 ? "right" : "left"}>
+                <ChapterFull c={c} />
+                <Visual id={c.id} />
+              </Stop>
+            ))}
+            <div className="h-6" />
+          </RouteThread>
+        </Container>
+      </section>
 
-      <section id="faq" className="py-20">
+      <section id="faq" className="bg-sand py-20 lg:py-24">
         <Container className="max-w-3xl">
           <Reveal>
             <Eyebrow>Questions fréquentes</Eyebrow>
-            <h2 className="mt-3 text-3xl font-semibold">Ce que l&apos;on nous demande souvent.</h2>
+            <Title2
+              lead="Ce que l'on nous"
+              accent="demande souvent."
+              className="mt-4 text-3xl sm:text-4xl"
+            />
           </Reveal>
           <div className="mt-8">
             <FaqAccordion items={faqItems} />
           </div>
           <div className="mt-10">
-            <ButtonLink href="/demo">Demander une démo</ButtonLink>
+            <ButtonLink href="/demo" variant="accent">
+              Demander une démo
+            </ButtonLink>
           </div>
         </Container>
       </section>

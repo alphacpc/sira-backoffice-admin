@@ -8,30 +8,36 @@ export default function FaqAccordion({ items }: { items: FaqItem[] }) {
   const [openIndex, setOpenIndex] = useState<number | null>(0);
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       {items.map((item, index) => {
         const isOpen = openIndex === index;
         return (
           <div
             key={item.question}
             className={`overflow-hidden rounded-2xl border bg-white transition-colors ${
-              isOpen ? "border-forest/40" : "border-ink/10"
+              isOpen ? "border-amber shadow-soft" : "border-navy/10"
             }`}
           >
             <button
               type="button"
               onClick={() => setOpenIndex(isOpen ? null : index)}
-              className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+              className="flex w-full items-center gap-4 px-5 py-5 text-left focus-visible:outline-2 focus-visible:outline-offset-[-3px] focus-visible:outline-navy sm:px-6"
               aria-expanded={isOpen}
             >
-              <span className="text-lg font-semibold text-ink">
+              <span
+                aria-hidden="true"
+                className="w-7 shrink-0 font-mono text-xs font-semibold tracking-[0.12em] text-amber-ink"
+              >
+                {String(index + 1).padStart(2, "0")}
+              </span>
+              <span className="flex-1 text-lg font-bold leading-snug text-navy">
                 {item.question}
               </span>
               <span
-                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-lg transition-colors ${
+                className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-xl font-bold leading-none transition-colors ${
                   isOpen
-                    ? "bg-forest text-white"
-                    : "bg-ink/10 text-ink"
+                    ? "bg-amber text-navy"
+                    : "bg-amber-soft text-navy"
                 }`}
               >
                 <motion.span
@@ -51,7 +57,7 @@ export default function FaqAccordion({ items }: { items: FaqItem[] }) {
                   exit={{ height: 0, opacity: 0 }}
                   transition={{ duration: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
                 >
-                  <p className="px-6 pb-6 text-ink/75">{item.answer}</p>
+                  <p className="px-5 pb-6 pl-[3.75rem] text-ink/75 sm:pl-[4.25rem] sm:pr-6">{item.answer}</p>
                 </motion.div>
               )}
             </AnimatePresence>
