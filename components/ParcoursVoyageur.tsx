@@ -218,15 +218,7 @@ export default function ParcoursVoyageur() {
         )}
       </div>
 
-      <div className="relative flex h-[560px] items-center justify-center overflow-hidden rounded-[2rem] bg-navy-dark ring-1 ring-white/10">
-        <div
-          aria-hidden="true"
-          className="absolute -right-24 -top-24 h-72 w-72 rounded-full border border-amber/25"
-        />
-        <div
-          aria-hidden="true"
-          className="absolute -right-10 -top-10 h-44 w-44 rounded-full border border-amber/25"
-        />
+      <div className="relative flex h-[560px] items-center justify-center overflow-hidden">
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={active}
