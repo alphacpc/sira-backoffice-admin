@@ -40,7 +40,7 @@ function AudienceMock({ id }: { id: Audience["id"] }) {
     case "voyageur":
       return (
         <PhoneShell>
-          <div className="min-h-[300px] bg-cream p-4">
+          <div className="min-h-[430px] bg-cream p-4">
             <TicketMock />
           </div>
         </PhoneShell>
