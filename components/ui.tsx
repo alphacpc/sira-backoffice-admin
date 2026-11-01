@@ -34,6 +34,7 @@ const variants = {
   primary: "bg-navy text-white hover:bg-navy-dark focus-visible:outline-navy",
   accent: "bg-amber text-navy hover:bg-amber-dark focus-visible:outline-navy",
   outline: "border border-navy/30 text-navy hover:border-navy focus-visible:outline-navy",
+  "accent-dark": "bg-amber text-navy hover:bg-amber-dark focus-visible:outline-white",
   "outline-light": "border border-white/40 text-white hover:border-white focus-visible:outline-white",
 } as const;
 

@@ -1,12 +1,13 @@
 import type { Metadata } from "next";
 import Image from "next/image";
 import { Container, Eyebrow, ButtonLink, Title2 } from "@/components/ui";
-import { Reveal, Enter, Drift, ScrollZoom } from "@/components/motion";
+import { Reveal, Enter, ScrollZoom } from "@/components/motion";
 import { RouteThread } from "@/components/route/RouteThread";
 import { Stop } from "@/components/route/Stop";
 import { StopText } from "@/components/route/StopText";
 import { RouteLine } from "@/components/RouteLine";
 import { Coupon } from "@/components/Coupon";
+import { Hero } from "@/components/hero/Hero";
 import { PhotoCard } from "@/components/PhotoCard";
 import ParcoursVoyageur from "@/components/ParcoursVoyageur";
 import { FleetMapCard } from "@/components/screens/FleetMapCard";
@@ -25,12 +26,6 @@ const chapter = (id: Chapter["id"]) => chapters.find((c) => c.id === id)!;
 const fade = {
   WebkitMaskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
   maskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
-} as const;
-
-/** Hero ticket: fully transparent before it leaves the navy panel, so no bezel ghost remains on the paper. */
-const heroFade = {
-  WebkitMaskImage: "linear-gradient(to bottom, #000 55%, transparent 84%)",
-  maskImage: "linear-gradient(to bottom, #000 55%, transparent 84%)",
 } as const;
 
 function Terminus({ code, label, arrival = false }: { code: string; label: string; arrival?: boolean }) {
@@ -62,130 +57,10 @@ export default function HomePage() {
   return (
     <main>
       {/* 1. Hero */}
-      <section className="relative overflow-hidden bg-paper">
-        <Drift distance={-70}>
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none absolute -right-80 -top-64 h-[760px] w-[760px] text-amber opacity-25 lg:-right-40 lg:-top-40 lg:opacity-100"
-          viewBox="0 0 760 760"
-          fill="none"
-        >
-          {[380, 300, 220, 140].map((r) => (
-            <circle key={r} cx="380" cy="380" r={r} stroke="currentColor" strokeOpacity="0.28" strokeWidth="1.5" />
-          ))}
-        </svg>
-        </Drift>
-        <Drift distance={-130}>
-        <svg
-          aria-hidden="true"
-          className="pointer-events-none absolute -bottom-52 -left-52 h-[520px] w-[520px] text-amber opacity-25 lg:opacity-100"
-          viewBox="0 0 520 520"
-          fill="none"
-        >
-          {[260, 190, 120].map((r) => (
-            <circle key={r} cx="260" cy="260" r={r} stroke="currentColor" strokeOpacity="0.2" strokeWidth="1.5" />
-          ))}
-        </svg>
-        </Drift>
-
-        <Container className="relative grid grid-cols-1 items-center gap-16 pb-16 pt-12 [&>*]:min-w-0 lg:grid-cols-[1fr_1.05fr] lg:gap-10 lg:pb-24 lg:pt-20">
-          <div>
-            <Enter trigger="mount" y={14} duration={0.6}>
-              <Eyebrow>Pour les compagnies d&apos;autocars d&apos;Afrique de l&apos;Ouest</Eyebrow>
-            </Enter>
-            <Title2
-              as="h1"
-              lead="Toute votre compagnie de transport, dans"
-              accent="une seule plateforme."
-              animate="mount"
-              delay={0.12}
-              className="mt-6 text-[2.5rem] sm:text-6xl lg:text-[3.9rem] xl:text-[4.5rem]"
-            />
-            <Enter trigger="mount" y={18} delay={0.55} duration={0.6}>
-              <p className="mt-7 max-w-xl text-lg leading-relaxed text-ink/75">
-                Flotte, billetterie, colis, équipes et conformité. Sira remplace les cahiers de guichet
-                et les tableurs par un outil unique, pensé pour votre exploitation.
-              </p>
-            </Enter>
-            <Enter trigger="mount" y={18} delay={0.68} duration={0.6}>
-              <div className="mt-9 flex flex-wrap gap-3">
-                <ButtonLink href="/demo" variant="accent">
-                  Demander une démo
-                </ButtonLink>
-                <ButtonLink href="/solution" variant="outline">
-                  Voir la solution
-                </ButtonLink>
-              </div>
-            </Enter>
-          </div>
-
-          <div>
-            <div className="relative mx-auto aspect-[1/1.02] w-full max-w-[560px] lg:max-w-none">
-              <Enter
-                trigger="mount"
-                aria-hidden="true"
-                clip="left"
-                fade={false}
-                delay={0.1}
-                duration={0.85}
-                className="absolute inset-x-0 bottom-[6%] top-[14%] rounded-[2.25rem] bg-navy lg:left-[6%]"
-              />
-              <Enter
-                trigger="mount"
-                aria-hidden="true"
-                clip="left"
-                fade={false}
-                delay={0.75}
-                duration={0.5}
-                className="absolute right-[10%] top-[8%] h-3 w-24 rounded-full bg-amber lg:right-[14%]"
-              />
-              <PhotoCard
-                src="/images/clean/gestionnaire-ecran.png"
-                alt="Un gestionnaire de compagnie découvre, surpris, ce que son écran lui affiche."
-                width={1920}
-                height={1356}
-                rotate="right"
-                priority
-                enter={{ delay: 0.3, x: 56, y: 24, rotate: 6 }}
-                parallax="page"
-                sizes="(min-width: 1024px) 34vw, 70vw"
-                className="absolute right-[3%] top-0 w-[68%]"
-              />
-              <PhotoCard
-                src="/images/clean/gestionnaire-laptop.png"
-                alt="Une responsable d'exploitation consulte Sira sur son ordinateur portable."
-                width={1920}
-                height={1959}
-                rotate="left"
-                enter={{ delay: 0.45, x: -36, y: 48, rotate: -6 }}
-                parallax="page"
-                sizes="(min-width: 1024px) 22vw, 42vw"
-                className="absolute bottom-[0%] left-[0%] w-[42%]"
-              />
-              <Enter
-                trigger="mount"
-                y={70}
-                delay={0.6}
-                duration={0.8}
-                className="absolute -bottom-[1%] right-[4%] w-[33%] drop-shadow-[0_24px_30px_rgba(13,18,38,0.45)]"
-                style={heroFade}
-              >
-                <Image
-                  src="/images/clean/billet.png"
-                  alt="Billet électronique Sira : Dakar, Touba, siège 12A, code QR."
-                  width={820}
-                  height={1323}
-                  sizes="(min-width: 1024px) 18vw, 34vw"
-                  className="block h-auto w-full rounded-[1.5rem]"
-                />
-              </Enter>
-            </div>
-          </div>
-        </Container>
-      </section>
+      <Hero />
 
       {/* 2. Cinq arrêts sur la route */}
-      <section className="bg-paper pb-10 pt-4 lg:pt-10">
+      <section className="bg-paper pb-10 pt-10 lg:pt-14">
         <Container>
           <Reveal>
             <p className="max-w-2xl text-balance text-2xl font-extrabold leading-tight tracking-tight text-navy sm:text-3xl">
