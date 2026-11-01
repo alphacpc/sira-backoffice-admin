@@ -24,11 +24,6 @@ export const metadata: Metadata = {
 
 const chapter = (id: Chapter["id"]) => chapters.find((c) => c.id === id)!;
 
-const fade = {
-  WebkitMaskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
-  maskImage: "linear-gradient(to bottom, #000 58%, transparent 96%)",
-} as const;
-
 function Terminus({ code, label, arrival = false }: { code: string; label: string; arrival?: boolean }) {
   return (
     <div className={`relative ${arrival ? "pb-10 pt-2" : "py-2"}`}>
@@ -80,12 +75,7 @@ export default function HomePage() {
             </Stop>
 
             <Stop id="billetterie" code={billetterie.stop.code} name={billetterie.stop.name} align="right">
-              <Enter className="relative mx-auto w-full max-w-[580px] pb-[14%] pt-4" x={-44} scale={0.96} duration={0.8} delay={0.15}>
-                <div
-                  aria-hidden="true"
-                  className="absolute inset-x-0 bottom-0 top-[18%] rounded-[2rem] bg-navy"
-                />
-                {/* Face sits bottom-right of the photo: the phones overlap only its left (tree) side. */}
+              <Enter className="relative mx-auto w-full max-w-[520px]" x={-44} scale={0.96} duration={0.8} delay={0.15}>
                 <PhotoCard
                   src="/images/clean/voyageuse.jpg"
                   alt="Une voyageuse serre contre elle l'arbre de son village, un billet confirmé Dakar-Touba affiché à l'écran."
@@ -93,29 +83,8 @@ export default function HomePage() {
                   height={1368}
                   rotate="left"
                   sizes="(min-width: 1024px) 34vw, 90vw"
-                  className="relative ml-auto w-[86%]"
+                  className="w-full"
                 />
-                <Image
-                  src="/images/sieges.png"
-                  alt="Plan des sièges du bus, deux places choisies."
-                  width={820}
-                  height={1576}
-                  sizes="(min-width: 1024px) 10vw, 30vw"
-                  className="absolute bottom-0 left-[1%] h-auto w-[30%] -rotate-3 rounded-[1.5rem] drop-shadow-[0_20px_28px_rgba(13,18,38,0.5)]"
-                />
-                <div
-                  className="absolute bottom-[-3%] left-[27%] w-[26%] rotate-2 drop-shadow-[0_20px_28px_rgba(13,18,38,0.5)]"
-                  style={fade}
-                >
-                  <Image
-                    src="/images/clean/billet.png"
-                    alt="Billet électronique avec code QR."
-                    width={820}
-                    height={1323}
-                    sizes="(min-width: 1024px) 10vw, 26vw"
-                    className="block h-auto w-full rounded-[1.5rem]"
-                  />
-                </div>
               </Enter>
               <StopText c={billetterie} side="right" />
             </Stop>
