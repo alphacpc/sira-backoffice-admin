@@ -3,6 +3,7 @@ import { Container, Eyebrow, Title2 } from "@/components/ui";
 import { HeroBlock, Reveal } from "@/components/motion";
 import PlanTable from "@/components/PlanTable";
 import PaymentMethods from "@/components/PaymentMethods";
+import ComparisonTable from "@/components/ComparisonTable";
 import { plans } from "@/content/plans";
 
 export const metadata: Metadata = {
@@ -47,6 +48,7 @@ export default function PricingPage() {
         </Container>
       </section>
       <PaymentMethods />
+      <ComparisonTable />
     </main>
   );
 }

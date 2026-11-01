@@ -41,3 +41,62 @@ export const plans: Plan[] = [
     ],
   },
 ];
+
+/** Niveau minimal qui inclut la fonction : 0 Essentiel, 1 Exploitation, 2 Pilotage. Chaque niveau inclut les précédents. */
+export interface ComparisonRow {
+  label: string;
+  from: 0 | 1 | 2;
+}
+export interface ComparisonGroup {
+  code: string;
+  title: string;
+  rows: ComparisonRow[];
+}
+
+export const comparison: ComparisonGroup[] = [
+  {
+    code: "FLO",
+    title: "Flotte",
+    rows: [
+      { label: "Gares, lignes, bus et trajets", from: 0 },
+      { label: "Plan de sièges", from: 0 },
+      { label: "Flottes et fournisseurs", from: 1 },
+      { label: "Maintenance des bus", from: 1 },
+    ],
+  },
+  {
+    code: "BIL",
+    title: "Billetterie",
+    rows: [
+      { label: "Billetterie au guichet et en ligne", from: 0 },
+      { label: "Billets électroniques et contrôle par scan", from: 0 },
+      { label: "Notifications par email et dans l'application", from: 0 },
+    ],
+  },
+  {
+    code: "LOC",
+    title: "Location",
+    rows: [{ label: "Lien de réservation, devis et factures", from: 1 }],
+  },
+  {
+    code: "COL",
+    title: "Colis",
+    rows: [{ label: "Suivi public, ré-acheminement, documents", from: 1 }],
+  },
+  {
+    code: "EQP",
+    title: "Équipes",
+    rows: [{ label: "Plannings, congés, incidents, bulletins de paie", from: 1 }],
+  },
+  {
+    code: "PIL",
+    title: "Clients et conformité",
+    rows: [
+      { label: "Programme de fidélité et parrainage", from: 1 },
+      { label: "Avis clients", from: 2 },
+      { label: "Campagnes dans l'application", from: 2 },
+      { label: "Partenariat entre compagnies", from: 2 },
+      { label: "Consentements et demandes RGPD", from: 2 },
+    ],
+  },
+];
