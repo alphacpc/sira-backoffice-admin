@@ -134,37 +134,6 @@ export default function SecurityPage() {
             Dix services métier
           </h3>
           <LedgerList items={underTheHood.services} />
-
-          <h3 className="mt-12 font-mono text-sm font-semibold uppercase tracking-[0.18em] text-white">
-            Composants communs
-          </h3>
-          <LedgerList items={underTheHood.components} />
-
-          <p className="mt-10 font-mono text-sm leading-relaxed text-white/75">
-            <span className="font-semibold text-amber">Technologies : </span>
-            {underTheHood.stack.join(" · ")}.
-          </p>
-        </Container>
-      </section>
-
-      <section className="py-20">
-        <Container>
-          <div className="rounded-3xl bg-navy px-8 py-12 text-center text-white">
-            <Title2
-              tone="dark"
-              lead="Une question de sécurité"
-              accent="ou de conformité ?"
-              className="text-3xl"
-            />
-            <p className="mx-auto mt-3 max-w-xl text-white/80">
-              Parlons-en lors d&apos;une démonstration, avec vos responsables techniques si vous le souhaitez.
-            </p>
-            <div className="mt-6 flex justify-center">
-              <ButtonLink href="/demo" variant="accent">
-                Demander une démo
-              </ButtonLink>
-            </div>
-          </div>
         </Container>
       </section>
     </main>
