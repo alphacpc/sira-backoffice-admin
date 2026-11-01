@@ -7,11 +7,13 @@ const field =
 
 export default function DemoForm() {
   const [done, setDone] = useState(false);
+  const [body, setBody] = useState("");
+  const [copied, setCopied] = useState(false);
 
   function onSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault();
     const d = new FormData(e.currentTarget);
-    const body = [
+    const text = [
       `Nom : ${d.get("name")}`,
       `Email : ${d.get("email")}`,
       `Compagnie : ${d.get("company") || "—"}`,
@@ -21,20 +23,19 @@ export default function DemoForm() {
     ].join("\n");
     window.location.href = `mailto:contact@sira.app?subject=${encodeURIComponent(
       "Demande de démonstration Sira"
-    )}&body=${encodeURIComponent(body)}`;
+    )}&body=${encodeURIComponent(text)}`;
+    setBody(text);
+    setCopied(false);
     setDone(true);
   }
 
-  if (done) {
-    return (
-      <div role="status" className="rounded-2xl border border-forest/30 bg-forest/5 p-8">
-        <p className="font-serif text-xl">Votre messagerie s&apos;est ouverte.</p>
-        <p className="mt-2 text-sm text-ink/75">
-          Envoyez le message prérempli pour finaliser votre demande. Ce site n&apos;envoie rien de
-          lui-même : si rien ne s&apos;est ouvert, écrivez-nous à contact@sira.app.
-        </p>
-      </div>
-    );
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(body);
+      setCopied(true);
+    } catch {
+      /* rien à afficher */
+    }
   }
 
   return (
@@ -63,6 +64,29 @@ export default function DemoForm() {
       <div>
         <label htmlFor="message" className="block text-sm font-medium">Votre besoin</label>
         <textarea id="message" name="message" rows={4} className={field} />
+      </div>
+      <div role="status" aria-live="polite">
+        {done && (
+          <p className="text-sm text-ink/80">
+            Votre messagerie s&apos;est ouverte avec un message prérempli. Envoyez-le pour finaliser
+            votre demande. Ce site n&apos;envoie rien de lui-même : si rien ne s&apos;est ouvert,
+            écrivez-nous à{" "}
+            <a
+              href="mailto:contact@sira.app"
+              className="underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            >
+              contact@sira.app
+            </a>
+            .{" "}
+            <button
+              type="button"
+              onClick={copy}
+              className="rounded-full border border-ink/20 px-3 py-1 text-xs font-medium focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+            >
+              {copied ? "Message copié" : "Copier le message"}
+            </button>
+          </p>
+        )}
       </div>
       <button
         type="submit"

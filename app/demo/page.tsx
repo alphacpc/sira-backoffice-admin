@@ -25,7 +25,7 @@ export default function DemoPage() {
             <h1 className="mt-4 text-4xl font-semibold leading-tight sm:text-5xl">
               Voyez Sira sur une exploitation comme la vôtre.
             </h1>
-            <ol className="mt-8 space-y-4">
+            <ol role="list" className="mt-8 space-y-4">
               {steps.map((s, i) => (
                 <li key={s} className="flex gap-3 text-ink/80">
                   <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-forest text-xs font-bold text-white">
@@ -37,7 +37,12 @@ export default function DemoPage() {
             </ol>
             <p className="mt-8 flex items-center gap-2 text-sm text-ink/70">
               <Icon name="mail" className="h-4 w-4" />
-              contact@sira.app
+              <a
+                href="mailto:contact@sira.app"
+                className="hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-forest"
+              >
+                contact@sira.app
+              </a>
             </p>
           </Reveal>
           <Reveal delay={0.08}>
