@@ -47,7 +47,6 @@ export const audiences: Audience[] = [
       "Avec le droit colis : fait avancer le statut d'un colis (en transit, au hub, livré)",
       "Avec le droit colis : reprend un colis au hub pour un autre trajet",
       "Avec le droit colis : joint une preuve de livraison",
-      "Des rôles dédiés au personnel de terrain sont à venir",
     ],
   },
   {

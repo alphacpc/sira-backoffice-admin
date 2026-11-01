@@ -1,9 +1,8 @@
 import type { Chapter } from "@/content/solution";
 
 /**
- * Full text of a solution chapter: title, tagline, description, every point
- * and the dashed « À venir » block. Calmer than the home page stops, which
- * only show three points.
+ * Full text of a solution chapter: title, tagline, description, every point.
+ * Calmer than the home page stops, which only show three points.
  */
 export function ChapterFull({ c }: { c: Chapter }) {
   return (
@@ -25,19 +24,6 @@ export function ChapterFull({ c }: { c: Chapter }) {
         ))}
       </ol>
 
-      {c.pending.length > 0 && (
-        <div className="relative mt-6 max-w-lg rounded-2xl border-2 border-dashed border-amber-dark/70 bg-amber-soft/50 px-5 py-4">
-          <p className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-amber-ink">À venir</p>
-          <ul className="mt-2 space-y-1.5 text-sm text-ink/80">
-            {c.pending.map((p) => (
-              <li key={p} className="flex gap-2.5">
-                <span aria-hidden="true" className="mt-[9px] h-px w-3 shrink-0 bg-amber-ink" />
-                {p}
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
     </div>
   );
 }

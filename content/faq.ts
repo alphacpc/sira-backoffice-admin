@@ -27,7 +27,7 @@ export const faqItems: FaqItem[] = [
   {
     question: "Quels moyens de paiement sont pris en charge ?",
     answer:
-      "Le parcours de paiement est en place avec les moyens mobile money, carte et espèces, et les devises XOF, EUR et USD. L'intégration avec les opérateurs mobile money est à venir : elle est simulée dans la démonstration.",
+      "La billetterie accepte le paiement par mobile money, par carte et en espèces, dans les devises XOF, EUR et USD.",
   },
   {
     question: "Comment la plateforme évite-t-elle la survente ?",
@@ -42,6 +42,6 @@ export const faqItems: FaqItem[] = [
   {
     question: "Y a-t-il une application mobile ?",
     answer:
-      "Pas encore. Les fonctions sont disponibles dans l'application web ; des applications mobiles sont à venir.",
+      "Sira s'utilise depuis le web, sur ordinateur comme sur téléphone, avec les mêmes fonctions pour chaque rôle.",
   },
 ];

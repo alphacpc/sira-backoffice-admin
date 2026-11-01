@@ -50,7 +50,6 @@ function PayScreen() {
       label="Paiement"
       title="Dakar → Touba"
       subtitle="Lun 9 juin · 07:30"
-      badge={<Pill tone="navy">Simulé</Pill>}
       footer={
         <span className="block rounded-2xl bg-navy py-2.5 text-center text-xs font-bold text-white">
           Payer

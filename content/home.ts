@@ -14,7 +14,7 @@ export const journeySteps: JourneyStep[] = [
   },
   {
     title: "Il paie",
-    text: "Le paiement confirme la réservation. L'intégration des opérateurs mobile money est à venir : elle est simulée en démonstration.",
+    text: "Le paiement confirme la réservation, par mobile money, carte ou espèces.",
   },
   {
     title: "Il reçoit son billet",

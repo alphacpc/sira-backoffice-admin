@@ -59,8 +59,7 @@ export default function SecurityPage() {
               className="mt-4 max-w-3xl text-4xl sm:text-5xl lg:text-6xl"
             />
             <p className="mt-6 max-w-2xl text-lg text-white/80">
-              Voici ce que la plateforme fait aujourd&apos;hui, sans promesse sur ce qui n&apos;existe
-              pas encore.
+              Voici ce que la plateforme met en œuvre, concrètement.
             </p>
             <div className="mt-8">
               <ButtonLink href="#sous-le-capot" variant="outline-light">

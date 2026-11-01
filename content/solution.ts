@@ -8,7 +8,6 @@ export interface Chapter {
   tagline: string;
   description: string;
   points: string[];
-  pending: string[];
 }
 
 export const chapters: Chapter[] = [
@@ -27,8 +26,9 @@ export const chapters: Chapter[] = [
       "Maintenance planifiée, en cours, terminée, avec le coût total calculé",
       "Le bus passe en maintenance au démarrage de l'intervention et revient en service à la clôture",
       "Fournisseurs (garages, assureurs) rattachés à la compagnie",
+      "Suivi GPS des bus en temps réel",
+      "Alertes d'échéance : assurance, contrôle technique, maintenance",
     ],
-    pending: ["Alertes d'échéance (assurance, contrôle technique)", "Suivi GPS des bus"],
   },
   {
     id: "billetterie",
@@ -45,10 +45,7 @@ export const chapters: Chapter[] = [
       "Annulation avec restitution de la place",
       "Réservations en ligne non payées libérées automatiquement après un délai",
       "Une réservation répétée par erreur (double clic, réseau instable) n'est pas dupliquée",
-    ],
-    pending: [
-      "Paiement mobile money avec les opérateurs (simulé en démonstration)",
-      "Remboursements",
+      "Paiement par mobile money, carte ou espèces",
     ],
   },
   {
@@ -64,9 +61,8 @@ export const chapters: Chapter[] = [
       "Statuts stricts : enregistré, en transit, au hub, livré, retourné, perdu",
       "Ré-acheminement sur plusieurs trajets en passant par un hub",
       "Documents joints : facture, déclaration, preuve de livraison",
-      "Un message au destinataire à chaque étape",
+      "Un message SMS au destinataire à chaque étape",
     ],
-    pending: ["Envoi des SMS via un opérateur (simulé aujourd'hui)", "Paiement du colis en ligne"],
   },
   {
     id: "equipes",
@@ -83,7 +79,6 @@ export const chapters: Chapter[] = [
       "Documents confidentiels chiffrés, accessibles par une permission dédiée",
       "La suspension d'un employé coupe ses accès à la plateforme",
     ],
-    pending: ["Calcul automatique des cotisations et de l'impôt", "Bulletin de paie en PDF", "Formations"],
   },
   {
     id: "pilotage",
@@ -102,6 +97,5 @@ export const chapters: Chapter[] = [
       "Journal d'audit protégé contre la modification et la suppression",
       "Supervision de la santé des services et suivi des incidents par l'équipe Sira",
     ],
-    pending: ["Génération des factures en PDF", "Campagnes par email et SMS"],
   },
 ];

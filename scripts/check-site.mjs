@@ -55,6 +55,12 @@ for (const f of sources) {
   if (m) fail(`${relative(root, f)} : token de l'ancienne identité (${m[0]})`);
 }
 
+// 1e. Aucune mention « à venir » / « simulé » : toutes les fonctions sont présentées comme disponibles.
+for (const f of sources) {
+  const text = readFileSync(f, "utf8");
+  if (/à venir|a venir|Simulé/i.test(text)) fail(`${relative(root, f)} : mention « à venir » / « simulé » interdite`);
+}
+
 // 2. Redirections des anciennes pages.
 const legacy = [
   "/pourquoi-sira", "/solutions", "/services", "/reservation", "/reseau",

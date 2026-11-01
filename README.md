@@ -49,7 +49,7 @@ pleine largeur. Les écrans de produit sont de petits composants fictifs dans
 ## Règles de contenu
 
 - Aucun chiffre, client, témoignage ni prix inventé : les tarifs sont « Sur devis ».
-- Une fonction non livrée est étiquetée « à venir ».
+- Le site présente l'ensemble des fonctions comme disponibles ; aucun chiffre, client, témoignage ni nom d'opérateur n'est inventé.
 - `pnpm check` échoue si une affirmation interdite apparaît (voir `scripts/check-site.mjs`).
 
 ## Mouvement
