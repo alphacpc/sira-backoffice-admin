@@ -5,6 +5,10 @@ import { requireSession } from "@/lib/auth/session";
 import { companiesRepo } from "@/lib/repos/companies";
 import { getStore } from "@/lib/repos/store";
 
+export type ActionResult = { ok: true } | { ok: false; error: string };
+
+const SESSION_EXPIRED = "Session expirée, reconnecte-toi";
+
 function refresh(companyId: string | null) {
   revalidatePath("/");
   revalidatePath("/compagnies");
@@ -17,34 +21,54 @@ function requireString(value: unknown, label: string): string {
   return value;
 }
 
-export async function approveDocument(docId: string): Promise<void> {
-  const session = await requireSession();
-  requireString(docId, "Document");
-  const doc = companiesRepo.reviewDocument(docId, "approved", undefined, session.sub);
-  refresh(doc.companyId);
+/** Runs an action body after the session check; never throws for expected failures. */
+async function run(body: (sub: string) => void): Promise<ActionResult> {
+  let sub: string;
+  try {
+    sub = (await requireSession()).sub;
+  } catch {
+    return { ok: false, error: SESSION_EXPIRED };
+  }
+  try {
+    body(sub);
+    return { ok: true };
+  } catch (e) {
+    return { ok: false, error: e instanceof Error && e.message ? e.message : "Action impossible" };
+  }
 }
 
-export async function rejectDocument(docId: string, reason: string): Promise<void> {
-  const session = await requireSession();
-  requireString(docId, "Document");
-  requireString(reason, "Motif");
-  const doc = companiesRepo.reviewDocument(docId, "rejected", reason.trim(), session.sub);
-  refresh(doc.companyId);
+export async function approveDocument(docId: string): Promise<ActionResult> {
+  return run((actor) => {
+    requireString(docId, "Document");
+    const doc = companiesRepo.reviewDocument(docId, "approved", undefined, actor);
+    refresh(doc.companyId);
+  });
 }
 
-export async function forceActivateCompany(companyId: string, reason: string): Promise<void> {
-  const session = await requireSession();
-  requireString(companyId, "Compagnie");
-  requireString(reason, "Motif");
-  companiesRepo.forceActivate(companyId, reason.trim(), session.sub);
-  refresh(companyId);
+export async function rejectDocument(docId: string, reason: string): Promise<ActionResult> {
+  return run((actor) => {
+    requireString(docId, "Document");
+    requireString(reason, "Motif");
+    const doc = companiesRepo.reviewDocument(docId, "rejected", reason.trim(), actor);
+    refresh(doc.companyId);
+  });
 }
 
-export async function revealContact(companyId: string, field: "email" | "phone"): Promise<void> {
-  const session = await requireSession();
-  requireString(companyId, "Compagnie");
-  if (field !== "email" && field !== "phone") throw new Error("Champ invalide");
-  if (!getStore().companies.some((c) => c.id === companyId)) throw new Error("Compagnie introuvable");
-  companiesRepo.logReveal(companyId, field, session.sub);
-  revalidatePath(`/compagnies/${companyId}`);
+export async function forceActivateCompany(companyId: string, reason: string): Promise<ActionResult> {
+  return run((actor) => {
+    requireString(companyId, "Compagnie");
+    requireString(reason, "Motif");
+    companiesRepo.forceActivate(companyId, reason.trim(), actor);
+    refresh(companyId);
+  });
+}
+
+export async function revealContact(companyId: string, field: "email" | "phone"): Promise<ActionResult> {
+  return run((actor) => {
+    requireString(companyId, "Compagnie");
+    if (field !== "email" && field !== "phone") throw new Error("Champ invalide");
+    if (!getStore().companies.some((c) => c.id === companyId)) throw new Error("Compagnie introuvable");
+    companiesRepo.logReveal(companyId, field, actor);
+    revalidatePath(`/compagnies/${companyId}`);
+  });
 }

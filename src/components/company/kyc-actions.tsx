@@ -10,29 +10,36 @@ export function KycActions({ docId, docLabel }: { docId: string; docLabel: strin
   const router = useRouter();
   const [rejecting, setRejecting] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function approve() {
     setBusy(true);
+    setError(null);
     try {
-      await approveDocument(docId);
+      const result = await approveDocument(docId);
       router.refresh();
+      if (!result.ok) setError(result.error);
+    } catch {
+      setError("Action impossible");
     } finally {
       setBusy(false);
     }
   }
 
   return (
-    <div className="flex gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <Button size="sm" onClick={approve} disabled={busy} aria-label={`Approuver ${docLabel}`}>Approuver</Button>
       <Button size="sm" variant="secondary" onClick={() => setRejecting(true)} aria-label={`Rejeter ${docLabel}`}>Rejeter</Button>
+      {error && <p role="alert" className="text-xs text-danger">{error}</p>}
       <ConfirmDialog
         open={rejecting} onOpenChange={setRejecting}
         title={`Rejeter « ${docLabel} »`}
         description="Le motif sera conservé et visible dans l'historique."
         confirmLabel="Rejeter le document" destructive requireReason
         onConfirm={async (reason) => {
-          await rejectDocument(docId, reason);
+          const result = await rejectDocument(docId, reason);
           router.refresh();
+          if (!result.ok) throw new Error(result.error);
         }}
       />
     </div>
