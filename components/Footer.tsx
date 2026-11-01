@@ -1,5 +1,4 @@
 import Logo from "@/components/Logo";
-import { ButtonLink, Title2 } from "@/components/ui";
 import { Stagger, StaggerItem } from "@/components/motion";
 import { chapters } from "@/content/solution";
 import { FooterLink } from "@/components/footer/FooterLink";
@@ -28,35 +27,8 @@ export default function Footer() {
     <footer className="relative mt-4">
       <div className="relative overflow-hidden bg-gradient-to-b from-navy to-navy-deep text-white">
         <div className="relative mx-auto max-w-6xl px-6 pb-8 pt-12 lg:pt-14">
-          {/* Bande d'appel : un billet à souche */}
-          <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-gradient-to-br from-navy-dark to-navy-deep">
-            <Stagger className="flex flex-col md:flex-row md:items-stretch" stagger={0.07}>
-              <StaggerItem className="flex-1 px-7 py-9 sm:px-10 sm:py-11">
-                <p className={heading}>DKR → TBA · Prochain départ</p>
-                <Title2
-                  as="h2"
-                  tone="dark"
-                  lead="Prêt à"
-                  accent="embarquer ?"
-                  className="mt-3 text-4xl sm:text-5xl"
-                />
-                <p className="mt-4 max-w-md text-base text-white/80">
-                  Une démonstration sur des données d&apos;exemple, adaptée à vos lignes et à vos équipes.
-                </p>
-              </StaggerItem>
-              <StaggerItem className="relative flex items-center justify-center border-t-2 border-dashed border-white/20 px-7 py-8 md:w-72 md:border-l-2 md:border-t-0 md:px-8">
-                <span aria-hidden="true" className="absolute -left-3 -top-[13px] h-6 w-6 rounded-full md:left-[-13px] md:-top-3" style={{ backgroundColor: "#1c2544" }} />
-                <span aria-hidden="true" className="absolute -right-3 -top-[13px] h-6 w-6 rounded-full md:-bottom-3 md:left-[-13px] md:right-auto md:top-auto" style={{ backgroundColor: "#1c2544" }} />
-                <ButtonLink href="/demo" variant="accent-dark">
-                  Demander une démo
-                  <span data-arrow aria-hidden="true" className="ml-2">→</span>
-                </ButtonLink>
-              </StaggerItem>
-            </Stagger>
-          </div>
-
           {/* Grille principale */}
-          <Stagger className="mt-14 grid gap-12 md:grid-cols-12 md:gap-8 lg:mt-16" stagger={0.07}>
+          <Stagger className="grid gap-12 md:grid-cols-12 md:gap-8" stagger={0.07}>
             <StaggerItem className="md:col-span-12 lg:col-span-4">
               <Logo height={44} variant="dark" />
               <p className="mt-4 max-w-sm text-sm leading-relaxed text-white/70">
