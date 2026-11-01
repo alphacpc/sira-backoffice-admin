@@ -1,69 +1,50 @@
-import { securitySections } from "@/content/security";
-import { Icon } from "@/components/icons";
-import CTABand from "@/components/CTABand";
+import type { Metadata } from "next";
+import { Container, Eyebrow, ButtonLink } from "@/components/ui";
 import { Reveal } from "@/components/motion";
+import { Icon } from "@/components/icons";
+import { trustSections } from "@/content/trust";
+import { underTheHood } from "@/content/under-the-hood";
+
+export const metadata: Metadata = {
+  title: "Sécurité et confiance",
+  description:
+    "Isolation entre compagnies, rôles, journal d'audit, RGPD et exploitation : comment Sira protège vos données.",
+};
 
 export default function SecurityPage() {
   return (
-    <main className="bg-white">
-      {/* ===== Hero ===== */}
-      <section className="relative overflow-hidden bg-white">
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-96 bg-[radial-gradient(ellipse_70%_100%_at_50%_0%,rgb(245_165_36/0.12),transparent_70%)]"
-        />
-        <div className="relative mx-auto max-w-6xl px-6 pb-14 pt-20 sm:pt-24">
+    <main>
+      <section className="pb-6 pt-16 lg:pt-24">
+        <Container>
           <Reveal>
-            <p className="text-sm font-semibold uppercase tracking-widest text-accent">
-              Sécurité &amp; conformité
-            </p>
-            <h1 className="mt-3 text-4xl font-bold tracking-tight text-primary-deep sm:text-5xl">
-              Sûre <span className="text-gradient">par conception.</span>
+            <Eyebrow>Sécurité et confiance</Eyebrow>
+            <h1 className="mt-4 max-w-3xl text-4xl font-semibold leading-tight sm:text-5xl">
+              Des données de voyageurs et de paiements, traitées avec sérieux.
             </h1>
-            <p className="mt-5 max-w-2xl text-lg text-primary/60">
-              Une plateforme qui manipule des paiements et des données
-              personnelles se doit d&apos;être sûre par conception. Voici comment
-              Sira s&apos;y prend.
+            <p className="mt-6 max-w-2xl text-lg text-ink/75">
+              Voici ce que la plateforme fait aujourd&apos;hui, sans promesse sur ce qui n&apos;existe
+              pas encore.
             </p>
           </Reveal>
-        </div>
+        </Container>
       </section>
 
-      {/* ===== Sections ===== */}
-      <section className="mx-auto max-w-5xl px-6 pb-16">
-        <div className="space-y-6">
-          {securitySections.map((section, index) => (
-            <Reveal key={section.title} delay={Math.min(index, 2) * 0.06}>
-              <article className="grid gap-6 rounded-3xl border border-primary/10 bg-white p-7 transition hover:border-accent/40 hover:shadow-[var(--shadow-soft)] sm:grid-cols-[auto_1fr] sm:p-8">
-                <div className="flex items-center gap-4 sm:flex-col sm:items-start">
-                  <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-accent/10">
-                    <Icon
-                      name={section.icon}
-                      className="h-6 w-6 text-accent-dark"
-                    />
-                  </span>
-                  <span className="text-sm font-bold text-primary/20">
-                    {String(index + 1).padStart(2, "0")}
-                  </span>
-                </div>
+      <section className="py-12">
+        <Container className="space-y-5">
+          {trustSections.map((s, i) => (
+            <Reveal key={s.title} delay={Math.min(i, 2) * 0.05}>
+              <article className="grid grid-cols-1 [&>*]:min-w-0 gap-6 rounded-3xl border border-ink/10 bg-white p-7 sm:grid-cols-[auto_1fr] sm:p-8">
+                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-forest/10 text-forest">
+                  <Icon name={s.icon} className="h-6 w-6" />
+                </span>
                 <div>
-                  <h2 className="text-2xl font-semibold text-primary-deep">
-                    {section.title}
-                  </h2>
-                  <p className="mt-3 max-w-3xl text-primary/60">
-                    {section.description}
-                  </p>
-                  <ul className="mt-6 grid gap-3 sm:grid-cols-2">
-                    {section.points.map((point) => (
-                      <li
-                        key={point}
-                        className="flex items-start gap-2.5 text-sm text-primary/80"
-                      >
-                        <Icon
-                          name="check"
-                          className="mt-0.5 h-4 w-4 shrink-0 text-accent-dark"
-                        />
-                        {point}
+                  <h2 className="text-2xl font-semibold">{s.title}</h2>
+                  <p className="mt-2 text-ink/70">{s.description}</p>
+                  <ul className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 [&>*]:min-w-0">
+                    {s.points.map((p) => (
+                      <li key={p} className="flex gap-2.5 text-sm text-ink/85">
+                        <Icon name="check" className="mt-0.5 h-4 w-4 shrink-0 text-forest" />
+                        {p}
                       </li>
                     ))}
                   </ul>
@@ -71,16 +52,69 @@ export default function SecurityPage() {
               </article>
             </Reveal>
           ))}
-        </div>
+        </Container>
       </section>
 
-      {/* ===== CTA ===== */}
-      <div className="mx-auto max-w-6xl px-6 pb-24">
-        <CTABand
-          title="La sécurité vous importe ?"
-          description="Demandez une démonstration et posez-nous toutes vos questions."
-        />
-      </div>
+      <section id="sous-le-capot" className="bg-sand/60 py-20">
+        <Container>
+          <Reveal>
+            <Eyebrow>Sous le capot</Eyebrow>
+            <h2 className="mt-3 max-w-2xl text-3xl font-semibold">
+              Pour vos équipes techniques : comment c&apos;est construit.
+            </h2>
+          </Reveal>
+
+          <ul className="mt-10 grid grid-cols-1 gap-5 md:grid-cols-3 [&>*]:min-w-0">
+            {underTheHood.principles.map((p) => (
+              <li key={p.title} className="rounded-2xl border border-ink/10 bg-white p-6">
+                <h3 className="text-lg font-semibold">{p.title}</h3>
+                <p className="mt-2 text-sm text-ink/70">{p.text}</p>
+              </li>
+            ))}
+          </ul>
+
+          <h3 className="mt-14 text-xl font-semibold">Dix services métier</h3>
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
+            {underTheHood.services.map((s) => (
+              <li key={s.name} className="rounded-xl border border-ink/10 bg-white p-4 text-sm">
+                <p className="font-semibold">{s.name}</p>
+                <p className="mt-1 text-ink/70">{s.role}</p>
+              </li>
+            ))}
+          </ul>
+
+          <h3 className="mt-12 text-xl font-semibold">Composants communs</h3>
+          <ul className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 [&>*]:min-w-0">
+            {underTheHood.components.map((c) => (
+              <li key={c.name} className="rounded-xl border border-ink/10 bg-white p-4 text-sm">
+                <p className="font-semibold">{c.name}</p>
+                <p className="mt-1 text-ink/70">{c.role}</p>
+              </li>
+            ))}
+          </ul>
+
+          <p className="mt-10 text-sm text-ink/70">
+            <span className="font-semibold text-ink">Technologies : </span>
+            {underTheHood.stack.join(" · ")}.
+          </p>
+        </Container>
+      </section>
+
+      <section className="py-20">
+        <Container>
+          <div className="rounded-3xl bg-forest px-8 py-12 text-center text-white">
+            <h2 className="text-3xl font-semibold">Une question de sécurité ou de conformité ?</h2>
+            <p className="mx-auto mt-3 max-w-xl text-white/80">
+              Parlons-en lors d&apos;une démonstration, avec vos responsables techniques si vous le souhaitez.
+            </p>
+            <div className="mt-6 flex justify-center">
+              <ButtonLink href="/demo" variant="accent">
+                Demander une démo
+              </ButtonLink>
+            </div>
+          </div>
+        </Container>
+      </section>
     </main>
   );
 }
