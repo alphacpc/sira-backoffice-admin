@@ -93,7 +93,7 @@ export const chapters: Chapter[] = [
       "Abonnement avec période d'essai, renouvellement et factures",
       "Vérification des pièces de la compagnie avant l'activation du compte",
       "Consentements par compagnie et demandes RGPD suivies sous 30 jours",
-      "Journal d'audit qui ne peut être ni modifié ni effacé",
+      "Journal d'audit protégé contre la modification et la suppression",
       "Supervision de la santé des services et suivi des incidents par l'équipe Sira",
     ],
     pending: ["Génération des factures en PDF", "Campagnes par email et SMS"],

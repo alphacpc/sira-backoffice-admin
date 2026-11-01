@@ -7,51 +7,41 @@ export const faqItems: FaqItem[] = [
   {
     question: "Qu'est-ce que Sira ?",
     answer:
-      "Sira est une plateforme SaaS multi-tenant destinée aux compagnies de transport interurbain par autocar en Afrique de l'Ouest. Elle unifie la gestion de flotte, la billetterie, l'expédition de colis, les ressources humaines et la facturation SaaS dans un seul espace.",
+      "Sira est une plateforme pour les compagnies de transport interurbain par autocar en Afrique de l'Ouest. Elle réunit la flotte, la billetterie, les colis, les équipes, la fidélité clients et la conformité, et chaque compagnie y dispose de son propre espace.",
   },
   {
     question: "À qui s'adresse Sira ?",
     answer:
-      "Aux compagnies de transport interurbain de toutes tailles : d'une compagnie avec quelques bus à une flotte importante desservant plusieurs lignes et plusieurs gares. Chaque compagnie active les modules dont elle a besoin.",
+      "Aux compagnies d'autocars, des petites flottes aux réseaux de plusieurs lignes et de plusieurs gares. Les fonctions activées dépendent du plan de chaque compagnie.",
   },
   {
     question: "Combien coûte Sira ?",
     answer:
-      "Sira est proposée sous forme d'abonnement mensuel, avec plusieurs plans selon la taille de la flotte et le volume d'activité. Consultez la page Tarifs pour les ordres de grandeur, ou demandez une démonstration pour une proposition adaptée.",
+      "Les tarifs sont établis sur devis, selon la taille de la flotte et les fonctions retenues. La page Tarifs décrit les trois niveaux; une démonstration permet de cadrer le vôtre.",
   },
   {
-    question: "Les données d'une compagnie sont-elles isolées ?",
+    question: "Les données d'une compagnie sont-elles séparées de celles des autres ?",
     answer:
-      "Oui. Chaque compagnie est un tenant à part entière, avec son propre sous-domaine et des données strictement séparées. Chaque accès est filtré par compagnie, de sorte qu'aucune donnée d'une autre compagnie ne peut fuiter, par construction.",
+      "Oui. Les accès sont filtrés par compagnie dans chaque service : un utilisateur rattaché à une compagnie ne peut ni lire ni modifier les données d'une autre.",
   },
   {
     question: "Quels moyens de paiement sont pris en charge ?",
     answer:
-      "La billetterie prend en charge le paiement mobile money (Orange Money, Wave…), ainsi que le virement, la carte et les espèces. Les devises gérées incluent le FCFA (XOF), l'euro et le dollar.",
+      "Le parcours de paiement est en place avec les moyens mobile money, carte et espèces, et les devises XOF, EUR et USD. L'intégration avec les opérateurs mobile money est à venir : elle est simulée dans la démonstration.",
   },
   {
-    question: "Comment se fait la réservation en ligne ?",
+    question: "Un siège peut-il être vendu deux fois ?",
     answer:
-      "Le passager (ou l'agent au guichet) recherche un trajet, choisit un siège, paie par mobile money et reçoit un billet électronique scannable. La disponibilité des places est mise à jour de façon atomique, ce qui évite toute survente.",
+      "Non. Les places disponibles sont décomptées à chaque vente, au guichet comme en ligne, et une réservation répétée par erreur n'est pas dupliquée.",
   },
   {
-    question: "Sira gère-t-elle aussi les colis ?",
+    question: "Sira gère-t-elle les colis ?",
     answer:
-      "Oui. Un colis est expédié sur le réseau de la compagnie, suivi publiquement par numéro étape par étape, et peut être ré-acheminé sur plusieurs trajets via des hubs. Des documents (facture, déclaration, preuve de livraison) peuvent y être attachés.",
+      "Oui. Un colis reçoit un numéro de suivi consultable sans compte, suit des statuts stricts, peut être ré-acheminé sur plusieurs trajets via un hub et peut porter des documents joints.",
   },
   {
-    question: "La plateforme est-elle conforme à la réglementation ?",
+    question: "Y a-t-il une application mobile ?",
     answer:
-      "Sira est alignée sur la loi sénégalaise n°2008-12 sur la protection des données personnelles et compatible RGPD. Elle fournit un journal d'audit en ajout seul, une gestion du consentement, et le suivi des droits des personnes concernées.",
-  },
-  {
-    question: "Puis-je personnaliser la plateforme à mon image ?",
-    answer:
-      "Les plans supérieurs incluent un sous-domaine personnalisé et des fonctionnalités à la carte. Le nom et les paramètres de la compagnie (devise, commission, coordonnées) sont configurables.",
-  },
-  {
-    question: "Comment démarrer ?",
-    answer:
-      "Commencez par demander une démonstration. Nous établissons ensemble vos besoins (flotte, lignes, volume), vous choisissez un plan, et votre compagnie est configurée avec son espace dédié.",
+      "Pas encore. Les fonctions sont disponibles dans l'application web; des applications mobiles sont à venir.",
   },
 ];
