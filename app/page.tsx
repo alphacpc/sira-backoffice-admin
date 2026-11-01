@@ -94,7 +94,7 @@ export default function HomePage() {
                 <div className="relative rounded-[2rem] bg-mist px-4 py-10 sm:px-10 lg:px-8 lg:py-14">
                   <div className="relative grid grid-cols-1 items-center gap-10 [&>*]:min-w-0 lg:grid-cols-[0.82fr_1.18fr] lg:gap-8">
                     <StopText c={location} />
-                    <LocationComposition variant="side" panel={false} />
+                    <LocationComposition variant="side" panel={false} quote={false} />
                   </div>
                 </div>
               </Enter>

@@ -22,12 +22,24 @@ export function LocationComposition({
   className = "",
   variant = "stack",
   panel = true,
+  quote = true,
 }: {
   className?: string;
   variant?: "side" | "stack";
   panel?: boolean;
+  /** `false` : le téléphone du lien de réservation seul, sans le devis ni le lien pointillé. */
+  quote?: boolean;
 }) {
   const side = variant === "side";
+  if (!quote) {
+    return (
+      <div className={`relative ${panel ? "rounded-[2rem] bg-mist px-4 py-10 sm:px-8 lg:px-10 lg:py-14" : ""} ${className}`}>
+        <Enter x={36} duration={0.8} delay={0.1} className="relative mx-auto max-w-[300px]">
+          <RentalRequestScreen className="max-w-[300px]" />
+        </Enter>
+      </div>
+    );
+  }
   return (
     <div
       className={`relative ${panel ? "rounded-[2rem] bg-mist px-4 py-10 sm:px-8 lg:px-10 lg:py-14" : ""} ${className}`}
