@@ -133,10 +133,10 @@ test("the command palette opens with the keyboard and navigates to a company", a
   await expect(page.getByRole("heading", { name: "Louga Trans" })).toBeVisible();
 });
 
-test("unimplemented sections show a coming-soon page", async ({ page }) => {
+test("an unknown path answers 404", async ({ page }) => {
   await login(page);
-  await page.goto("/recherche");
-  await expect(page.getByText("Bientôt disponible")).toBeVisible();
+  const response = await page.goto("/ce-chemin-nexiste-pas");
+  expect(response?.status()).toBe(404);
 });
 
 test("deactivating KYC types lets a company activate without those documents", async ({ page }) => {
@@ -1484,6 +1484,148 @@ test("the journal shows the indicators and filters by actor, period and data rev
   await expect(page.getByRole("row", { name: /Compagnie suspendue pour impayé/ })).toBeVisible();
 });
 
+test("searching by booking code lists the bookings and opens one", async ({ page }) => {
+  await login(page);
+  await page.goto("/recherche");
+  await expect(page.getByTestId("search-help")).toBeVisible();
+  await page.getByLabel("Rechercher dans le backoffice").fill("BK-");
+  await page.getByRole("button", { name: "Rechercher", exact: true }).click();
+  await expect(page).toHaveURL(/\/recherche\?q=BK-/);
+  const group = page.getByTestId("search-group-booking");
+  await expect(group).toBeVisible();
+  expect(await group.getByTestId("search-hit").count()).toBeGreaterThan(0);
+  await expect(page.getByTestId("search-group-ticket")).toHaveCount(0);
+  await group.getByTestId("search-hit").first().getByRole("link").click();
+  await expect(page).toHaveURL(/\/ventes\/reservations\/[0-9a-f-]+$/);
+});
+
+test("the search ignores accents and case", async ({ page }) => {
+  await login(page);
+  await page.goto("/recherche?q=AISSATOU");
+  await expect(page.getByTestId("search-hit").filter({ hasText: "Aïssatou Sarr" }).first()).toBeVisible();
+});
+
+test("a contact-like query is refused and never shown", async ({ page }) => {
+  await login(page);
+  await page.goto("/recherche?q=someone%40example.sn");
+  await expect(page).toHaveURL(/\/recherche\?refus=contact$/);
+  await expect(page.getByTestId("search-problem")).toHaveText(
+    "La recherche par e-mail ou téléphone n'est pas disponible : utilise un nom, un code ou un identifiant.",
+  );
+  await expect(page.getByLabel("Rechercher dans le backoffice")).toHaveValue("");
+  await expect(page.locator("body")).not.toContainText("someone@example.sn");
+
+  await page.goto("/recherche?q=%2B221%2077%20123%2045%2067");
+  await expect(page).toHaveURL(/\/recherche\?refus=contact$/);
+  await expect(page.locator("body")).not.toContainText("77 123 45 67");
+});
+
+test("a too short query is refused and an unknown one finds nothing", async ({ page }) => {
+  await login(page);
+  await page.goto("/recherche?q=a");
+  await expect(page.getByTestId("search-problem")).toHaveText("Saisis au moins 2 caractères");
+  await page.goto("/recherche?q=zzzqqqxxx");
+  await expect(page.getByTestId("search-empty")).toHaveText("Aucun résultat pour cette recherche.");
+  await expect(page.locator("body")).not.toContainText("zzzqqqxxx");
+});
+
+test("the search can be narrowed to one type", async ({ page }) => {
+  await login(page);
+  await page.goto("/recherche?q=pcl-");
+  await expect(page.getByTestId("search-group-parcel")).toBeVisible();
+  const filters = page.getByRole("navigation", { name: "Filtrer par type" });
+  await expect(filters.getByRole("link", { name: /^Tous \(\d+\)$/ })).toBeVisible();
+  await filters.getByRole("link", { name: /^Colis \(\d+\)$/ }).click();
+  await expect(page).toHaveURL(/type=parcel/);
+  await expect(page).toHaveURL(/q=pcl-/);
+  await expect(page.getByTestId("search-group-parcel")).toBeVisible();
+
+  await page.goto("/recherche?q=pcl-&type=booking");
+  await expect(page.getByTestId("search-empty")).toHaveText("Aucun résultat dans ce type.");
+});
+
+test("a long result list is capped and says how many are left", async ({ page }) => {
+  await login(page);
+  await page.goto("/recherche?q=bk-");
+  const group = page.getByTestId("search-group-booking");
+  const count = await group.getByTestId("search-hit").count();
+  expect(count).toBeLessThanOrEqual(25);
+  if (count === 25) await expect(group.getByTestId("search-more")).toContainText("autre(s) résultat(s)");
+});
+
+test("the palette lists records and links to the full search", async ({ page }) => {
+  await login(page);
+  await page.keyboard.press("ControlOrMeta+k");
+  const input = page.getByPlaceholder("Aller à une page ou une compagnie…");
+  await input.fill("BK-");
+  const record = page.getByRole("option", { name: /^BK-/ }).first();
+  await expect(record).toBeVisible();
+  await expect(page.getByRole("option", { name: /Voir tous les résultats pour « BK- »/ })).toBeVisible();
+  await record.click();
+  await expect(page).toHaveURL(/\/ventes\/reservations\/[0-9a-f-]+$/);
+
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByPlaceholder("Aller à une page ou une compagnie…").fill("TK-");
+  await page.getByRole("option", { name: /Voir tous les résultats pour « TK- »/ }).click();
+  await expect(page).toHaveURL(/\/recherche\?q=TK-$/);
+  await expect(page.getByTestId("search-group-ticket")).toBeVisible();
+});
+
+test("Enter in the palette goes to the best local match, else to the full search", async ({ page }) => {
+  await login(page);
+  await page.keyboard.press("ControlOrMeta+k");
+  const input = page.getByPlaceholder("Aller à une page ou une compagnie…");
+  await input.fill("Louga");
+  await expect(page.getByRole("option", { name: "Louga Trans" })).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/compagnies\/[0-9a-f-]+$/);
+  await expect(page.getByRole("heading", { name: "Louga Trans" })).toBeVisible();
+
+  await page.keyboard.press("ControlOrMeta+k");
+  await page.getByPlaceholder("Aller à une page ou une compagnie…").fill("zzzqqqxxx");
+  await expect(page.getByRole("option", { name: /Voir tous les résultats pour « zzzqqqxxx »/ })).toBeVisible();
+  await page.keyboard.press("Enter");
+  await expect(page).toHaveURL(/\/recherche\?q=zzzqqqxxx$/);
+});
+
+test("the palette never searches for a contact", async ({ page }) => {
+  await login(page);
+  const actionCalls: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST" && r.headers()["next-action"]) actionCalls.push(r.url());
+  });
+  await page.keyboard.press("ControlOrMeta+k");
+  const input = page.getByPlaceholder("Aller à une page ou une compagnie…");
+  await input.fill("someone@example.sn");
+  await expect(page.getByRole("option", { name: /Voir tous les résultats/ })).toHaveCount(0);
+  await expect(page.getByText("Aucun résultat")).toBeVisible();
+  await page.waitForTimeout(800); // well past the 250 ms debounce
+  expect(actionCalls).toEqual([]);
+});
+
+test("the palette drops a late answer to an older query", async ({ page }) => {
+  await login(page);
+  let calls = 0;
+  await page.route("**/*", async (route) => {
+    const req = route.request();
+    if (req.method() === "POST" && req.headers()["next-action"]) {
+      calls += 1;
+      if (calls === 1) await new Promise((r) => setTimeout(r, 2000)); // the first answer arrives last
+    }
+    await route.continue();
+  });
+  await page.keyboard.press("ControlOrMeta+k");
+  const input = page.getByPlaceholder("Aller à une page ou une compagnie…");
+  await input.fill("BK-");
+  await page.waitForTimeout(500); // first call fired, still pending
+  await input.fill("PCL-");
+  await expect(page.getByRole("option", { name: /^PCL-/ }).first()).toBeVisible();
+  await page.waitForTimeout(2500); // the stale BK- answer has now arrived
+  await expect(page.getByRole("option", { name: /^BK-/ })).toHaveCount(0);
+  await expect(page.getByRole("option", { name: /^PCL-/ }).first()).toBeVisible();
+  expect(calls).toBeGreaterThanOrEqual(2);
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
@@ -1555,6 +1697,7 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     "/supervision/usage", "/supervision/usage?jours=30",
     "/parametres/profil", "/parametres/equipe-admin", "/parametres/equipe-admin?statut=suspended",
     "/parametres/journal-backoffice", "/parametres/journal-backoffice?jours=30", "/parametres/journal-backoffice?revelations=1",
+    "/recherche", "/recherche?q=bk-", "/recherche?q=aissatou", "/recherche?q=express", "/recherche?q=sys-", "/recherche?refus=contact",
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
@@ -1591,6 +1734,30 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   await expect(page.getByTestId("notification-content")).toHaveCount(0);
   await page.goto(campaignPath);
   await expect(page.getByTestId("campaign-status")).toBeVisible();
+  // Global search: really rendered in the production build, and never able to find or echo a contact.
+  await page.goto("/recherche");
+  await expect(page.getByTestId("search-help")).toBeVisible();
+  await page.goto("/recherche?q=bk-");
+  expect(await page.getByTestId("search-group-booking").getByTestId("search-hit").count()).toBeGreaterThan(0);
+  await page.goto("/recherche?refus=contact");
+  await expect(page.getByTestId("search-problem")).toBeVisible();
+  for (const q of ["contact", "louga-trans.sn", "30137", "7712"]) {
+    const raw = await (await page.request.get(`/recherche?q=${q}`)).text();
+    await page.goto(`/recherche?q=${q}`);
+    const rendered = await page.content();
+    expect(raw, `raw search ${q}`).not.toMatch(ANY_SN_EMAIL);
+    expect(rendered, `dom search ${q}`).not.toMatch(ANY_SN_EMAIL);
+    for (const re of PHONES) {
+      expect(raw, `raw search ${q}`).not.toMatch(re);
+      expect(rendered, `dom search ${q}`).not.toMatch(re);
+    }
+    expect(await page.getByTestId("search-hit").count(), `hits for contact fragment ${q}`).toBe(0);
+  }
+  for (const q of ["someone@example.sn", "contact@louga-trans.sn", "%2B221%2077%2012%2030%2013%207"]) {
+    const res = await page.request.get(`/recherche?q=${q}`, { maxRedirects: 0 });
+    expect(res.status(), `refusal ${q}`).toBe(307);
+    expect(res.headers()["location"]).toMatch(/\/recherche\?refus=contact$/);
+  }
   // The pages are really rendered (the negative checks above would pass on an empty page).
   await page.goto("/acces/sessions");
   await expect(page.getByRole("cell", { name: /^(41\.82|196\.207)\.\d{1,3}\.0$/ }).first()).toBeVisible();

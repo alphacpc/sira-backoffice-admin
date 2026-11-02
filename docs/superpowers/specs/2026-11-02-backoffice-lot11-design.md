@@ -12,7 +12,7 @@ Date : 2026-11-02. Statut : rédigé pour relecture. Référence : `docs/sitemap
 ## Choix de cadrage
 
 - **Une recherche, deux portes d'entrée** : la page `/recherche` (résultats complets, groupés par type, liens de partage) et la **palette de commandes ⌘K** déjà présente (lot 1), qui gagne des résultats d'enregistrements en plus des pages et compagnies. Les deux utilisent le même dépôt `searchRepo`.
-- **On cherche un nom, un code ou un identifiant, jamais un contact.** Les requêtes qui ressemblent à une adresse e-mail (contiennent `@`) ou à un numéro de téléphone (uniquement chiffres, espaces, `+ ( ) . -`, au moins 7 chiffres) sont **refusées** avec un message, avant toute recherche. Raison : la requête voyage dans l'URL (`?q=`), et le backoffice ne met aucune donnée de contact dans une URL. Aucun champ e-mail ou téléphone n'est d'ailleurs interrogé. Une requête refusée n'est jamais renvoyée dans la page.
+- **On cherche un nom, un code ou un identifiant, jamais un contact.** Les requêtes qui ressemblent à une adresse e-mail (contiennent `@`) ou à un numéro de téléphone (uniquement chiffres, espaces, `+ ( ) . -`, au moins 7 chiffres) sont **refusées** avec un message, avant toute recherche. Raison : la requête voyage dans l'URL (`?q=`), et le backoffice ne met aucune donnée de contact dans une URL. Aucun champ e-mail ou téléphone n'est d'ailleurs interrogé. Une requête de type contact ou trop longue n'est jamais renvoyée dans la page.
 - **Champs interrogés** (nom d'affichage ou code seulement) :
 
 | Type | Champs | Lien | Sous-libellé |
@@ -44,6 +44,7 @@ L'entrée « Recherche globale » de la navigation passe à `implemented: true` 
 
 ## Règles
 
+- Une requête de type contact est **redirigée** vers `/recherche?refus=contact` (la valeur saisie disparaît de l'URL et n'est jamais réaffichée).
 - `queryProblem(raw)` renvoie `null` ou un message, dans cet ordre : trop court (`"Saisis au moins 2 caractères"`, après trim) → trop long (`"La recherche est trop longue (100 caractères maximum)"`) → ressemble à un contact (`"La recherche par e-mail ou téléphone n'est pas disponible : utilise un nom, un code ou un identifiant."`).
 - `searchRepo.search(raw, { types?, limitPerType }, now?)` renvoie `{ problem, groups }` ; avec un problème, `groups` est vide et aucune donnée n'est lue. `types` absent = tous. Les groupes vides sont omis, dans l'ordre du tableau ci-dessus.
 - La Server Action `searchEverywhere(query)` : session d'abord ; renvoie les résultats de tous les types **sauf les compagnies** (la palette les a déjà), 4 par type ; un problème de requête renvoie une liste vide (pas une erreur).

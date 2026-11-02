@@ -58,7 +58,11 @@ Six écrans : santé des services (indicateurs, disponibilité sur 24 h, histori
 
 Trois écrans : mon profil (compte, état du TOTP, session courante et sessions de l'administrateur), équipe admin (liste filtrable par statut) et journal du backoffice (filtres d'acteur, de période et de révélations de données). Neuf actions : modifier son nom, régénérer ses codes de récupération (affichés une seule fois), révoquer une de ses sessions ou toutes les autres, inviter un administrateur, le suspendre, le réactiver, réinitialiser son TOTP et révoquer ses sessions (motif obligatoire pour les quatre dernières). Le journal est filtrable et retrace les actions du backoffice.
 
-## Limites connues (lots 1 à 10)
+## Lot 11 : recherche globale
+
+Page `/recherche` et palette ⌘K enrichie : recherche d'un nom, d'un code ou d'un identifiant sur 11 types d'enregistrements (compagnies, utilisateurs, réservations, billets, colis, etc.), groupés par type, avec filtre par type. La maquette n'a désormais plus aucune page « bientôt disponible ».
+
+## Limites connues (lots 1 à 11)
 
 - Authentification et TOTP simulés (le rôle administrateur plateforme et le TOTP réels sont des prérequis backend).
 - État en mémoire : il est réinitialisé à chaque redémarrage du serveur.
@@ -77,7 +81,7 @@ Trois écrans : mon profil (compte, état du TOTP, session courante et sessions 
 - Conformité : journaux en lecture seule et sans export ; les lectures de pages n'écrivent pas dans le journal d'accès (seules les actions le font), alors que le backend écrit une ligne à chaque lecture d'une demande ; les révélations de données personnelles des lots 3, 6 et 7 sont dans l'activité du backoffice, pas dans le journal d'accès ; le job d'anonymisation n'est pas simulé (les compteurs « non anonymisées » se calculent à la lecture) ; on ne peut pas revenir à la durée de rétention par défaut ; les notes de clôture sont obligatoires (plus strict que le backend) ; aucune alerte de retard n'est émise ; l'acteur des lignes écrites par le backoffice est un libellé, pas un compte de la plateforme ; la consultation de consentements est limitée aux utilisateurs qui en ont.
 - Supervision : contrôles de santé échantillonnés toutes les 30 minutes (le backend sonde toutes les 30 secondes) ; taux d'erreur de service jamais calculé ; aucun moyen de relancer un sondage ; un service en panne n'ouvre pas d'incident automatiquement ; un incident ne garde pas l'historique de ses statuts et sa gravité ou sa portée ne sont pas modifiables ; obsolescence mesurée contre le dernier sondage de la plateforme, pas contre l'horloge de l'écran ; trafic API semé sur 30 jours (le backend en garde 90) et usage produit dérivé des données présentes ; aucune limitation de débit ; l'auteur d'un incident est un libellé, pas un compte de la plateforme.
 - Paramètres : équipe propre à la maquette (le backend n'a ni rôle « administrateur plateforme » ni TOTP dédiés) ; l'authentification reste celle de démonstration (suspendre, inviter ou réinitialiser le TOTP n'a aucun effet sur la connexion réelle) ; pas de changement de mot de passe ni d'enrôlement TOTP réel ; la session courante est une session semée ; pas d'annulation d'invitation ni de suppression d'administrateur ; connexions et déconnexions non journalisées ; journal borné à 500 entrées, sans export ; un seul niveau de rôle d'administrateur ; codes de récupération non stockés (affichés une fois).
-- Seule la recherche globale affiche « Bientôt disponible ».
+- Recherche : pas de recherche par e-mail ni téléphone (volontaire : une telle requête est refusée et jamais réaffichée) ; pas de recherche dans les noms de passagers, d'expéditeurs, de destinataires ni dans le contenu des messages ; sous-chaîne simple sans tolérance aux fautes ; 25 résultats par type au plus ; pas d'historique ni de filtres sauvegardés ; la palette interroge le serveur à chaque pause de saisie.
 - Navigation latérale masquée sous 768 px (outil de bureau).
 
 > **Démonstration seulement : identifiants et TOTP simulés, ne jamais déployer ce lot tel quel.**

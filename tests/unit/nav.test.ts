@@ -6,7 +6,7 @@ describe("nav", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1 to lot 10 pages as implemented", () => {
+  it("marks every page as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
     expect(done).toEqual([
       "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/clients/avis", "/clients/comptes",
@@ -18,6 +18,7 @@ describe("nav", () => {
       "/flotte/maintenance", "/flotte/plans-de-sieges", "/flotte/trajets",
       "/offre/fonctionnalites", "/offre/paliers-partenaires", "/offre/plans", "/offre/types-documents-kyc",
       "/parametres/equipe-admin", "/parametres/journal-backoffice", "/parametres/profil",
+      "/recherche",
       "/supervision/api", "/supervision/incidents", "/supervision/services", "/supervision/usage",
       "/utilisateurs",
       "/ventes/billets", "/ventes/en-ligne", "/ventes/moyens-de-paiement", "/ventes/paiements", "/ventes/reservations",
@@ -177,7 +178,11 @@ describe("lot 10 breadcrumbs", () => {
     expect(isLinkablePath("/parametres/profil")).toBe(true);
     expect(isLinkablePath("/parametres")).toBe(false);
   });
-  it("keeps the global search as the only unimplemented page", () => {
-    expect(allNavItems().filter((i) => !i.implemented).map((i) => i.href)).toEqual(["/recherche"]);
+  it("has no page left as coming soon", () => {
+    expect(allNavItems().filter((i) => !i.implemented)).toEqual([]);
+  });
+  it("labels the search segment", () => {
+    expect(labelForSegment("recherche")).toBe("Recherche");
+    expect(isLinkablePath("/recherche")).toBe(true);
   });
 });

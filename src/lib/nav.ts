@@ -1,12 +1,10 @@
 export interface NavItem { label: string; href: string; implemented: boolean }
 export interface NavSection { label: string; items: NavItem[] }
 
-const todo = (label: string, href: string): NavItem => ({ label, href, implemented: false });
-
 export const NAV: NavSection[] = [
   { label: "Vue 360", items: [
     { label: "Vue d'ensemble", href: "/", implemented: true },
-    todo("Recherche globale", "/recherche"),
+    { label: "Recherche globale", href: "/recherche", implemented: true },
   ] },
   { label: "Compagnies", items: [
     { label: "Toutes les compagnies", href: "/compagnies", implemented: true },
