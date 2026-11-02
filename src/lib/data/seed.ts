@@ -472,6 +472,8 @@ export function buildSeed(now: Date = new Date()): Store {
 
   seedSales(store, now, iso);
   seedCustomers(store, iso);
+  seedParcels(store, now);
+  seedFeedbacks(store, now);
 
   // Sessions: 1 to 3 per active account (some revoked, some expired); a suspended account only
   // keeps the session revoked at its suspension. lastLoginAt is the start of the newest session.
@@ -887,4 +889,146 @@ function seedCustomers(store: Store, iso: (offsetDays: number) => string): void 
   sponsor(1, customers[1]!, "EXPIRED", "DISCOUNT", 10, -120, -30);
   customers[2]!.sponsorshipId = redeemed.id;
   customers[2]!.sponsoredAt = iso(-45);
+}
+
+const RECIPIENTS = [
+  "Mame Diarra Sène", "Tidiane Cissokho", "Fama Badiane", "Elhadji Sakho",
+  "Soda Mendy", "Moctar Dème", "Aby Tounkara", "Bakary Konaté",
+];
+const PARCEL_SCENARIOS = { lostable: "Dior Kébé", pending: "Gorgui Sall", closed: "Yacine Ndoye" } as const;
+const PARCEL_TYPES: ParcelType[] = ["DOCUMENT", "PACKAGE", "FRAGILE", "PERISHABLE", "OTHER"];
+const PARCEL_DESCRIPTIONS = [
+  "Dossiers administratifs", "Pièces détachées", "Verres en cristal", "Produits frais", "Vêtements", "Matériel informatique",
+];
+const DEPARTED_STATUSES: ParcelStatus[] = ["DELIVERED", "DELIVERED", "IN_TRANSIT", "AT_HUB", "LOST", "RETURNED"];
+const PARCEL_PATHS: Record<ParcelStatus, ParcelStatus[]> = {
+  PENDING: ["PENDING"], IN_TRANSIT: ["PENDING", "IN_TRANSIT"], AT_HUB: ["PENDING", "IN_TRANSIT", "AT_HUB"],
+  DELIVERED: ["PENDING", "IN_TRANSIT", "DELIVERED"], LOST: ["PENDING", "IN_TRANSIT", "LOST"],
+  RETURNED: ["PENDING", "IN_TRANSIT", "RETURNED"], CANCELLED: ["PENDING", "CANCELLED"],
+};
+const HUB_PATH: ParcelStatus[] = ["PENDING", "IN_TRANSIT", "AT_HUB", "IN_TRANSIT", "DELIVERED"];
+
+/**
+ * Parcels of every trip (more on departed trips so all seven statuses appear), each with its legs and a status
+ * history that ends at its current status; some delivered parcels went through a hub (two legs).
+ */
+function seedParcels(store: Store, now: Date): void {
+  let parcelSeq = 1, legSeq = 1, historySeq = 1;
+  const nowMs = now.getTime();
+  const DAY_MS = 86_400_000;
+
+  store.trips.forEach((trip, ti) => {
+    const route = store.routes.find((r) => r.id === trip.routeId);
+    if (!route) return;
+    const count = trip.status === "departed" ? 2 + (ti % 2) : ti % 3;
+    const departure = Date.parse(trip.departure);
+    for (let j = 0; j < count; j++) {
+      const n = ti * 10 + j;
+      const status: ParcelStatus =
+        trip.status === "cancelled" ? "CANCELLED"
+        : trip.status === "planned" ? "PENDING"
+        : trip.status === "boarding" ? (j % 2 === 0 ? "PENDING" : "IN_TRANSIT")
+        : DEPARTED_STATUSES[(ti + j) % DEPARTED_STATUSES.length]!;
+      const secondTrip = store.trips.find((t) => t.companyId === trip.companyId && t.id !== trip.id);
+      const hub = status === "DELIVERED" && j === 0 && ti % 4 === 0 && secondTrip !== undefined;
+      const path = hub ? HUB_PATH : PARCEL_PATHS[status];
+      const customer = j % 2 === 0 ? store.customers[n % store.customers.length]! : null;
+      const weightKg = 1 + (n % 9) * 2.5;
+      const createdMs = Math.min(departure - 2 * DAY_MS, nowMs - 3_600_000);
+      const parcel: Parcel = {
+        id: uid(41, parcelSeq), companyId: trip.companyId, parcelCode: hashCode("PCL-", parcelSeq),
+        trackingNumber: hashCode("TRK-", parcelSeq),
+        senderName: customer ? customer.name : PEOPLE[n % PEOPLE.length]!, senderCustomerId: customer?.id ?? null,
+        recipientName: RECIPIENTS[n % RECIPIENTS.length]!,
+        recipientPhone: `+2217713${String(10_000 + ((n * 37) % 80_000)).padStart(5, "0")}`,
+        weightKg, parcelType: PARCEL_TYPES[n % PARCEL_TYPES.length]!,
+        description: PARCEL_DESCRIPTIONS[n % PARCEL_DESCRIPTIONS.length]!,
+        tripId: trip.id, originStationId: route.originId, destinationStationId: route.destinationId,
+        pickupAt: new Date(departure - 3_600_000).toISOString(), expectedDeliveryAt: trip.arrival,
+        actualDeliveryAt: status === "DELIVERED" ? new Date(Date.parse(trip.arrival) + 1_800_000).toISOString() : null,
+        status, shippingFee: Math.round((1500 + weightKg * 200) / 100) * 100, currency: trip.currency,
+        paymentStatus: status === "CANCELLED" ? "REFUNDED" : status === "PENDING" ? "PENDING" : "PAID",
+        createdAt: new Date(createdMs).toISOString(),
+      };
+      parcelSeq++;
+      store.parcels.push(parcel);
+
+      store.parcelLegs.push({
+        id: uid(42, legSeq), parcelId: parcel.id, companyId: parcel.companyId, tripId: trip.id,
+        assignmentCode: hashCode("ASG-", legSeq), sequence: 1,
+      });
+      legSeq++;
+      if (hub) {
+        store.parcelLegs.push({
+          id: uid(42, legSeq), parcelId: parcel.id, companyId: parcel.companyId, tripId: secondTrip.id,
+          assignmentCode: hashCode("ASG-", legSeq), sequence: 2,
+        });
+        legSeq++;
+      }
+
+      path.forEach((newStatus, k) => {
+        store.parcelHistory.push({
+          id: uid(43, historySeq++), parcelId: parcel.id, previousStatus: k === 0 ? null : path[k - 1]!, newStatus,
+          notes: null, changedBy: k === 0 ? null : "Équipe de la compagnie",
+          changedAt: new Date(createdMs + k * 1_800_000).toISOString(),
+        });
+      });
+    }
+  });
+
+  store.parcels.find((p) => p.status === "IN_TRANSIT")!.recipientName = PARCEL_SCENARIOS.lostable;
+  store.parcels.find((p) => p.status === "PENDING")!.recipientName = PARCEL_SCENARIOS.pending;
+  store.parcels.find((p) => p.status === "DELIVERED")!.recipientName = PARCEL_SCENARIOS.closed;
+}
+
+const FEEDBACK_SCENARIOS = {
+  ignorable: "Climatisation en panne pendant le trajet", resolved: "Service impeccable au guichet",
+} as const;
+const FEEDBACK_STATUS_CYCLE: FeedbackStatus[] = ["PENDING", "PENDING", "REVIEWED", "RESOLVED", "IGNORED"];
+const FEEDBACK_RATINGS = [5, 4, 2, 1, 3];
+const FEEDBACK_TITLES: Record<"TRIP" | "PARCEL" | "SERVICE", string[]> = {
+  TRIP: ["Départ en retard", "Trajet confortable", "Bus très propre", "Arrêt trop long", "Chauffeur courtois"],
+  PARCEL: ["Colis bien arrivé", "Colis livré en retard"],
+  SERVICE: ["Accueil au guichet", "Application de réservation"],
+};
+
+/** Reviews of every customer: one per paid booking (four at most), one for their first parcel, one on the service. */
+function seedFeedbacks(store: Store, now: Date): void {
+  let seq = 1;
+  const nowMs = now.getTime();
+  const DAY_MS = 86_400_000;
+
+  const add = (
+    customer: Customer, companyId: string, feedbackType: "TRIP" | "PARCEL" | "SERVICE",
+    refs: { tripId?: string; parcelId?: string; bookingId?: string }, baseIso: string,
+  ) => {
+    const n = seq++;
+    const status = FEEDBACK_STATUS_CYCLE[n % FEEDBACK_STATUS_CYCLE.length]!;
+    const createdMs = Math.min(Date.parse(baseIso) + 2 * DAY_MS, nowMs - 3_600_000);
+    const titles = FEEDBACK_TITLES[feedbackType];
+    store.feedbacks.push({
+      id: uid(49, n), companyId, customerId: customer.id,
+      tripId: refs.tripId ?? null, parcelId: refs.parcelId ?? null, bookingId: refs.bookingId ?? null,
+      rating: FEEDBACK_RATINGS[(n * 3) % FEEDBACK_RATINGS.length]!, feedbackType,
+      title: titles[n % titles.length]!, comment: "Retour d'expérience détaillé du client sur ce service.",
+      status,
+      response: status === "RESOLVED" ? "Merci pour votre retour, nous en avons tenu compte." : null,
+      respondedAt: status === "RESOLVED" ? new Date(Math.min(createdMs + DAY_MS, nowMs)).toISOString() : null,
+      createdAt: new Date(createdMs).toISOString(),
+    });
+  };
+
+  for (const customer of store.customers) {
+    const paid = store.bookings
+      .filter((b) => b.userId === customer.userId && b.paymentStatus === "paid")
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id))
+      .slice(0, 4);
+    for (const b of paid) add(customer, b.companyId, "TRIP", { tripId: b.tripId, bookingId: b.id }, b.createdAt);
+    const parcel = store.parcels.find((p) => p.senderCustomerId === customer.id);
+    if (parcel) add(customer, parcel.companyId, "PARCEL", { parcelId: parcel.id, tripId: parcel.tripId }, parcel.createdAt);
+    if (paid[0]) add(customer, paid[0].companyId, "SERVICE", {}, paid[0].createdAt);
+  }
+
+  store.feedbacks.find((f) => f.status === "PENDING")!.title = FEEDBACK_SCENARIOS.ignorable;
+  store.feedbacks.find((f) => f.status === "RESOLVED")!.title = FEEDBACK_SCENARIOS.resolved;
 }

@@ -96,3 +96,53 @@ describe("sponsorship seed", () => {
     for (const c of s.customers.filter((x) => x.sponsorshipId === null)) expect(c.sponsoredAt).toBeNull();
   });
 });
+
+describe("feedback seed", () => {
+  it("references existing customers, companies and, when given, trips, parcels and bookings of the same company", () => {
+    const s = getStore();
+    expect(s.feedbacks.length).toBeGreaterThan(10);
+    for (const f of s.feedbacks) {
+      expect(s.customers.some((c) => c.id === f.customerId)).toBe(true);
+      expect(s.companies.some((c) => c.id === f.companyId)).toBe(true);
+      expect(f.rating).toBeGreaterThanOrEqual(1);
+      expect(f.rating).toBeLessThanOrEqual(5);
+      if (f.bookingId) {
+        const b = s.bookings.find((x) => x.id === f.bookingId)!;
+        expect(b.companyId).toBe(f.companyId);
+        expect(b.paymentStatus).toBe("paid");
+        expect(s.customers.find((c) => c.id === f.customerId)!.userId).toBe(b.userId);
+      }
+      if (f.parcelId) expect(s.parcels.find((x) => x.id === f.parcelId)!.companyId).toBe(f.companyId);
+      if (f.tripId) expect(s.trips.find((x) => x.id === f.tripId)!.companyId).toBe(f.companyId);
+      if (f.feedbackType === "PARCEL") expect(f.parcelId).not.toBeNull();
+      if (f.feedbackType === "TRIP") expect(f.bookingId).not.toBeNull();
+    }
+  });
+
+  it("covers the four statuses and the three feedback types it produces; only resolved reviews carry a response", () => {
+    const s = getStore();
+    expect(new Set(s.feedbacks.map((f) => f.status))).toEqual(new Set(["PENDING", "REVIEWED", "RESOLVED", "IGNORED"]));
+    expect(new Set(s.feedbacks.map((f) => f.feedbackType))).toEqual(new Set(["TRIP", "PARCEL", "SERVICE"]));
+    for (const f of s.feedbacks) {
+      expect(f.response !== null).toBe(f.status === "RESOLVED");
+      expect(f.respondedAt !== null).toBe(f.status === "RESOLVED");
+      expect(Date.parse(f.createdAt)).toBeLessThanOrEqual(NOW.getTime());
+      if (f.respondedAt) {
+        expect(f.respondedAt >= f.createdAt).toBe(true);
+        expect(Date.parse(f.respondedAt)).toBeLessThanOrEqual(NOW.getTime());
+      }
+    }
+  });
+
+  it("has exactly one review per scenario title", () => {
+    const s = getStore();
+    const pending = s.feedbacks.filter((f) => f.title === "Climatisation en panne pendant le trajet");
+    const resolved = s.feedbacks.filter((f) => f.title === "Service impeccable au guichet");
+    expect(pending.map((f) => f.status)).toEqual(["PENDING"]);
+    expect(resolved.map((f) => f.status)).toEqual(["RESOLVED"]);
+  });
+
+  it("holds no e-mail and no phone number", () => {
+    expect(JSON.stringify(getStore().feedbacks)).not.toMatch(/@|\+221/);
+  });
+});
