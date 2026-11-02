@@ -318,6 +318,29 @@ test("an unknown account id shows a not-found page", async ({ page }) => {
   await expect(page.getByText("Utilisateur introuvable")).toBeVisible();
 });
 
+test("the roles page counts accounts and the matrix shows the MANAGER grants", async ({ page }) => {
+  await login(page);
+  await page.goto("/acces/roles");
+  await expect(page.getByTestId("role-users-ADMIN")).toHaveText("2 utilisateur(s)");
+  await expect(page.getByTestId("role-permissions-MANAGER")).toHaveText("12 permission(s)");
+  await expect(page.getByTestId("role-permissions-CHAUFFEUR")).toHaveText("0 permission(s)");
+  const details = page.locator("details").filter({ hasText: "Permissions du rôle « Agent de vente »" });
+  await details.getByText("Permissions du rôle « Agent de vente »").click();
+  await expect(details.getByText("BOOKING_MANAGE")).toBeVisible();
+  await expect(details.getByText("RBAC_MANAGE")).toHaveCount(0);
+
+  await page.goto("/acces/permissions");
+  await expect(page.locator('[data-testid^="grant-MANAGER-"][data-granted="true"]')).toHaveCount(12);
+  for (const code of ["COMPANY_MANAGE", "COMPANY_PARTNERSHIP_MANAGE", "FLEET_MAINTENANCE_MANAGE", "USER_MANAGE"]) {
+    await expect(page.getByTestId(`grant-MANAGER-${code}`)).toHaveAttribute("data-granted", "true");
+  }
+  for (const code of ["RBAC_MANAGE", "COMPANY_KYC_REVIEW", "COMPLIANCE_READ", "MONITORING_MANAGE", "EMPLOYEE_CONFIDENTIAL_ACCESS"]) {
+    await expect(page.getByTestId(`grant-MANAGER-${code}`)).toHaveAttribute("data-granted", "false");
+  }
+  await expect(page.getByTestId("grant-ADMIN-RBAC_MANAGE")).toHaveAttribute("data-granted", "true");
+  await expect(page.getByRole("rowheader", { name: /EMPLOYEE_CONFIDENTIAL_ACCESS/ })).toBeVisible();
+});
+
 test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
