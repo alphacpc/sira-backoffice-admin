@@ -170,6 +170,17 @@ export const adminsRepo = {
   },
 };
 
+function selfOf(actor: string): BackofficeAdmin {
+  const admin = getStore().backofficeAdmins.find((a) => a.identifier === actor);
+  if (!admin) throw new Error("Compte introuvable");
+  return admin;
+}
+
+function newRecoveryCode(): string {
+  const hex = crypto.randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase();
+  return `${hex.slice(0, 4)}-${hex.slice(4)}`;
+}
+
 export const profileRepo = {
   view(actor: string, now: Date = new Date()): ProfileView | undefined {
     const admin = getStore().backofficeAdmins.find((a) => a.identifier === actor);
@@ -186,6 +197,51 @@ export const profileRepo = {
       recoveryCodesRemaining: admin.recoveryCodesRemaining, createdAt: admin.createdAt, lastLoginAt: admin.lastLoginAt,
       otherActiveSessions: sessions.filter((s) => !s.current && s.state === "active").length, sessions,
     };
+  },
+
+  /** Guards, in this order: my account, name is a string, present, at most 100 characters. */
+  updateDisplayName(actor: string, name: string, now: Date = new Date()): BackofficeAdmin {
+    const admin = selfOf(actor);
+    if (typeof name !== "string") throw new Error("Nom invalide");
+    const displayName = name.trim();
+    if (!displayName) throw new Error("Le nom est obligatoire");
+    if (displayName.length > MAX_NAME) throw new Error("Le nom est trop long (100 caractères maximum)");
+    admin.displayName = displayName;
+    addActivity(null, actor, `Nom affiché de ${admin.identifier} modifié`, now);
+    return admin;
+  },
+
+  /** Guards, in this order: my account, one of my sessions, not the current one, still active. No motif for one's own session. */
+  revokeSession(actor: string, sessionId: string, now: Date = new Date()): BackofficeSession {
+    const admin = selfOf(actor);
+    const session = sessionsOf(admin.id).find((s) => s.id === sessionId);
+    if (!session) throw new Error("Session introuvable");
+    if (session.current) throw new Error("Utilise la déconnexion pour fermer la session courante");
+    if (backofficeSessionState(session, now) !== "active") throw new Error("La session est déjà révoquée ou expirée");
+    revokeAll([session], "Révoquée par le titulaire", now);
+    addActivity(null, actor, `Session révoquée (${session.deviceLabel})`, now);
+    return session;
+  },
+
+  /** Guards, in this order: my account, at least one other active session. The current session stays. */
+  revokeOthers(actor: string, now: Date = new Date()): number {
+    const admin = selfOf(actor);
+    const others = activeSessionsOf(admin.id, now).filter((s) => !s.current);
+    if (others.length === 0) throw new Error("Aucune autre session active");
+    revokeAll(others, "Révoquée par le titulaire", now);
+    addActivity(null, actor, `${others.length} autre(s) session(s) révoquée(s)`, now);
+    return others.length;
+  },
+
+  /** Guards, in this order: my account, TOTP enabled. Returns the new codes once; only their number is kept. */
+  regenerateRecoveryCodes(actor: string, now: Date = new Date()): string[] {
+    const admin = selfOf(actor);
+    if (!admin.totpEnabled) throw new Error("Le TOTP n'est pas activé");
+    const codes = new Set<string>();
+    while (codes.size < RECOVERY_CODE_COUNT) codes.add(newRecoveryCode());
+    admin.recoveryCodesRemaining = RECOVERY_CODE_COUNT;
+    addActivity(null, actor, "Codes de récupération régénérés", now);
+    return [...codes];
   },
 };
 
