@@ -66,6 +66,9 @@ export function CommandPalette({ companies }: { companies: { id: string; name: s
   const matchingCompanies = filterByQuery(companies, query, (c) => c.name);
   const trimmed = query.trim();
   const canSearchAll = queryProblem(query) === null;
+  const sections = paletteSections({
+    pages: pages.length, companies: matchingCompanies.length, records: hits.length, canSearchAll,
+  });
   const nothing = pages.length === 0 && matchingCompanies.length === 0 && hits.length === 0 && !canSearchAll;
 
   return (
@@ -86,43 +89,51 @@ export function CommandPalette({ companies }: { companies: { id: string; name: s
         />
         <Command.List className="max-h-80 overflow-y-auto p-2">
           {nothing && <p className="px-3 py-6 text-center text-sm text-muted-foreground">Aucun résultat</p>}
-          {pages.length > 0 && (
-            <Command.Group heading="Pages" className="text-xs text-muted-foreground">
-              {pages.map((i) => (
-                <Command.Item key={i.href} value={`page ${i.href}`} onSelect={() => go(i.href)} className={ITEM}>
-                  {i.label}
-                </Command.Item>
-              ))}
-            </Command.Group>
-          )}
-          {matchingCompanies.length > 0 && (
-            <Command.Group heading="Compagnies" className="text-xs text-muted-foreground">
-              {matchingCompanies.map((c) => (
-                <Command.Item key={c.id} value={`compagnie ${c.id}`} onSelect={() => go(`/compagnies/${c.id}`)} className={ITEM}>
-                  {c.name}
-                </Command.Item>
-              ))}
-            </Command.Group>
-          )}
-          {hits.length > 0 && (
-            <Command.Group heading="Enregistrements" className="text-xs text-muted-foreground">
-              {hits.map((h) => (
-                <Command.Item key={`${h.type}-${h.id}`} value={`${h.type} ${h.id}`} onSelect={() => go(h.href)} className={ITEM}>
-                  <span className="font-medium">{h.label}</span>
-                  <span className="ml-2 text-xs text-muted-foreground">{h.sublabel}</span>
-                </Command.Item>
-              ))}
-            </Command.Group>
-          )}
-          {canSearchAll && (
-            <Command.Group heading="Recherche" className="text-xs text-muted-foreground">
-              <Command.Item
-                value={`tous ${trimmed}`} onSelect={() => go(`/recherche?q=${encodeURIComponent(trimmed)}`)} className={ITEM}
-              >
-                Voir tous les résultats pour « {trimmed} »
-              </Command.Item>
-            </Command.Group>
-          )}
+          {sections.map((section) => {
+            switch (section) {
+              case "pages":
+                return (
+                  <Command.Group key="pages" heading="Pages" className="text-xs text-muted-foreground">
+                    {pages.map((i) => (
+                      <Command.Item key={i.href} value={`page ${i.href}`} onSelect={() => go(i.href)} className={ITEM}>
+                        {i.label}
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                );
+              case "companies":
+                return (
+                  <Command.Group key="companies" heading="Compagnies" className="text-xs text-muted-foreground">
+                    {matchingCompanies.map((c) => (
+                      <Command.Item key={c.id} value={`compagnie ${c.id}`} onSelect={() => go(`/compagnies/${c.id}`)} className={ITEM}>
+                        {c.name}
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                );
+              case "records":
+                return (
+                  <Command.Group key="records" heading="Enregistrements" className="text-xs text-muted-foreground">
+                    {hits.map((h) => (
+                      <Command.Item key={`${h.type}-${h.id}`} value={`${h.type} ${h.id}`} onSelect={() => go(h.href)} className={ITEM}>
+                        <span className="font-medium">{h.label}</span>
+                        <span className="ml-2 text-xs text-muted-foreground">{h.sublabel}</span>
+                      </Command.Item>
+                    ))}
+                  </Command.Group>
+                );
+              case "all":
+                return (
+                  <Command.Group key="all" heading="Recherche" className="text-xs text-muted-foreground">
+                    <Command.Item
+                      value={`tous ${trimmed}`} onSelect={() => go(`/recherche?q=${encodeURIComponent(trimmed)}`)} className={ITEM}
+                    >
+                      Voir tous les résultats pour « {trimmed} »
+                    </Command.Item>
+                  </Command.Group>
+                );
+            }
+          })}
         </Command.List>
       </Command.Dialog>
     </>
