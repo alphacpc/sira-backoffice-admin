@@ -550,3 +550,34 @@ export interface ApiUsageRow {
   day: string; companyId: string | null; endpoint: string; method: "GET" | "POST" | "PATCH";
   statusClass: ApiStatusClass; count: number; avgResponseMs: number; maxResponseMs: number;
 }
+
+export type AdminStatus = "active" | "suspended" | "invited";
+
+/** Backoffice administrator. The login identifier (`prenom.nom@sira.app`) is a service identifier, not contact data. */
+export interface BackofficeAdmin {
+  id: string;
+  identifier: string;
+  displayName: string;
+  status: AdminStatus;
+  totpEnabled: boolean;
+  totpEnrolledAt: string | null;
+  /** Only the number of recovery codes left is kept, never the codes. */
+  recoveryCodesRemaining: number;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+/** A backoffice session (8 hours, like the real cookie). `ipAddress` is the full address and never leaves the server. */
+export interface BackofficeSession {
+  id: string;
+  adminId: string;
+  deviceLabel: string;
+  ipAddress: string;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+  revokedReason: string | null;
+  /** The session of the signed-in administrator (the real cookie carries no session id). */
+  current: boolean;
+}

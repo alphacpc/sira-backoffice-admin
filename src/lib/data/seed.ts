@@ -10,6 +10,7 @@ import type {
   Customer, Feedback, FeedbackStatus, FeedbackType, LoyaltyAccount, LoyaltyProgram, LoyaltyTransaction, MembershipType,
   Parcel, ParcelHistoryEntry, ParcelLeg, ParcelStatus, ParcelType, Sponsorship, SponsorshipRewardType, SponsorshipStatus,
   AppNotification, CampaignObjective, CampaignStatus, MarketingCampaign, MarketingMessage, MarketingMessageStatus, MarketingSchedule, MarketingSegment, NotificationChannel, NotificationStatus, ScheduleStatus,
+  AdminStatus, BackofficeAdmin, BackofficeSession,
   ApiUsageRow, ImpactScope, IncidentSeverity, IncidentStatus, ServiceHealthCheck, ServiceStatus, SystemIncident,
   CancelReason, TripStatus, UsageMetric, UserSession, UserStatus, Vendor, VendorKind,
 } from "@/lib/types";
@@ -36,6 +37,8 @@ export interface Store {
   serviceChecks: ServiceHealthCheck[];
   systemIncidents: SystemIncident[];
   apiUsage: ApiUsageRow[];
+  backofficeAdmins: BackofficeAdmin[];
+  backofficeSessions: BackofficeSession[];
   plans: Plan[];
   featureDefs: FeatureDef[];
   partnerTiers: PartnerTier[];
@@ -264,7 +267,7 @@ export function buildSeed(now: Date = new Date()): Store {
     companies: [], documents: [], subscriptions: [], invoices: [], limits: {},
     features: {}, usage: {}, referrals: {}, employees: [], buses: [], trips: [],
     activity: [], dataSubjectRequests: [], consentRecords: [], auditLogs: [], dataAccessLogs: [],
-    serviceChecks: [], systemIncidents: [], apiUsage: [],
+    serviceChecks: [], systemIncidents: [], apiUsage: [], backofficeAdmins: [], backofficeSessions: [],
     plans: [], featureDefs: [], partnerTiers: [], kycTypes: [],
     subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
     users: [], roles: [], permissions: [], rolePermissions: [], sessions: [],
@@ -519,6 +522,7 @@ export function buildSeed(now: Date = new Date()): Store {
   seedServiceChecks(store, now);
   seedSystemIncidents(store, iso);
   seedApiUsage(store, now);
+  seedBackofficeTeam(store, iso);
 
   return store;
 }
@@ -1578,5 +1582,74 @@ function seedApiUsage(store: Store, now: Date): void {
         }
       }
     });
+  }
+}
+
+const TEAM_JOURNAL: [number, string, string][] = [
+  [-40, "ibrahima.sow", "Type de document KYC désactivé"],
+  [-31, "fatou.diallo", "Plan Starter : prix mensuel modifié"],
+  [-27, "moustapha.ndiaye", "Compagnie suspendue pour impayé"],
+  [-19, "fatou.diallo", "Facture relancée"],
+  [-14, "moustapha.ndiaye", "Donnée personnelle révélée : téléphone de pape.mbaye"],
+  [-11, "ibrahima.sow", "Paliers partenaires consultés pour audit"],
+  [-8, "moustapha.ndiaye", "Donnée personnelle révélée : e-mail de aissatou.sarr"],
+  [-6, "fatou.diallo", "Campagne annulée"],
+  [-3, "ibrahima.sow", "Incident déclaré (Haute) sur booking-service"],
+  [-2, "fatou.diallo", "Demande RGPD (accès) : reçue → en cours"],
+];
+
+/**
+ * Six backoffice administrators with their 8-hour sessions (relative to the seed date), plus ten journal entries
+ * written by the other active administrators. `admin@sira.app` is the signed-in demo identity.
+ */
+function seedBackofficeTeam(store: Store, iso: (offsetDays: number) => string): void {
+  let adminSeq = 1, sessionSeq = 1, journalSeq = 1;
+  const h = (hours: number) => iso(hours / 24);
+
+  const addAdmin = (
+    identifier: string, displayName: string, status: AdminStatus,
+    createdDaysAgo: number, enrolledDaysAgo: number | null, recoveryCodesRemaining: number,
+  ): BackofficeAdmin => {
+    const admin: BackofficeAdmin = {
+      id: uid(81, adminSeq++), identifier, displayName, status,
+      totpEnabled: enrolledDaysAgo !== null, totpEnrolledAt: enrolledDaysAgo === null ? null : iso(-enrolledDaysAgo),
+      recoveryCodesRemaining, lastLoginAt: null, createdAt: iso(-createdDaysAgo),
+    };
+    store.backofficeAdmins.push(admin);
+    return admin;
+  };
+  const addSession = (
+    admin: BackofficeAdmin, deviceLabel: string, ipAddress: string, startHours: number, lastSeenHours: number,
+    options: { current?: boolean; revokedReason?: string } = {},
+  ): void => {
+    const createdAt = h(startHours);
+    store.backofficeSessions.push({
+      id: uid(82, sessionSeq++), adminId: admin.id, deviceLabel, ipAddress, createdAt, lastSeenAt: h(lastSeenHours),
+      expiresAt: h(startHours + 8),
+      revokedAt: options.revokedReason ? h(lastSeenHours) : null, revokedReason: options.revokedReason ?? null,
+      current: options.current ?? false,
+    });
+    if (admin.lastLoginAt === null || createdAt > admin.lastLoginAt) admin.lastLoginAt = createdAt;
+  };
+
+  const self = addAdmin("admin@sira.app", "Administrateur Sira", "active", 400, 399, 8);
+  const moustapha = addAdmin("moustapha.ndiaye@sira.app", "Moustapha Ndiaye", "active", 300, 299, 6);
+  const ibrahima = addAdmin("ibrahima.sow@sira.app", "Ibrahima Sow", "active", 250, 249, 8);
+  const fatou = addAdmin("fatou.diallo@sira.app", "Fatou Diallo", "active", 200, 199, 5);
+  const seynabou = addAdmin("seynabou.kane@sira.app", "Seynabou Kane", "suspended", 180, 179, 3);
+  addAdmin("awa.fall@sira.app", "Awa Fall", "invited", 2, null, 0);
+
+  addSession(self, "Chrome · macOS", "41.82.14.23", -1, -0.05, { current: true });
+  addSession(self, "Application Android", "196.207.31.8", -3, -0.5);
+  addSession(self, "Firefox · Ubuntu", "41.82.77.54", -5, -2);
+  addSession(self, "Safari · iPhone", "196.207.5.19", -48, -47.5);
+  addSession(moustapha, "Chrome · Windows", "41.82.9.120", -2, -1);
+  addSession(ibrahima, "Edge · Windows", "196.207.44.67", -4, -3);
+  addSession(fatou, "Chrome · Windows", "41.82.101.3", -1.5, -0.2);
+  addSession(fatou, "Application Android", "196.207.88.201", -6, -5);
+  addSession(seynabou, "Firefox · Ubuntu", "41.82.23.15", -24 * 20, -24 * 20 + 1, { revokedReason: "Compte suspendu" });
+
+  for (const [days, username, action] of TEAM_JOURNAL) {
+    store.activity.push({ id: uid(83, journalSeq++), companyId: null, at: iso(days), actor: `${username}@sira.app`, action });
   }
 }
