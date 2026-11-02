@@ -219,6 +219,32 @@ export const bookingsRepo = {
       cancelBlockedReason: cancelBlockReason(booking),
     };
   },
+
+  /**
+   * Cancels a booking on behalf of the platform. Guards, in this order: booking exists, reason, not already
+   * cancelled, not paid, no payment in progress. A failed payment does not block. The seat goes back to the
+   * trip (free in the seat map, one more available seat).
+   */
+  cancel(bookingId: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): Booking {
+    const s = getStore();
+    const booking = s.bookings.find((b) => b.id === bookingId);
+    if (!booking) throw new Error("Réservation introuvable");
+    const motif = reason.trim();
+    if (!motif) throw new Error("Un motif est obligatoire");
+    const blocked = cancelBlockReason(booking);
+    if (blocked) throw new Error(blocked);
+    booking.status = "cancelled";
+    booking.cancelledAt = now.toISOString();
+    booking.cancelReason = "PLATFORM";
+    const seat = s.seatMaps.find((m) => m.tripId === booking.tripId)?.seats.find((x) => x.code === booking.seatNumber);
+    if (seat && seat.state === "booked") {
+      seat.state = "free";
+      const trip = s.trips.find((t) => t.id === booking.tripId);
+      if (trip) trip.availableSeats += 1;
+    }
+    addActivity(booking.companyId, actor, `Réservation ${booking.bookingCode} annulée. Motif : ${motif}`, now);
+    return booking;
+  },
 };
 
 export const transactionsRepo = {
