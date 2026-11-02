@@ -1331,6 +1331,11 @@ test("recovery codes are shown once after regenerating them", async ({ page }) =
   await expect(page.getByRole("dialog", { name: "Nouveaux codes de récupération" })).toBeVisible();
   await expect(page.getByTestId("recovery-code")).toHaveCount(8);
   await expect(page.getByTestId("recovery-code").first()).toHaveText(/^[0-9A-F]{4}-[0-9A-F]{4}$/);
+  await page.keyboard.press("Escape");
+  await expect(page.getByRole("dialog", { name: "Nouveaux codes de récupération" })).toBeVisible();
+  await expect(page.getByTestId("recovery-code")).toHaveCount(8);
+  await page.mouse.click(2, 2);
+  await expect(page.getByTestId("recovery-code")).toHaveCount(8);
   await page.getByRole("button", { name: "J'ai noté mes codes" }).click();
   await expect(page.getByTestId("recovery-code")).toHaveCount(0);
   await page.reload();

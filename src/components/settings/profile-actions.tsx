@@ -64,7 +64,11 @@ export function ProfileActions({ displayName, totpEnabled, otherActiveSessions }
       />
 
       <Dialog open={codes !== null} onOpenChange={(o) => { if (!o) setCodes(null); }}>
-        <DialogContent>
+        <DialogContent
+          onEscapeKeyDown={(e) => e.preventDefault()}
+          onPointerDownOutside={(e) => e.preventDefault()}
+          onInteractOutside={(e) => e.preventDefault()}
+        >
           <DialogTitle>Nouveaux codes de récupération</DialogTitle>
           <DialogDescription>Chaque code ne sert qu&apos;une fois. Ils ne seront plus affichés après la fermeture de cette fenêtre.</DialogDescription>
           <ul className="mt-4 grid grid-cols-2 gap-2 font-mono text-sm">
