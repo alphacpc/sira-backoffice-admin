@@ -157,3 +157,25 @@ describe("sales labels", () => {
     expect(anomalyExplanation("MISSING_TICKET")).toBe("Le paiement est réussi mais aucun billet n'a été émis pour cette réservation.");
   });
 });
+
+import { parcelPaymentBadge, parcelStatusBadge, parcelTypeLabel } from "@/lib/labels";
+
+describe("parcel labels", () => {
+  it("labels parcel statuses, payments and types", () => {
+    expect(parcelStatusBadge("PENDING")).toEqual({ label: "En attente", tone: "neutral" });
+    expect(parcelStatusBadge("IN_TRANSIT")).toEqual({ label: "En transit", tone: "info" });
+    expect(parcelStatusBadge("AT_HUB")).toEqual({ label: "Au hub", tone: "warning" });
+    expect(parcelStatusBadge("DELIVERED")).toEqual({ label: "Livré", tone: "success" });
+    expect(parcelStatusBadge("CANCELLED")).toEqual({ label: "Annulé", tone: "neutral" });
+    expect(parcelStatusBadge("RETURNED")).toEqual({ label: "Retourné", tone: "warning" });
+    expect(parcelStatusBadge("LOST")).toEqual({ label: "Perdu", tone: "danger" });
+    expect(parcelPaymentBadge("PENDING")).toEqual({ label: "À payer", tone: "warning" });
+    expect(parcelPaymentBadge("PAID")).toEqual({ label: "Payé", tone: "success" });
+    expect(parcelPaymentBadge("REFUNDED")).toEqual({ label: "Remboursé", tone: "neutral" });
+    expect(parcelTypeLabel("DOCUMENT")).toBe("Document");
+    expect(parcelTypeLabel("PACKAGE")).toBe("Colis standard");
+    expect(parcelTypeLabel("FRAGILE")).toBe("Fragile");
+    expect(parcelTypeLabel("PERISHABLE")).toBe("Périssable");
+    expect(parcelTypeLabel("OTHER")).toBe("Autre");
+  });
+});

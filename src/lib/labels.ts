@@ -4,7 +4,7 @@ import type {
   TransactionStatus,
   BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, Incident, Invoice, KycDocumentStatus,
   MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
-  ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, TripStatus, UserStatus, VendorKind,
+  ParcelPaymentStatus, ParcelStatus, ParcelType, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, TripStatus, UserStatus, VendorKind,
 } from "@/lib/types";
 
 type Badge = { label: string; tone: Tone };
@@ -242,3 +242,24 @@ export const anomalyExplanation = (k: AnomalyKind): string =>
     AMOUNT_MISMATCH: "Le montant de la transaction ne correspond pas à celui de la réservation.",
     MISSING_TICKET: "Le paiement est réussi mais aucun billet n'a été émis pour cette réservation.",
   })[k];
+
+export const parcelStatusBadge = (s: ParcelStatus): Badge =>
+  pick({
+    PENDING: { label: "En attente", tone: "neutral" },
+    IN_TRANSIT: { label: "En transit", tone: "info" },
+    AT_HUB: { label: "Au hub", tone: "warning" },
+    DELIVERED: { label: "Livré", tone: "success" },
+    CANCELLED: { label: "Annulé", tone: "neutral" },
+    RETURNED: { label: "Retourné", tone: "warning" },
+    LOST: { label: "Perdu", tone: "danger" },
+  }, s);
+
+export const parcelPaymentBadge = (s: ParcelPaymentStatus): Badge =>
+  pick({
+    PENDING: { label: "À payer", tone: "warning" },
+    PAID: { label: "Payé", tone: "success" },
+    REFUNDED: { label: "Remboursé", tone: "neutral" },
+  }, s);
+
+export const parcelTypeLabel = (t: ParcelType): string =>
+  ({ DOCUMENT: "Document", PACKAGE: "Colis standard", FRAGILE: "Fragile", PERISHABLE: "Périssable", OTHER: "Autre" })[t];
