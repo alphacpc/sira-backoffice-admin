@@ -526,6 +526,9 @@ export function buildSeed(now: Date = new Date()): Store {
   ];
 
   seedDataSubjectRequests(store, iso);
+  seedConsents(store, iso);
+  seedAuditLogs(store, now, iso);
+  seedDataAccessLogs(store, now);
 
   return store;
 }
@@ -1254,4 +1257,199 @@ function seedDataSubjectRequests(store: Store, iso: (offsetDays: number) => stri
       resolutionNotes: d.notes ?? null, createdAt: iso(d.createdDays),
     });
   }
+}
+
+const DEFAULT_RETENTION_DAYS = 730;
+
+/** Consent history of the client accounts (append-only rows), plus a cookie consent for three employees. */
+function seedConsents(store: Store, iso: (offsetDays: number) => string): void {
+  let seq = 1;
+  const record = (
+    userId: string, consentType: ConsentType, companyId: string | null, status: ConsentStatus,
+    source: ConsentSource, days: number, consentVersion = "v1.1",
+  ): void => {
+    store.consentRecords.push({
+      id: uid(62, seq++), userId, consentType, companyId, status, consentVersion, source,
+      grantedAt: status === "GRANTED" ? iso(days) : null, withdrawnAt: status === "WITHDRAWN" ? iso(days) : null,
+      createdAt: iso(days),
+    });
+  };
+  const clients = store.users.filter((u) => u.roleCode === "USER" && u.companyId === null);
+  const companyIds = store.loyaltyPrograms.map((p) => p.companyId);
+
+  clients.forEach((u, k) => {
+    record(u.id, "COOKIES_ANALYTICS", null, "GRANTED", "SIGNUP", -(180 - k * 10), "v1.0");
+    record(u.id, "GEOLOCATION", null, "GRANTED", "SETTINGS_PAGE", -(150 - k * 10));
+    if (k % 2 === 0) record(u.id, "GEOLOCATION", null, "WITHDRAWN", "SETTINGS_PAGE", -(40 + k));
+    const emailCompany = companyIds[k % companyIds.length]!;
+    record(u.id, "MARKETING_EMAIL", emailCompany, "GRANTED", "BOOKING_FLOW", -(100 - k));
+    if (k % 3 === 1) record(u.id, "MARKETING_EMAIL", emailCompany, "WITHDRAWN", "SETTINGS_PAGE", -20);
+    record(u.id, "MARKETING_SMS", companyIds[(k + 1) % companyIds.length]!, "GRANTED", "SETTINGS_PAGE", -(60 - k));
+    if (k === 0) record(u.id, "MARKETING_EMAIL", null, "GRANTED", "SIGNUP", -400, "v1.0");
+    if (k === 3) record(u.id, "DATA_SHARING_PARTNERS", null, "GRANTED", "SETTINGS_PAGE", -30);
+    if (k === 1 || k === 2) record(u.id, "DATA_SHARING_PARTNERS", null, "GRANTED", "BOOKING_FLOW", -(25 + k));
+  });
+  store.users.filter((u) => u.companyId !== null).slice(0, 3).forEach((u, k) => {
+    record(u.id, "COOKIES_ANALYTICS", null, "GRANTED", "SIGNUP", -(90 - k * 5));
+  });
+}
+
+/**
+ * Audit trail derived from the other domains (company creation and activation, logins, bookings, parcel status
+ * changes, three subscription history lines per active company, admin role grants), then anonymised the way the
+ * daily retention job would have: a company line older than the company's retention loses its IP and user agent.
+ */
+function seedAuditLogs(store: Store, now: Date, iso: (offsetDays: number) => string): void {
+  let seq = 1;
+  const nowMs = now.getTime();
+  const DAY_MS = 86_400_000;
+  const admin = store.users.find((u) => u.roleCode === "ADMIN" && u.status === "active")!;
+  const originOf = (userId: string) => {
+    const session = store.sessions.find((x) => x.userId === userId);
+    return { ipAddress: session?.ipAddress ?? "196.207.12.40", userAgent: session?.deviceLabel ?? "Chrome · Windows" };
+  };
+  const noOrigin = { ipAddress: null, userAgent: null };
+  const staffOf = (companyId: string) => store.users.find((u) => u.companyId === companyId) ?? null;
+  const add = (row: Omit<AuditLog, "id" | "occurredAt" | "actorLabel">): void => {
+    store.auditLogs.push({ id: uid(63, seq++), actorLabel: null, occurredAt: row.createdAt, ...row });
+  };
+
+  for (const c of store.companies) {
+    add({
+      companyId: c.id, actorUserId: admin.id, actorType: "USER", action: "CREATE", entityType: "Company", entityId: c.id,
+      beforeState: null, afterState: { status: "DRAFT" }, ...originOf(admin.id), sourceService: "company-service",
+      createdAt: c.createdAt,
+    });
+    if (c.activatedAt) {
+      add({
+        companyId: c.id, actorUserId: c.forceActivated ? admin.id : null, actorType: c.forceActivated ? "USER" : "SYSTEM",
+        action: "UPDATE", entityType: "Company", entityId: c.id,
+        beforeState: { status: "DRAFT", forceActivated: "false" },
+        afterState: { status: "ACTIVE", forceActivated: String(c.forceActivated) },
+        ...(c.forceActivated ? originOf(admin.id) : noOrigin), sourceService: "company-service", createdAt: c.activatedAt,
+      });
+    }
+  }
+
+  for (const c of store.companies.filter((x) => x.status === "active")) {
+    const subscription = store.subscriptions.find((s) => s.companyId === c.id);
+    const born = Date.parse(c.createdAt);
+    const age = nowMs - born;
+    const steps: [number, Record<string, string>, Record<string, string>][] = [
+      [0.2, { status: "TRIAL" }, { status: "ACTIVE" }],
+      [0.5, { billingCycle: "MONTHLY" }, { billingCycle: "YEARLY" }],
+      [0.8, { billingCycle: "YEARLY" }, { billingCycle: "MONTHLY" }],
+    ];
+    for (const [fraction, beforeState, afterState] of steps) {
+      add({
+        companyId: c.id, actorUserId: admin.id, actorType: "USER", action: "UPDATE", entityType: "CompanySubscription",
+        entityId: subscription?.id ?? c.id, beforeState, afterState, ...originOf(admin.id),
+        sourceService: "company-service", createdAt: new Date(born + age * fraction).toISOString(),
+      });
+    }
+  }
+
+  for (const session of store.sessions) {
+    const user = store.users.find((u) => u.id === session.userId);
+    add({
+      companyId: user?.companyId ?? null, actorUserId: session.userId, actorType: "USER", action: "LOGIN",
+      entityType: "User", entityId: session.userId, beforeState: null, afterState: null,
+      ipAddress: session.ipAddress, userAgent: session.deviceLabel, sourceService: "identity-service",
+      createdAt: session.createdAt,
+    });
+  }
+  for (const u of store.users.filter((x) => x.status === "suspended")) {
+    add({
+      companyId: u.companyId, actorUserId: null, actorType: "SYSTEM", action: "LOGIN_FAILED", entityType: "User",
+      entityId: u.id, beforeState: null, afterState: { reason: "ACCOUNT_NOT_ACTIVE" }, ...originOf(u.id),
+      sourceService: "identity-service", createdAt: iso(-3),
+    });
+  }
+  for (const u of store.users.filter((x) => x.roleCode === "ADMIN")) {
+    add({
+      companyId: null, actorUserId: null, actorType: "SYSTEM", action: "PERMISSION_CHANGE", entityType: "User",
+      entityId: u.id, beforeState: { roleCode: "USER" }, afterState: { roleCode: "ADMIN", sessionsRevoked: "0" },
+      ...noOrigin, sourceService: "identity-service", createdAt: u.createdAt,
+    });
+  }
+
+  for (const b of store.bookings) {
+    const actorId = b.channel === "online" ? b.userId : staffOf(b.companyId)?.id ?? null;
+    add({
+      companyId: b.companyId, actorUserId: actorId, actorType: actorId ? "USER" : "SYSTEM", action: "CREATE",
+      entityType: "Booking", entityId: b.id, beforeState: null, afterState: { status: "confirmed", paymentStatus: "pending" },
+      ...(actorId ? originOf(actorId) : noOrigin), sourceService: "booking-service", createdAt: b.createdAt,
+    });
+  }
+
+  for (const h of store.parcelHistory.filter((x) => x.previousStatus !== null)) {
+    const parcel = store.parcels.find((p) => p.id === h.parcelId)!;
+    const staff = staffOf(parcel.companyId);
+    add({
+      companyId: parcel.companyId, actorUserId: staff?.id ?? null, actorType: staff ? "USER" : "SYSTEM", action: "UPDATE",
+      entityType: "Parcel", entityId: parcel.id, beforeState: { status: h.previousStatus! }, afterState: { status: h.newStatus },
+      ...(staff ? originOf(staff.id) : noOrigin), sourceService: "parcel-service", createdAt: h.changedAt,
+    });
+  }
+
+  // The daily job's work: anonymise what is older than the company's retention.
+  let anonymised = 0;
+  for (const a of store.auditLogs) {
+    if (!a.companyId || a.ipAddress === null) continue;
+    const days = store.companies.find((c) => c.id === a.companyId)?.dataRetentionDays ?? DEFAULT_RETENTION_DAYS;
+    if (nowMs - Date.parse(a.createdAt) > days * DAY_MS) {
+      a.ipAddress = null;
+      a.userAgent = null;
+      anonymised++;
+    }
+  }
+  const purgeAt = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate(), 3, 15));
+  if (purgeAt.getTime() > nowMs) purgeAt.setUTCDate(purgeAt.getUTCDate() - 1);
+  add({
+    companyId: null, actorUserId: null, actorType: "SYSTEM", action: "UPDATE", entityType: "RetentionPurge",
+    entityId: purgeAt.toISOString().slice(0, 10), beforeState: null,
+    afterState: { anonymisedAuditLogs: String(anonymised), anonymisedDataAccessLogs: "0" },
+    ...noOrigin, sourceService: "audit-compliance-service", createdAt: purgeAt.toISOString(),
+  });
+
+  store.auditLogs.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+}
+
+/** Platform admins' accesses to personal data: one view per request, a modification per closed one, an export, three consent reads. */
+function seedDataAccessLogs(store: Store, now: Date): void {
+  let seq = 1;
+  const nowMs = now.getTime();
+  const DAY_MS = 86_400_000;
+  const activeAdmins = store.users.filter((u) => u.roleCode === "ADMIN" && u.status === "active");
+  const admins = activeAdmins.length > 0 ? activeAdmins : store.users.filter((u) => u.roleCode === "ADMIN");
+  const subjectTypeOf = (u: PlatformUser): DataSubjectType =>
+    u.companyId !== null ? "EMPLOYEE" : u.roleCode === "USER" ? "CUSTOMER" : "USER";
+  const add = (
+    who: PlatformUser, subject: PlatformUser, dataCategory: DataCategory, accessReason: AccessReason,
+    accessType: AccessType, createdAt: string,
+  ): void => {
+    store.dataAccessLogs.push({
+      id: uid(64, seq++), accessedByUserId: who.id, accessedByLabel: null, dataSubjectType: subjectTypeOf(subject),
+      dataSubjectId: subject.id, dataCategory, accessReason, accessType,
+      ipAddress: store.sessions.find((s) => s.userId === who.id)?.ipAddress ?? "41.82.10.20", createdAt,
+    });
+  };
+  const userOf = (id: string) => store.users.find((u) => u.id === id)!;
+
+  store.dataSubjectRequests.forEach((r, k) => {
+    const who = admins[k % admins.length]!;
+    const subject = userOf(r.requesterUserId);
+    const viewedAt = new Date(Math.min(Date.parse(r.createdAt) + DAY_MS, nowMs - 60_000)).toISOString();
+    add(who, subject, "IDENTITY", "LEGAL_OBLIGATION", "VIEW", viewedAt);
+    if (r.resolvedAt) {
+      add(who, subject, "IDENTITY", "LEGAL_OBLIGATION", "MODIFY", r.resolvedAt);
+      if (r.requestType === "PORTABILITY") add(who, subject, "IDENTITY", "LEGAL_OBLIGATION", "EXPORT", r.resolvedAt);
+    }
+  });
+
+  const clients = store.users.filter((u) => u.roleCode === "USER" && u.companyId === null);
+  const reads: [AccessReason, number][] = [["INVESTIGATION", -9], ["SUPPORT_REQUEST", -6], ["LEGAL_OBLIGATION", -2]];
+  reads.forEach(([reason, days], k) => {
+    add(admins[k % admins.length]!, clients[k % clients.length]!, "CONSENT", reason, "VIEW", new Date(nowMs + days * DAY_MS).toISOString());
+  });
 }
