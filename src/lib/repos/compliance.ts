@@ -1,4 +1,5 @@
 import { truncateIp } from "@/lib/mask";
+import { addActivity } from "@/lib/repos/activity";
 import { getStore } from "@/lib/repos/store";
 import type {
   AccessReason, AccessType, AuditAction, AuditActorType, AuditLog, Company, ConsentRecord, ConsentSource,
@@ -145,6 +146,37 @@ function currentConsents(): ConsentRecord[] {
   return [...latest.values()];
 }
 
+let appendSeq = 1;
+
+/** The only way a backoffice action adds to the audit trail; existing lines are never touched. */
+function appendAudit(
+  row: Pick<AuditLog, "companyId" | "action" | "entityType" | "entityId" | "beforeState" | "afterState" | "sourceService">,
+  actor: string, now: Date,
+): void {
+  getStore().auditLogs.push({
+    id: `audit-${now.getTime()}-${appendSeq++}`, actorUserId: null, actorLabel: actor, actorType: "USER",
+    ipAddress: null, userAgent: null, occurredAt: now.toISOString(), createdAt: now.toISOString(), ...row,
+  });
+}
+
+function appendAccess(
+  row: Pick<DataAccessLog, "dataSubjectType" | "dataSubjectId" | "dataCategory" | "accessReason" | "accessType">,
+  actor: string, now: Date,
+): void {
+  getStore().dataAccessLogs.push({
+    id: `access-${now.getTime()}-${appendSeq++}`, accessedByUserId: null, accessedByLabel: actor,
+    ipAddress: null, createdAt: now.toISOString(), ...row,
+  });
+}
+
+const DSR_STATUS_TEXT: Record<DsrStatus, string> = {
+  RECEIVED: "reçue", IN_PROGRESS: "en cours", COMPLETED: "clôturée", REJECTED: "rejetée",
+};
+const DSR_TYPE_TEXT: Record<DsrType, string> = {
+  ACCESS: "Accès", RECTIFICATION: "Rectification", ERASURE: "Effacement",
+  PORTABILITY: "Portabilité", RESTRICTION: "Limitation", OBJECTION: "Opposition",
+};
+
 export const auditRepo = {
   listRows(filter: { companyId?: string; action?: AuditAction } = {}): AuditRow[] {
     return getStore().auditLogs
@@ -218,6 +250,43 @@ export const dsrRepo = {
       companyName: companyName(request.companyId, "—"), daysLeft, overdue: daysLeft !== null && daysLeft < 0,
     };
   },
+
+  /**
+   * Moves a request along the workflow. Guards, in this order: request exists, resolution notes (required to close
+   * or reject), transition allowed. Writes an audit line, a data-access line and an activity entry.
+   */
+  transition(
+    requestId: string, target: DsrStatus, notes: string, actor = "admin@sira.app", now: Date = new Date(),
+  ): DataSubjectRequest {
+    const s = getStore();
+    const request = s.dataSubjectRequests.find((r) => r.id === requestId);
+    if (!request) throw new Error("Demande introuvable");
+    const text = notes.trim();
+    if (target !== "IN_PROGRESS" && !text) throw new Error("Des notes de résolution sont obligatoires");
+    const blocked = dsrTransitionBlock(request, target);
+    if (blocked) throw new Error(blocked);
+    const previous = request.status;
+    request.status = target;
+    request.handledBy = actor;
+    if (target !== "IN_PROGRESS") {
+      request.resolvedAt = now.toISOString();
+      request.resolutionNotes = text;
+    }
+    appendAudit({
+      companyId: request.companyId, action: "UPDATE", entityType: "DataSubjectRequest", entityId: request.id,
+      beforeState: { status: previous }, afterState: { status: target }, sourceService: "audit-compliance-service",
+    }, actor, now);
+    const subject = s.users.find((u) => u.id === request.requesterUserId);
+    appendAccess({
+      dataSubjectType: subject ? subjectTypeOf(subject) : "USER", dataSubjectId: request.requesterUserId,
+      dataCategory: "IDENTITY", accessReason: "LEGAL_OBLIGATION", accessType: "MODIFY",
+    }, actor, now);
+    addActivity(
+      request.companyId, actor,
+      `Demande RGPD (${DSR_TYPE_TEXT[request.requestType]}) : ${DSR_STATUS_TEXT[previous]} → ${DSR_STATUS_TEXT[target]}`, now,
+    );
+    return request;
+  },
 };
 
 export const consentsRepo = {
@@ -245,6 +314,29 @@ export const consentsRepo = {
       .map((u) => ({ id: u.id, label: `${u.displayName} (${u.companyId ? companyName(u.companyId) : "client"})` }))
       .sort((a, b) => a.label.localeCompare(b.label));
   },
+
+  /**
+   * Reads a user's consent history on behalf of the platform. Guards, in this order: valid access reason, user
+   * exists. A refused call writes nothing; a successful one adds a `VIEW` / `CONSENT` line to the data-access log.
+   */
+  consult(userId: string, accessReason: string, actor = "admin@sira.app", now: Date = new Date()): ConsentEntryView[] {
+    const s = getStore();
+    if (!(ACCESS_REASONS as readonly string[]).includes(accessReason)) throw new Error("Motif d'accès invalide");
+    const user = s.users.find((u) => u.id === userId);
+    if (!user) throw new Error("Utilisateur introuvable");
+    appendAccess({
+      dataSubjectType: subjectTypeOf(user), dataSubjectId: user.id, dataCategory: "CONSENT",
+      accessReason: accessReason as AccessReason, accessType: "VIEW",
+    }, actor, now);
+    const current = new Set(currentConsents().map((r) => r.id));
+    return s.consentRecords
+      .filter((r) => r.userId === userId)
+      .sort(newest((r) => r.createdAt))
+      .map((r): ConsentEntryView => ({
+        id: r.id, consentType: r.consentType, companyName: r.companyId ? companyName(r.companyId) : null,
+        status: r.status, consentVersion: r.consentVersion, source: r.source, at: r.createdAt, isCurrent: current.has(r.id),
+      }));
+  },
 };
 
 export const retentionRepo = {
@@ -261,5 +353,31 @@ export const retentionRepo = {
         };
       })
       .sort((a, b) => a.companyName.localeCompare(b.companyName));
+  },
+
+  /**
+   * Sets a company's retention. Guards, in this order: company exists, reason, whole number of days between 90
+   * and 3650, different from the current effective duration. Shortening it makes older lines due for anonymisation
+   * at the next run of the daily job (not simulated).
+   */
+  set(companyId: string, days: number, reason: string, actor = "admin@sira.app", now: Date = new Date()): Company {
+    const company = getStore().companies.find((c) => c.id === companyId);
+    if (!company) throw new Error("Compagnie introuvable");
+    const motif = reason.trim();
+    if (!motif) throw new Error("Un motif est obligatoire");
+    if (!Number.isInteger(days) || days < MIN_RETENTION_DAYS || days > MAX_RETENTION_DAYS) {
+      throw new Error(`La durée doit être un nombre entier de jours compris entre ${MIN_RETENTION_DAYS} et ${MAX_RETENTION_DAYS}`);
+    }
+    const effective = effectiveRetentionDays(company);
+    if (days === effective) throw new Error(`La durée de rétention est déjà de ${effective} jours`);
+    const previous = company.dataRetentionDays;
+    company.dataRetentionDays = days;
+    appendAudit({
+      companyId: company.id, action: "UPDATE", entityType: "Company", entityId: company.id,
+      beforeState: { dataRetentionDays: previous === null ? "null" : String(previous) },
+      afterState: { dataRetentionDays: String(days) }, sourceService: "company-service",
+    }, actor, now);
+    addActivity(company.id, actor, `Durée de rétention de ${company.name} : ${effective} → ${days} jours. Motif : ${motif}`, now);
+    return company;
   },
 };
