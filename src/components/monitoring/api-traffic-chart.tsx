@@ -1,5 +1,7 @@
 "use client";
 
+import { ChartDataTable } from "./chart-data-table";
+import { apiTrafficTable } from "@/lib/chart-rows";
 import { Bar, BarChart, CartesianGrid, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 /** Projection of one day of aggregated traffic: counts only. */
@@ -7,6 +9,7 @@ export interface ApiTrafficPoint { label: string; ok: number; clientErrors: numb
 
 export function ApiTrafficChart({ points }: { points: ApiTrafficPoint[] }) {
   return (
+    <div>
     <div className="h-64" role="img" aria-label="Requêtes par jour, par classe de statut">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={points} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
@@ -20,6 +23,8 @@ export function ApiTrafficChart({ points }: { points: ApiTrafficPoint[] }) {
           <Bar dataKey="serverErrors" name="5xx" stackId="a" fill="var(--danger)" radius={[4, 4, 0, 0]} />
         </BarChart>
       </ResponsiveContainer>
+    </div>
+    <ChartDataTable table={apiTrafficTable(points)} />
     </div>
   );
 }

@@ -1145,6 +1145,14 @@ test("a company's retention can be shortened within the allowed range", async ({
   await expect(row.getByTestId("retention-pending")).not.toHaveText("0");
 });
 
+async function expectChartData(page: import("@playwright/test").Page, rows: number | RegExp) {
+  const details = page.getByTestId("chart-data");
+  await expect(details.locator("summary")).toHaveText("Voir les données du graphique");
+  await details.locator("summary").click();
+  await expect(details.getByRole("table")).toBeVisible();
+  await expect(details.getByTestId("chart-data-row")).toHaveCount(rows as number);
+}
+
 test("service health shows the indicators, the outage, the stale service and the history chart", async ({ page }) => {
   await login(page);
   await page.goto("/supervision/services");
@@ -1159,6 +1167,8 @@ test("service health shows the indicators, the outage, the stale service and the
   await expect(page.getByRole("row", { name: /gateway.*Obsolète/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /identity-service.*Opérationnel.*100 %/ })).toBeVisible();
   await expect(page.getByRole("img", { name: /notification-service/ })).toBeVisible();
+  await expectChartData(page, 48);
+  await expect(page.getByTestId("chart-data").getByRole("cell", { name: "En panne" }).first()).toBeVisible();
   await page.getByRole("link", { name: "identity-service", exact: true }).last().click();
   await expect(page).toHaveURL(/service=identity-service/);
   await expect(page.getByRole("img", { name: /identity-service/ })).toBeVisible();
@@ -1262,6 +1272,7 @@ test("API traffic shows the indicators, a daily chart and the endpoints, for a c
   await expect(page.getByRole("heading", { name: "Trafic API" })).toBeVisible();
   for (const id of ["api-requests", "api-latency", "api-4xx", "api-5xx"]) await expect(page.getByTestId(id)).toBeVisible();
   await expect(page.getByRole("img", { name: /Requêtes par jour/ })).toBeVisible();
+  await expectChartData(page, 7);
   await expect(page.getByRole("row", { name: /POST.*\/auth\/login/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /GET.*\/parcels\/track\/\{id\}/ })).toBeVisible();
   await page.getByRole("link", { name: "30 jours", exact: true }).click();
@@ -1276,6 +1287,7 @@ test("product usage shows the derived events and the daily chart", async ({ page
   await expect(page.getByTestId("usage-events")).toBeVisible();
   await expect(page.getByTestId("usage-users")).toBeVisible();
   await expect(page.getByRole("img", { name: /Événements produit par jour/ })).toBeVisible();
+  await expectChartData(page, 30);
   await expect(page.getByRole("row", { name: /booking_created.*Réservations/ })).toBeVisible();
   await expect(page.getByRole("row", { name: /parcel_created.*Colis/ })).toBeVisible();
 });

@@ -1,6 +1,8 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { ChartDataTable } from "@/components/monitoring/chart-data-table";
+import { serviceLatencyTable } from "@/lib/chart-rows";
 import type { ServiceHealth } from "@/lib/types";
 
 const COLOR = { healthy: "var(--success)", degraded: "var(--warning)", down: "var(--danger)" } as const;
@@ -12,6 +14,7 @@ export function ServiceLatencyChart({ services }: { services: ServiceHealth[] })
     status: s.status,
   }));
   return (
+    <div>
     <div className="h-56" role="img" aria-label="Temps de réponse par service, en millisecondes">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
@@ -27,6 +30,8 @@ export function ServiceLatencyChart({ services }: { services: ServiceHealth[] })
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+    </div>
+    <ChartDataTable table={serviceLatencyTable(services)} />
     </div>
   );
 }

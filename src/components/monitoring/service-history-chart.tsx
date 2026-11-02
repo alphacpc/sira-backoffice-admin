@@ -1,5 +1,7 @@
 "use client";
 
+import { ChartDataTable } from "./chart-data-table";
+import { serviceHistoryTable } from "@/lib/chart-rows";
 import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 
 /** Projection of a check: a UTC time label, the response time and the status. */
@@ -9,6 +11,7 @@ const COLOR = { healthy: "var(--success)", degraded: "var(--warning)", down: "va
 
 export function ServiceHistoryChart({ service, points }: { service: string; points: ServiceHistoryPoint[] }) {
   return (
+    <div>
     <div className="h-64" role="img" aria-label={`Temps de réponse des ${points.length} derniers contrôles de ${service}, en millisecondes`}>
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={points} margin={{ top: 4, right: 8, left: -12, bottom: 0 }}>
@@ -24,6 +27,8 @@ export function ServiceHistoryChart({ service, points }: { service: string; poin
           </Bar>
         </BarChart>
       </ResponsiveContainer>
+    </div>
+    <ChartDataTable table={serviceHistoryTable(points)} />
     </div>
   );
 }
