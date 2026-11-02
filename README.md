@@ -56,7 +56,7 @@ Six écrans : santé des services (indicateurs, disponibilité sur 24 h, histori
 
 ## Lot 10 : paramètres du backoffice
 
-Trois écrans : mon profil (compte, état du TOTP, session courante et sessions de l'administrateur), équipe admin (liste filtrable par statut) et journal du backoffice (filtres d'acteur, de période et de révélations de données). Huit actions : modifier son nom, régénérer ses codes de récupération (affichés une seule fois), révoquer une de ses sessions ou toutes les autres, inviter un administrateur, le suspendre, le réactiver, réinitialiser son TOTP et révoquer ses sessions (motif obligatoire pour les quatre dernières). Le journal est filtrable et retrace les actions du backoffice.
+Trois écrans : mon profil (compte, état du TOTP, session courante et sessions de l'administrateur), équipe admin (liste filtrable par statut) et journal du backoffice (filtres d'acteur, de période et de révélations de données). Neuf actions : modifier son nom, régénérer ses codes de récupération (affichés une seule fois), révoquer une de ses sessions ou toutes les autres, inviter un administrateur, le suspendre, le réactiver, réinitialiser son TOTP et révoquer ses sessions (motif obligatoire pour les quatre dernières). Le journal est filtrable et retrace les actions du backoffice.
 
 ## Limites connues (lots 1 à 10)
 
