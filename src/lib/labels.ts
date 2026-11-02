@@ -1,9 +1,11 @@
+import { formatMoney } from "@/lib/format";
 import type { Tone } from "@/components/data/status-badge";
 import type {
   AnomalyKind, BookingChannel, BookingPaymentStatus, BookingStatus, CancelReason, PaymentMethodKind, TicketStatus,
   TransactionStatus,
   BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, Incident, Invoice, KycDocumentStatus,
   MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
+  FeedbackStatus, FeedbackType, MembershipType, SponsorshipRewardType, SponsorshipStatus,
   ParcelPaymentStatus, ParcelStatus, ParcelType, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, TripStatus, UserStatus, VendorKind,
 } from "@/lib/types";
 
@@ -263,3 +265,31 @@ export const parcelPaymentBadge = (s: ParcelPaymentStatus): Badge =>
 
 export const parcelTypeLabel = (t: ParcelType): string =>
   ({ DOCUMENT: "Document", PACKAGE: "Colis standard", FRAGILE: "Fragile", PERISHABLE: "Périssable", OTHER: "Autre" })[t];
+
+export const feedbackStatusBadge = (s: FeedbackStatus): Badge =>
+  pick({
+    PENDING: { label: "En attente", tone: "warning" },
+    REVIEWED: { label: "Examiné", tone: "info" },
+    RESOLVED: { label: "Résolu", tone: "success" },
+    IGNORED: { label: "Ignoré", tone: "neutral" },
+  }, s);
+
+export const feedbackTypeLabel = (t: FeedbackType): string =>
+  ({ TRIP: "Trajet", BUS: "Bus", STATION: "Gare", SERVICE: "Service", PARCEL: "Colis" })[t];
+
+export const membershipLabel = (m: MembershipType): string =>
+  ({ REGULAR: "Standard", VIP: "VIP", PREMIUM: "Premium" })[m];
+
+export const sponsorshipStatusBadge = (s: SponsorshipStatus): Badge =>
+  pick({
+    ACTIVE: { label: "Actif", tone: "success" },
+    REDEEMED: { label: "Utilisé", tone: "info" },
+    EXPIRED: { label: "Expiré", tone: "neutral" },
+  }, s);
+
+export const rewardLabel = (type: SponsorshipRewardType, value: number, currency: string): string =>
+  type === "DISCOUNT" ? `Réduction de ${value} %`
+    : type === "LOYALTY_POINTS" ? `${value} points`
+    : `Remise de ${formatMoney(value, currency)}`;
+
+export const ratingStars = (rating: number): string => "★".repeat(rating) + "☆".repeat(5 - rating);

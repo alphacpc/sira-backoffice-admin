@@ -179,3 +179,32 @@ describe("parcel labels", () => {
     expect(parcelTypeLabel("OTHER")).toBe("Autre");
   });
 });
+
+import {
+  feedbackStatusBadge, feedbackTypeLabel, membershipLabel, ratingStars, rewardLabel, sponsorshipStatusBadge,
+} from "@/lib/labels";
+
+describe("client labels", () => {
+  it("labels reviews, memberships, sponsorships and ratings", () => {
+    expect(feedbackStatusBadge("PENDING")).toEqual({ label: "En attente", tone: "warning" });
+    expect(feedbackStatusBadge("REVIEWED")).toEqual({ label: "Examiné", tone: "info" });
+    expect(feedbackStatusBadge("RESOLVED")).toEqual({ label: "Résolu", tone: "success" });
+    expect(feedbackStatusBadge("IGNORED")).toEqual({ label: "Ignoré", tone: "neutral" });
+    expect(feedbackTypeLabel("TRIP")).toBe("Trajet");
+    expect(feedbackTypeLabel("BUS")).toBe("Bus");
+    expect(feedbackTypeLabel("STATION")).toBe("Gare");
+    expect(feedbackTypeLabel("SERVICE")).toBe("Service");
+    expect(feedbackTypeLabel("PARCEL")).toBe("Colis");
+    expect(membershipLabel("REGULAR")).toBe("Standard");
+    expect(membershipLabel("VIP")).toBe("VIP");
+    expect(membershipLabel("PREMIUM")).toBe("Premium");
+    expect(sponsorshipStatusBadge("ACTIVE")).toEqual({ label: "Actif", tone: "success" });
+    expect(sponsorshipStatusBadge("REDEEMED")).toEqual({ label: "Utilisé", tone: "info" });
+    expect(sponsorshipStatusBadge("EXPIRED")).toEqual({ label: "Expiré", tone: "neutral" });
+    expect(rewardLabel("DISCOUNT", 10, "XOF")).toBe("Réduction de 10 %");
+    expect(rewardLabel("LOYALTY_POINTS", 500, "XOF")).toBe("500 points");
+    expect(rewardLabel("CASH", 2000, "XOF")).toMatch(/^Remise de 2[\s  ]000/);
+    expect(ratingStars(3)).toBe("★★★☆☆");
+    expect(ratingStars(5)).toBe("★★★★★");
+  });
+});

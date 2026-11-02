@@ -91,3 +91,52 @@ describe("revealParcelRecipientPhone", () => {
     expect(getStore().activity).toHaveLength(n);
   });
 });
+
+import { ignoreFeedback } from "@/app/(admin)/clients/actions";
+
+const feedbackTitled = (title: string) => getStore().feedbacks.find((f) => f.title === title)!;
+const PENDING_TITLE = "Climatisation en panne pendant le trajet";
+const RESOLVED_TITLE = "Service impeccable au guichet";
+
+describe("ignoreFeedback", () => {
+  it("reads and writes nothing without a session", async () => {
+    requireSession.mockRejectedValue(new Error("Non authentifié"));
+    const target = feedbackTitled(PENDING_TITLE);
+    const n = getStore().activity.length;
+    expect(await ignoreFeedback(target.id, "motif")).toEqual(EXPIRED);
+    expect(target.status).toBe("PENDING");
+    expect(getStore().activity).toHaveLength(n);
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("ignores the review, journals the actor and revalidates the affected pages", async () => {
+    const target = feedbackTitled(PENDING_TITLE);
+    expect(await ignoreFeedback(target.id, " Propos injurieux ")).toEqual({ ok: true });
+    expect(target.status).toBe("IGNORED");
+    expect(getStore().activity[0]).toMatchObject({ actor: "tester@sira.app", companyId: target.companyId });
+    const paths = revalidatePath.mock.calls.map((c) => c[0] as string);
+    expect(paths).toEqual(expect.arrayContaining([
+      "/clients/avis", `/clients/avis/${target.id}`, `/clients/comptes/${target.customerId}`, `/compagnies/${target.companyId}`,
+    ]));
+  });
+
+  it("accepts a reason of exactly 500 characters and refuses 501 without changing anything", async () => {
+    const target = feedbackTitled(PENDING_TITLE);
+    expect(await ignoreFeedback(target.id, "x".repeat(501))).toEqual({ ok: false, error: "Motif trop long (500 caractères maximum)" });
+    expect(target.status).toBe("PENDING");
+    expect(await ignoreFeedback(target.id, "x".repeat(500))).toEqual({ ok: true });
+    expect(target.status).toBe("IGNORED");
+  });
+
+  it("returns the rule's message as an error result", async () => {
+    expect(await ignoreFeedback(feedbackTitled(RESOLVED_TITLE).id, "motif")).toEqual({ ok: false, error: "Cet avis est déjà traité" });
+    expect(await ignoreFeedback("00000000-0000-4000-8000-000000000000", "motif")).toEqual({ ok: false, error: "Avis introuvable" });
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("refuses a blank id or a blank reason", async () => {
+    expect((await ignoreFeedback("", "motif")).ok).toBe(false);
+    expect((await ignoreFeedback(feedbackTitled(PENDING_TITLE).id, "  ")).ok).toBe(false);
+    expect(feedbackTitled(PENDING_TITLE).status).toBe("PENDING");
+  });
+});
