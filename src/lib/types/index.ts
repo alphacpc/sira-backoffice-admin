@@ -338,6 +338,7 @@ export interface Transaction {
 }
 
 export type TicketStatus = "ISSUED" | "CHECKED_IN" | "USED" | "CANCELLED";
+export type AnomalyKind = "STUCK" | "AMOUNT_MISMATCH" | "MISSING_TICKET";
 
 export interface Ticket {
   id: string; companyId: string; bookingId: string; tripId: string; ticketCode: string;

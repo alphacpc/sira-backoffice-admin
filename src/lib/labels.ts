@@ -1,5 +1,7 @@
 import type { Tone } from "@/components/data/status-badge";
 import type {
+  AnomalyKind, BookingChannel, BookingPaymentStatus, BookingStatus, CancelReason, PaymentMethodKind, TicketStatus,
+  TransactionStatus,
   BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, Incident, Invoice, KycDocumentStatus,
   MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
   ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, TripStatus, UserStatus, VendorKind,
@@ -190,3 +192,53 @@ export const maintenanceCategoryLabel = (c: MaintenanceCategory): string => CATE
 const SEAT_STATE_LABELS: Record<SeatState, string> = { free: "libre", booked: "réservé", occupied: "occupé", blocked: "bloqué" };
 /** Lower-case state of a seat, as read in "Siège 3B, réservé". */
 export const seatStateLabel = (s: SeatState): string => SEAT_STATE_LABELS[s];
+
+export const bookingStatusBadge = (s: BookingStatus): Badge =>
+  pick({
+    confirmed: { label: "Confirmée", tone: "success" },
+    cancelled: { label: "Annulée", tone: "neutral" },
+  }, s);
+
+export const bookingPaymentBadge = (s: BookingPaymentStatus): Badge =>
+  pick({
+    pending: { label: "En attente", tone: "warning" },
+    paid: { label: "Payée", tone: "success" },
+    failed: { label: "Échouée", tone: "danger" },
+  }, s);
+
+export const transactionStatusBadge = (s: TransactionStatus): Badge =>
+  pick({
+    PENDING: { label: "En attente", tone: "warning" },
+    COMPLETED: { label: "Réussie", tone: "success" },
+    FAILED: { label: "Échouée", tone: "danger" },
+  }, s);
+
+export const ticketStatusBadge = (s: TicketStatus): Badge =>
+  pick({
+    ISSUED: { label: "Émis", tone: "info" },
+    CHECKED_IN: { label: "Enregistré", tone: "success" },
+    USED: { label: "Utilisé", tone: "neutral" },
+    CANCELLED: { label: "Annulé", tone: "danger" },
+  }, s);
+
+export const channelLabel = (c: BookingChannel): string => (c === "online" ? "En ligne" : "Guichet");
+
+export const paymentKindLabel = (k: PaymentMethodKind): string =>
+  ({ MOBILE_MONEY: "Mobile money", CARD: "Carte bancaire", CASH: "Espèces" })[k];
+
+export const cancelReasonLabel = (r: CancelReason): string =>
+  ({
+    EXPIRED: "Expirée (non payée à temps)",
+    CLIENT: "Annulée par le client",
+    PLATFORM: "Annulée par l'équipe Sira",
+  })[r];
+
+export const anomalyLabel = (k: AnomalyKind): string =>
+  ({ STUCK: "Paiement bloqué", AMOUNT_MISMATCH: "Montant différent", MISSING_TICKET: "Billet manquant" })[k];
+
+export const anomalyExplanation = (k: AnomalyKind): string =>
+  ({
+    STUCK: "Le paiement est en attente depuis plus de 30 minutes sans résultat du fournisseur.",
+    AMOUNT_MISMATCH: "Le montant de la transaction ne correspond pas à celui de la réservation.",
+    MISSING_TICKET: "Le paiement est réussi mais aucun billet n'a été émis pour cette réservation.",
+  })[k];

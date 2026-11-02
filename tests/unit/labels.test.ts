@@ -118,3 +118,42 @@ describe("fleet labels", () => {
       .toEqual(["libre", "réservé", "occupé", "bloqué"]);
   });
 });
+
+import {
+  anomalyExplanation, anomalyLabel, bookingPaymentBadge, bookingStatusBadge, cancelReasonLabel,
+  channelLabel, paymentKindLabel, ticketStatusBadge, transactionStatusBadge,
+} from "@/lib/labels";
+
+describe("sales labels", () => {
+  it("labels booking, payment, transaction and ticket statuses", () => {
+    expect(bookingStatusBadge("confirmed")).toEqual({ label: "Confirmée", tone: "success" });
+    expect(bookingStatusBadge("cancelled")).toEqual({ label: "Annulée", tone: "neutral" });
+    expect(bookingPaymentBadge("pending")).toEqual({ label: "En attente", tone: "warning" });
+    expect(bookingPaymentBadge("paid")).toEqual({ label: "Payée", tone: "success" });
+    expect(bookingPaymentBadge("failed")).toEqual({ label: "Échouée", tone: "danger" });
+    expect(transactionStatusBadge("PENDING")).toEqual({ label: "En attente", tone: "warning" });
+    expect(transactionStatusBadge("COMPLETED")).toEqual({ label: "Réussie", tone: "success" });
+    expect(transactionStatusBadge("FAILED")).toEqual({ label: "Échouée", tone: "danger" });
+    expect(ticketStatusBadge("ISSUED")).toEqual({ label: "Émis", tone: "info" });
+    expect(ticketStatusBadge("CHECKED_IN")).toEqual({ label: "Enregistré", tone: "success" });
+    expect(ticketStatusBadge("USED")).toEqual({ label: "Utilisé", tone: "neutral" });
+    expect(ticketStatusBadge("CANCELLED")).toEqual({ label: "Annulé", tone: "danger" });
+  });
+
+  it("labels channels, payment kinds, cancellation causes and anomalies", () => {
+    expect(channelLabel("online")).toBe("En ligne");
+    expect(channelLabel("counter")).toBe("Guichet");
+    expect(paymentKindLabel("MOBILE_MONEY")).toBe("Mobile money");
+    expect(paymentKindLabel("CARD")).toBe("Carte bancaire");
+    expect(paymentKindLabel("CASH")).toBe("Espèces");
+    expect(cancelReasonLabel("EXPIRED")).toBe("Expirée (non payée à temps)");
+    expect(cancelReasonLabel("CLIENT")).toBe("Annulée par le client");
+    expect(cancelReasonLabel("PLATFORM")).toBe("Annulée par l'équipe Sira");
+    expect(anomalyLabel("STUCK")).toBe("Paiement bloqué");
+    expect(anomalyLabel("AMOUNT_MISMATCH")).toBe("Montant différent");
+    expect(anomalyLabel("MISSING_TICKET")).toBe("Billet manquant");
+    expect(anomalyExplanation("STUCK")).toBe("Le paiement est en attente depuis plus de 30 minutes sans résultat du fournisseur.");
+    expect(anomalyExplanation("AMOUNT_MISMATCH")).toBe("Le montant de la transaction ne correspond pas à celui de la réservation.");
+    expect(anomalyExplanation("MISSING_TICKET")).toBe("Le paiement est réussi mais aucun billet n'a été émis pour cette réservation.");
+  });
+});
