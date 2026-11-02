@@ -3,7 +3,7 @@ import type { Tone } from "@/components/data/status-badge";
 import type {
   AnomalyKind, BookingChannel, BookingPaymentStatus, BookingStatus, CancelReason, PaymentMethodKind, TicketStatus,
   TransactionStatus,
-  BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, Incident, Invoice, KycDocumentStatus,
+  BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, ImpactScope, Incident, IncidentStatus, Invoice, KycDocumentStatus,
   MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
   AccessReason, AccessType, AuditAction, AuditActorType, ConsentSource, ConsentStatus, ConsentType, DataCategory,
   DsrStatus, DsrType, FeedbackStatus, FeedbackType, MembershipType, SponsorshipRewardType, SponsorshipStatus,
@@ -405,3 +405,14 @@ export const consentStatusBadge = (s: ConsentStatus): Badge =>
 
 export const consentSourceLabel = (s: ConsentSource): string =>
   ({ SIGNUP: "Inscription", SETTINGS_PAGE: "Page de réglages", BOOKING_FLOW: "Parcours de réservation" })[s];
+
+export const incidentStatusBadge = (s: IncidentStatus): Badge =>
+  pick({
+    INVESTIGATING: { label: "En investigation", tone: "warning" },
+    IDENTIFIED: { label: "Identifié", tone: "warning" },
+    MONITORING: { label: "Sous surveillance", tone: "info" },
+    RESOLVED: { label: "Résolu", tone: "success" },
+  }, s);
+
+export const impactScopeLabel = (s: ImpactScope): string =>
+  ({ SINGLE_COMPANY: "Une compagnie", MULTI_COMPANY: "Plusieurs compagnies", PLATFORM_WIDE: "Toute la plateforme" })[s];

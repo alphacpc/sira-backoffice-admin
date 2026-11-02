@@ -1,3 +1,4 @@
+import { servicesRepo } from "@/lib/repos/monitoring";
 import { getStore } from "@/lib/repos/store";
 import type { ActivityEntry, DsrType, Incident, ServiceHealth, Subscription } from "@/lib/types";
 
@@ -29,11 +30,17 @@ export const dashboardRepo = {
         active: s.companies.filter((c) => c.status === "active").length,
         draft: s.companies.filter((c) => c.status === "draft").length,
         pastDue: pastDue.length,
-        openIncidents: s.incidents.filter((i) => i.status !== "RESOLVED").length,
+        openIncidents: s.systemIncidents.filter((i) => i.status !== "RESOLVED").length,
         pendingKyc: s.documents.filter((d) => d.status === "pending").length,
       },
-      services: s.services,
-      incidents: s.incidents.filter((i) => i.status !== "RESOLVED"),
+      services: servicesRepo.latestLive(),
+      incidents: s.systemIncidents
+        .filter((i) => i.status !== "RESOLVED")
+        .sort((a, b) => b.detectedAt.localeCompare(a.detectedAt))
+        .map((i): Incident => ({
+          id: i.id, code: i.incidentCode, title: i.title, serviceName: i.serviceName, severity: i.severity,
+          status: i.status, detectedAt: i.detectedAt,
+        })),
       pastDue,
       dsr: s.dataSubjectRequests
         .filter((d) => d.status === "RECEIVED" || d.status === "IN_PROGRESS")

@@ -10,7 +10,7 @@ describe("dashboardRepo.overview", () => {
     expect(o.kpis.companies).toBe(20);
     expect(o.kpis.active).toBe(12);
     expect(o.kpis.draft).toBe(5);
-    expect(o.kpis.openIncidents).toBe(2);
+    expect(o.kpis.openIncidents).toBe(getStore().systemIncidents.filter((i) => i.status !== "RESOLVED").length);
     expect(o.kpis.pastDue).toBe(2);
     expect(o.kpis.pendingKyc).toBeGreaterThan(0);
   });
@@ -42,5 +42,15 @@ describe("dashboardRepo.overview", () => {
       expect(d.requesterName).toBe(s.users.find((u) => u.id === source.requesterUserId)!.displayName);
       expect(Object.keys(d).sort()).toEqual(["daysLeft", "dueDate", "id", "requestType", "requesterName"]);
     }
+  });
+  it("shows the live services and the open incidents of the monitoring data", () => {
+    const o = dashboardRepo.overview(new Date());
+    expect(o.services).toHaveLength(10);
+    expect(o.services.map((s) => s.name)).not.toContain("gateway");
+    expect(o.services.find((s) => s.name === "notification-service")!.status).toBe("down");
+    expect(o.incidents.length).toBe(o.kpis.openIncidents);
+    expect(o.incidents.every((i) => i.status !== "RESOLVED")).toBe(true);
+    const at = o.incidents.map((i) => i.detectedAt);
+    expect([...at].sort().reverse()).toEqual(at);
   });
 });

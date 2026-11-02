@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { impactScopeLabel, incidentStatusBadge } from "@/lib/labels";
 import {
   billingCycleLabel, changeKindLabel, featureKindLabel, kycTypeStatusBadge, paymentStatusBadge,
   planStatusBadge, urgencyBadge,
@@ -320,5 +321,17 @@ describe("compliance labels", () => {
     expect(consentSourceLabel("SIGNUP")).toBe("Inscription");
     expect(consentSourceLabel("SETTINGS_PAGE")).toBe("Page de réglages");
     expect(consentSourceLabel("BOOKING_FLOW")).toBe("Parcours de réservation");
+  });
+});
+
+describe("monitoring labels", () => {
+  it("labels incident statuses and impact scopes", () => {
+    expect(incidentStatusBadge("INVESTIGATING")).toEqual({ label: "En investigation", tone: "warning" });
+    expect(incidentStatusBadge("IDENTIFIED")).toEqual({ label: "Identifié", tone: "warning" });
+    expect(incidentStatusBadge("MONITORING")).toEqual({ label: "Sous surveillance", tone: "info" });
+    expect(incidentStatusBadge("RESOLVED")).toEqual({ label: "Résolu", tone: "success" });
+    expect(impactScopeLabel("SINGLE_COMPANY")).toBe("Une compagnie");
+    expect(impactScopeLabel("MULTI_COMPANY")).toBe("Plusieurs compagnies");
+    expect(impactScopeLabel("PLATFORM_WIDE")).toBe("Toute la plateforme");
   });
 });

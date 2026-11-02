@@ -2,9 +2,9 @@ import { KYC_TYPES } from "@/lib/types/kyc";
 import type {
   ActivityEntry, Booking, BookingChannel, BookingPaymentStatus, BookingStatus, Bus, BusMaintenance, BusType, Company, CompanyStatus, CrewMember, CrewRole,
   AccessReason, AccessType, AuditAction, AuditActorType, AuditLog, ConsentRecord, ConsentSource, ConsentStatus, ConsentType, DataAccessLog, DataCategory, DataSubjectRequest, DataSubjectType, DsrStatus, DsrType,
-  Employee, FeatureDef, FeatureFlag, Fleet, FuelType, Incident, Invoice, KycDocument, KycDocumentType,
+  Employee, FeatureDef, FeatureFlag, Fleet, FuelType, Invoice, KycDocument, KycDocumentType,
   MaintenanceCategory, MaintenanceStatus, PartnerTier, PaymentAttempt, PermissionDef, Plan, PlanLimits,
-  PlatformUser, Referral, RetryOutcome, Role, RolePermission, Route, SeatMap, SeatState, ServiceHealth,
+  PlatformUser, Referral, RetryOutcome, Role, RolePermission, Route, SeatMap, SeatState,
   Station, Subscription, SubscriptionChangeKind, SubscriptionHistoryEntry, SubscriptionStatus, Trip,
   PaymentMethod, PaymentMethodKind, Ticket, TicketStatus, Transaction, TransactionStatus,
   Customer, Feedback, FeedbackStatus, FeedbackType, LoyaltyAccount, LoyaltyProgram, LoyaltyTransaction, MembershipType,
@@ -29,8 +29,6 @@ export interface Store {
   buses: Bus[];
   trips: Trip[];
   activity: ActivityEntry[];
-  services: ServiceHealth[];
-  incidents: Incident[];
   dataSubjectRequests: DataSubjectRequest[];
   consentRecords: ConsentRecord[];
   auditLogs: AuditLog[];
@@ -265,7 +263,7 @@ export function buildSeed(now: Date = new Date()): Store {
   const store: Store = {
     companies: [], documents: [], subscriptions: [], invoices: [], limits: {},
     features: {}, usage: {}, referrals: {}, employees: [], buses: [], trips: [],
-    activity: [], services: [], incidents: [], dataSubjectRequests: [], consentRecords: [], auditLogs: [], dataAccessLogs: [],
+    activity: [], dataSubjectRequests: [], consentRecords: [], auditLogs: [], dataAccessLogs: [],
     serviceChecks: [], systemIncidents: [], apiUsage: [],
     plans: [], featureDefs: [], partnerTiers: [], kycTypes: [],
     subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
@@ -513,22 +511,6 @@ export function buildSeed(now: Date = new Date()): Store {
     });
     user.lastLoginAt = iso(Math.max(...starts));
   });
-
-  store.services = [
-    ["identity-service", "healthy", 42], ["company-service", "healthy", 55],
-    ["fleet-service", "healthy", 61], ["booking-service", "healthy", 88],
-    ["parcel-service", "degraded", 1450], ["hr-service", "healthy", 70],
-    ["customer-service", "healthy", 64], ["notification-service", "down", 0],
-    ["audit-compliance-service", "healthy", 49], ["monitoring-service", "healthy", 38],
-  ].map(([name, status, ms]) => ({
-    name: name as string, status: status as ServiceHealth["status"], responseTimeMs: ms as number,
-  }));
-
-  store.incidents = [
-    { id: uid(10, 1), code: "SYS-A1B2C3D4", title: "Notifications non envoyées", serviceName: "notification-service", severity: "HIGH", status: "INVESTIGATING", detectedAt: iso(-0.2) },
-    { id: uid(10, 2), code: "SYS-E5F6G7H8", title: "Latence élevée sur les colis", serviceName: "parcel-service", severity: "MEDIUM", status: "MONITORING", detectedAt: iso(-1) },
-    { id: uid(10, 3), code: "SYS-J9K1L2M3", title: "Échec de connexion intermittent", serviceName: "identity-service", severity: "LOW", status: "RESOLVED", detectedAt: iso(-6) },
-  ];
 
   seedDataSubjectRequests(store, iso);
   seedConsents(store, iso);
