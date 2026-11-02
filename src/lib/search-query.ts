@@ -24,11 +24,25 @@ export function matchRank(text: string, normalizedQuery: string): number | null 
   return /[\s\-_./]/.test(n[at - 1]!) ? 2 : 3;
 }
 
-/** An e-mail address (contains `@`) or a phone number (digits and separators only, at least 7 digits). */
+const ZERO_WIDTH = /[\u200B-\u200D\u2060\uFEFF]/g;
+const PHONE_BODY = /^[+\p{Nd}\s().\-/_]+$/u;
+
+function digitCount(text: string): number {
+  return (text.match(/\p{Nd}/gu) ?? []).length;
+}
+
+/**
+ * An e-mail address (contains `@`) or a phone number (digits and separators only, at least 7 digits), after NFKC
+ * normalisation (full-width forms), with any Unicode decimal digit, `/` and `_` as separators and zero-width
+ * characters ignored. A short letter prefix followed by `:` or a space (`tel:771234567`) is also refused; a hyphen
+ * after the prefix (`BK-12345678`) is not, so codes stay searchable.
+ */
 export function isContactLike(raw: string): boolean {
-  const t = raw.trim();
+  const t = raw.normalize("NFKC").replace(ZERO_WIDTH, "").trim();
   if (t.includes("@")) return true;
-  return /^[+\d\s().-]+$/.test(t) && t.replace(/\D/g, "").length >= 7;
+  const prefixed = /^\p{L}{1,5}[:\s]\s*(.+)$/u.exec(t);
+  const body = prefixed ? prefixed[1]! : t;
+  return PHONE_BODY.test(body) && digitCount(body) >= 7;
 }
 
 /** Why a query cannot be searched, `null` when it can. Order: too short, too long, contact-like. */

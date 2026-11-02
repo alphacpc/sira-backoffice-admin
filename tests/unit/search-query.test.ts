@@ -52,6 +52,23 @@ describe("isContactLike", () => {
   });
 });
 
+describe("isContactLike bypass hardening", () => {
+  it.each([
+    "someone＠example.sn", "７７１２３４５６７", "＋221 77 123 45 67", "٧٧١٢٣٤٥٦٧",
+    "77/123/45/67", "77_123_45_67", "77\u200b123\u200c45\u200d67\ufeff12", "tel:771234567", "tel 771234567", "Tel: 77 123 45 67",
+  ])("refuses %s", (q) => {
+    expect(isContactLike(q)).toBe(true);
+    expect(queryProblem(q)).toBe(CONTACT_QUERY_MESSAGE);
+  });
+  it.each([
+    "BK-12345678", "SYS-12345678", "sira-co-12345678", "550e8400-e29b-41d4-a716-446655440000",
+    "TRK-0123456789", "PCL-20260101-0042", "MNT-1011", "INV-2026-000123", "TK-8F3A21", "tel:12345",
+  ])("still accepts the code %s", (q) => {
+    expect(isContactLike(q)).toBe(false);
+    expect(queryProblem(q)).toBeNull();
+  });
+});
+
 describe("queryProblem", () => {
   it("accepts a valid query", () => {
     expect(queryProblem("louga")).toBeNull();
