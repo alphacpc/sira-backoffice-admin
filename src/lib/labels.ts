@@ -1,7 +1,7 @@
 import type { Tone } from "@/components/data/status-badge";
 import type {
-  CompanyStatus, FeatureDef, Incident, Invoice, KycDocumentStatus, PaymentAttempt, PermissionDomain, Plan,
-  ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, UserStatus,
+  BusStatus, CompanyStatus, FeatureDef, Incident, Invoice, KycDocumentStatus, PaymentAttempt, PermissionDomain,
+  Plan, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, UserStatus,
 } from "@/lib/types";
 
 type Badge = { label: string; tone: Tone };
@@ -124,3 +124,10 @@ const DOMAIN_LABELS: Record<PermissionDomain, string> = {
 };
 
 export const permissionDomainLabel = (d: PermissionDomain): string => DOMAIN_LABELS[d];
+
+export const busStatusBadge = (s: BusStatus): Badge =>
+  pick({
+    active: { label: "En service", tone: "success" },
+    maintenance: { label: "Maintenance", tone: "warning" },
+    retired: { label: "Hors service", tone: "neutral" },
+  }, s);

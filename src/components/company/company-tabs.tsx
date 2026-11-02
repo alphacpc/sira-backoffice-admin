@@ -5,7 +5,7 @@ import { StatusBadge } from "@/components/data/status-badge";
 import { TabsWithUrl } from "@/components/data/tabs-with-url";
 import { Card, CardContent } from "@/components/ui/card";
 import { formatDate, formatDateTime, formatMoney, formatNumber, nextBillingLabel } from "@/lib/format";
-import { companyStatusBadge, invoiceStatusBadge, subscriptionStatusBadge } from "@/lib/labels";
+import { busStatusBadge, companyStatusBadge, invoiceStatusBadge, subscriptionStatusBadge } from "@/lib/labels";
 import { maskEmail, maskPhone } from "@/lib/mask";
 import type { CompanyDetail } from "@/lib/types";
 
@@ -191,7 +191,7 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
             {detail.buses.length === 0 ? <Empty>Aucun bus.</Empty> : (
               <ul className="space-y-1 text-sm">
                 {detail.buses.map((b) => (
-                  <li key={b.id} className="flex justify-between">{b.plate}<StatusBadge tone={b.status === "active" ? "success" : "warning"}>{b.status === "active" ? "En service" : "Maintenance"}</StatusBadge></li>
+                  <li key={b.id} className="flex justify-between">{b.plate}{(() => { const badge = busStatusBadge(b.status); return <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>; })()}</li>
                 ))}
               </ul>
             )}

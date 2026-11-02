@@ -127,12 +127,13 @@ export interface Employee {
   /** Platform account of the employee (`identity-service` user), null while the company is a draft. */
   userId: string | null;
 }
+/** Company-page projection of a bus (plate and status only). */
 export interface FleetBus {
-  id: string; companyId: string; plate: string; status: "active" | "maintenance";
+  id: string; companyId: string; plate: string; status: BusStatus;
 }
+/** Company-page projection of a trip (route label, departure and status only). */
 export interface FleetTrip {
-  id: string; companyId: string; route: string; departure: string;
-  status: "planned" | "boarding" | "departed";
+  id: string; companyId: string; route: string; departure: string; status: TripStatus;
 }
 
 export interface ActivityEntry {
@@ -209,3 +210,96 @@ export interface UserSession {
   revokedAt: string | null;
   revokedReason: string | null;
 }
+
+export interface Station { id: string; companyId: string; name: string; city: string }
+
+export type RouteStatus = "active" | "inactive";
+
+export interface Route {
+  id: string; companyId: string; originId: string; destinationId: string;
+  distanceKm: number; durationMinutes: number; status: RouteStatus;
+}
+
+export interface Fleet { id: string; companyId: string; name: string; depotId: string | null }
+
+export type VendorKind = "GARAGE" | "INSURER" | "PARTS" | "OTHER";
+
+export interface Vendor { id: string; companyId: string; name: string; kind: VendorKind }
+
+export type BusStatus = "active" | "maintenance" | "retired";
+export type BusType = "MINIBUS" | "COACH" | "STANDARD" | "ARTICULATED";
+export type FuelType = "DIESEL" | "PETROL" | "ELECTRIC" | "HYBRID";
+
+/** A bus (`fleet-service`). The three crew fields point to `CrewMember` ids, never to an account. */
+export interface Bus {
+  id: string;
+  companyId: string;
+  fleetId: string | null;
+  busCode: string;
+  plate: string;
+  brand: string;
+  model: string;
+  year: number;
+  busType: BusType;
+  fuelType: FuelType;
+  engineNumber: string;
+  color: string;
+  seatCapacity: number;
+  standingCapacity: number;
+  luggageCapacity: number;
+  wheelchairAccessible: boolean;
+  airConditioned: boolean;
+  gpsEnabled: boolean;
+  gpsDeviceId: string | null;
+  cameraInstalled: boolean;
+  fuelSensorInstalled: boolean;
+  status: BusStatus;
+  routeId: string | null;
+  depotId: string | null;
+  driverId: string | null;
+  driverAssistantId: string | null;
+  controllerId: string | null;
+  lastMaintenanceDate: string;
+  nextMaintenanceDate: string;
+  insuranceExpiry: string;
+  technicalInspectionExpiry: string;
+  registrationExpiry: string;
+  purchaseDate: string;
+  purchasePrice: number;
+  retiredAt: string | null;
+}
+
+export type TripStatus = "planned" | "boarding" | "departed" | "cancelled";
+
+export interface Trip {
+  id: string; companyId: string; routeId: string; busId: string;
+  departure: string; arrival: string; price: number; currency: string;
+  totalSeats: number; availableSeats: number; status: TripStatus;
+}
+
+export type SeatState = "free" | "booked" | "occupied" | "blocked";
+
+export interface SeatMap {
+  id: string; companyId: string; busId: string; tripId: string;
+  rows: number; columns: number; seats: { code: string; state: SeatState }[];
+}
+
+export type MaintenanceStatus = "PLANNED" | "IN_PROGRESS" | "COMPLETED" | "CANCELLED";
+export type MaintenanceCategory = "PREVENTIVE" | "CORRECTIVE" | "INSPECTION";
+
+export interface BusMaintenance {
+  id: string; companyId: string; busId: string; vendorId: string | null; code: string;
+  type: string; category: MaintenanceCategory; status: MaintenanceStatus;
+  scheduledDate: string; startedAt: string | null; completedAt: string | null;
+  laborCost: number; partsCost: number;
+  /** Labor plus parts, computed when the seed is built. */
+  totalCost: number;
+}
+
+export type CrewRole = "DRIVER" | "DRIVER_ASSISTANT" | "CONTROLLER";
+
+/**
+ * Crew registry of the backoffice (stands in for the `hr-service` employees the platform assigns):
+ * no account, no e-mail, no phone.
+ */
+export interface CrewMember { id: string; companyId: string; name: string; role: CrewRole }

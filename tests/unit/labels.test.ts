@@ -71,3 +71,12 @@ describe("access labels", () => {
     ]);
   });
 });
+
+import { busStatusBadge } from "@/lib/labels";
+describe("bus status badge", () => {
+  it("labels the three bus statuses", () => {
+    expect(busStatusBadge("active")).toEqual({ label: "En service", tone: "success" });
+    expect(busStatusBadge("maintenance")).toEqual({ label: "Maintenance", tone: "warning" });
+    expect(busStatusBadge("retired")).toEqual({ label: "Hors service", tone: "neutral" });
+  });
+});

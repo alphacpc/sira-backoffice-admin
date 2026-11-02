@@ -1,5 +1,6 @@
 import { addActivity } from "@/lib/repos/activity";
 import { kycTypesRepo } from "@/lib/repos/billing";
+import { companyFleetSummary } from "@/lib/repos/fleet";
 import { getStore } from "@/lib/repos/store";
 import type { Company, CompanyDetail, CompanyStatus, KycDocument } from "@/lib/types";
 
@@ -62,8 +63,7 @@ export const companiesRepo = {
       usage: s.usage[id] ?? [],
       referral: s.referrals[id] ?? { code: null, credits: [] },
       employees: s.employees.filter((e) => e.companyId === id),
-      buses: s.buses.filter((b) => b.companyId === id),
-      trips: s.trips.filter((t) => t.companyId === id),
+      ...companyFleetSummary(id),
       activity: s.activity
         .filter((a) => a.companyId === id)
         .sort((a, b) => b.at.localeCompare(a.at)),

@@ -1,10 +1,11 @@
 import { KYC_TYPES } from "@/lib/types/kyc";
 import type {
-  ActivityEntry, Company, CompanyStatus, DsrRequest, Employee, FeatureDef, FeatureFlag,
-  FleetBus, FleetTrip, Incident, Invoice, KycDocument, KycDocumentType, PartnerTier,
-  PaymentAttempt, PermissionDef, Plan, PlanLimits, PlatformUser, Referral, RetryOutcome, Role,
-  RolePermission, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionHistoryEntry,
-  SubscriptionStatus, UsageMetric, UserSession, UserStatus,
+  ActivityEntry, Bus, BusMaintenance, BusType, Company, CompanyStatus, CrewMember, CrewRole, DsrRequest,
+  Employee, FeatureDef, FeatureFlag, Fleet, FuelType, Incident, Invoice, KycDocument, KycDocumentType,
+  MaintenanceCategory, MaintenanceStatus, PartnerTier, PaymentAttempt, PermissionDef, Plan, PlanLimits,
+  PlatformUser, Referral, RetryOutcome, Role, RolePermission, Route, SeatMap, SeatState, ServiceHealth,
+  Station, Subscription, SubscriptionChangeKind, SubscriptionHistoryEntry, SubscriptionStatus, Trip,
+  TripStatus, UsageMetric, UserSession, UserStatus, Vendor, VendorKind,
 } from "@/lib/types";
 
 const DAY = 86_400_000;
@@ -19,8 +20,8 @@ export interface Store {
   usage: Record<string, UsageMetric[]>;
   referrals: Record<string, Referral>;
   employees: Employee[];
-  buses: FleetBus[];
-  trips: FleetTrip[];
+  buses: Bus[];
+  trips: Trip[];
   activity: ActivityEntry[];
   services: ServiceHealth[];
   incidents: Incident[];
@@ -37,6 +38,13 @@ export interface Store {
   permissions: PermissionDef[];
   rolePermissions: RolePermission[];
   sessions: UserSession[];
+  stations: Station[];
+  routes: Route[];
+  fleets: Fleet[];
+  vendors: Vendor[];
+  seatMaps: SeatMap[];
+  maintenances: BusMaintenance[];
+  crew: CrewMember[];
 }
 
 const NAMES = [
@@ -160,9 +168,48 @@ const CLIENTS: { username: string; displayName: string; status: UserStatus }[] =
   { username: "lamine.camara", displayName: "Lamine Camara", status: "active" },
 ];
 
-const ROUTES = [
-  "Dakar → Saint-Louis", "Dakar → Touba", "Dakar → Ziguinchor",
-  "Thiès → Kaolack", "Mbour → Dakar",
+/** Station cities; a company's stations step by 3 through this list, so they never repeat within it. */
+const CITIES = ["Dakar", "Thiès", "Saint-Louis", "Touba", "Kaolack", "Ziguinchor", "Mbour", "Tambacounda"];
+const BUS_MODELS: {
+  brand: string; model: string; busType: BusType; fuelType: FuelType;
+  seats: number; standing: number; luggage: number; price: number;
+}[] = [
+  { brand: "Mercedes-Benz", model: "Tourismo", busType: "COACH", fuelType: "DIESEL", seats: 53, standing: 0, luggage: 9, price: 95_000_000 },
+  { brand: "BYD", model: "K9", busType: "STANDARD", fuelType: "ELECTRIC", seats: 41, standing: 30, luggage: 1, price: 120_000_000 },
+  { brand: "Yutong", model: "ZK6122H", busType: "COACH", fuelType: "HYBRID", seats: 55, standing: 0, luggage: 10, price: 80_000_000 },
+  { brand: "King Long", model: "XMQ6127", busType: "COACH", fuelType: "DIESEL", seats: 51, standing: 0, luggage: 8, price: 70_000_000 },
+  { brand: "Toyota", model: "Coaster", busType: "MINIBUS", fuelType: "PETROL", seats: 29, standing: 0, luggage: 2, price: 35_000_000 },
+];
+const COLORS = ["Blanc", "Bleu", "Jaune", "Vert", "Rouge", "Gris"];
+const VENDORS: { name: string; kind: VendorKind }[] = [
+  { name: "Garage Central", kind: "GARAGE" },
+  { name: "Assurances Askia", kind: "INSURER" },
+];
+const CREW_FIRST = ["Abdou", "Babacar", "Modou", "Saliou", "Alioune", "Mamadou", "Serigne", "Assane", "Ndiaga", "Daouda", "Boubacar"];
+const CREW_LAST = ["Diagne", "Mbaye", "Thiam", "Gaye", "Seck", "Cissé", "Ndao", "Wade", "Badji", "Sané", "Lo"];
+const MAINTENANCE_TYPES: { type: string; category: MaintenanceCategory }[] = [
+  { type: "Vidange", category: "PREVENTIVE" },
+  { type: "Freins", category: "CORRECTIVE" },
+  { type: "Contrôle technique", category: "INSPECTION" },
+  { type: "Pneus", category: "CORRECTIVE" },
+  { type: "Révision générale", category: "PREVENTIVE" },
+];
+/** Insurance, technical inspection and registration expiries (days from `now`), cycled per bus. */
+const INSURANCE_DAYS = [-12, 15, 120, 200, 60];
+const INSPECTION_DAYS = [90, -5, 25, 300, 180];
+const REGISTRATION_DAYS = [365, 400, 10, 500, -30];
+/** The single retired bus of the seed: last bus of Dakar Voyages (company index 2). */
+const RETIRED_COMPANY_INDEX = 2;
+const SEAT_COLUMNS = 4;
+/**
+ * Trips of a bus by pattern `(company index + bus index) % 4` (days from `now`): pattern 0 is boarding
+ * then planned, 1 planned, 2 departed then cancelled, 3 departed. Patterns 2 and 3 leave no trip to come.
+ */
+const TRIP_PATTERNS: { status: TripStatus; day: number }[][] = [
+  [{ status: "boarding", day: 0.1 }, { status: "planned", day: 2 }],
+  [{ status: "planned", day: 1 }],
+  [{ status: "departed", day: -1 }, { status: "cancelled", day: 3 }],
+  [{ status: "departed", day: -2 }],
 ];
 const PEOPLE = [
   "Awa Diop", "Moussa Fall", "Fatou Ndiaye", "Ibrahima Sow", "Mariama Ba",
@@ -191,8 +238,9 @@ export function buildSeed(now: Date = new Date()): Store {
     plans: [], featureDefs: [], partnerTiers: [], kycTypes: [],
     subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
     users: [], roles: [], permissions: [], rolePermissions: [], sessions: [],
+    stations: [], routes: [], fleets: [], vendors: [], seatMaps: [], maintenances: [], crew: [],
   };
-  let docSeq = 1, subSeq = 1, invSeq = 1, empSeq = 1, busSeq = 1, tripSeq = 1, actSeq = 1;
+  let docSeq = 1, subSeq = 1, invSeq = 1, empSeq = 1, actSeq = 1;
   let attSeq = 1, histSeq = 1, userSeq = 1, sessionSeq = 1;
 
   store.plans = [...PLANS, LEGACY_PLAN].map((p, n) => ({
@@ -353,7 +401,7 @@ export function buildSeed(now: Date = new Date()): Store {
           }
         : { code: null, credits: [] };
 
-    // People, fleet
+    // People (the fleet is seeded by seedFleet, once every company exists)
     const roles: Employee["role"][] = ["MANAGER", "GUICHETIER", "CHAUFFEUR"];
     const peopleCount = status === "draft" ? 1 : 3;
     for (let p = 0; p < peopleCount; p++) {
@@ -371,20 +419,6 @@ export function buildSeed(now: Date = new Date()): Store {
         });
       }
     }
-    if (status === "active") {
-      for (let b = 0; b < 2 + (i % 3); b++) {
-        store.buses.push({
-          id: uid(7, busSeq++), companyId: id, plate: `DK-${1000 + i * 10 + b}-AB`,
-          status: b === 0 && i % 4 === 0 ? "maintenance" : "active",
-        });
-      }
-      for (let t = 0; t < 2; t++) {
-        store.trips.push({
-          id: uid(8, tripSeq++), companyId: id, route: ROUTES[(i + t) % ROUTES.length]!,
-          departure: iso(t + 1), status: t === 0 ? "boarding" : "planned",
-        });
-      }
-    }
 
     // Activity
     store.activity.push({
@@ -398,6 +432,8 @@ export function buildSeed(now: Date = new Date()): Store {
       });
     }
   });
+
+  seedFleet(store, iso);
 
   PLATFORM_ADMINS.forEach((a, k) => {
     store.users.push({
@@ -458,4 +494,148 @@ export function buildSeed(now: Date = new Date()): Store {
   ];
 
   return store;
+}
+
+/**
+ * Fleet of every active company: stations, routes, one fleet, vendors, as many buses as the plan's
+ * `usedBuses` (capped by `maxBuses`, never fewer than 2), crew, trips, seat maps and maintenances.
+ * Per company, the last bus has no crew (it feeds the "sans conducteur affecté" filter).
+ */
+function seedFleet(store: Store, iso: (offsetDays: number) => string): void {
+  let stationSeq = 1, routeSeq = 1, fleetSeq = 1, vendorSeq = 1, busSeq = 1, crewSeq = 1;
+  let tripSeq = 1, seatMapSeq = 1, maintenanceSeq = 1;
+
+  store.companies.forEach((company, i) => {
+    if (company.status !== "active") return;
+    const id = company.id;
+
+    const stations: Station[] = Array.from({ length: 2 + (i % 3) }, (_, k) => {
+      const city = CITIES[(i + k * 3) % CITIES.length]!;
+      return { id: uid(17, stationSeq++), companyId: id, name: `Gare routière de ${city}`, city };
+    });
+    store.stations.push(...stations);
+
+    const routes: Route[] = Array.from({ length: Math.min(stations.length, 2 + (i % 2)) }, (_, r) => {
+      const distanceKm = 80 + ((i * 37 + r * 53) % 400);
+      return {
+        id: uid(18, routeSeq++), companyId: id, originId: stations[r]!.id,
+        destinationId: stations[(r + 1) % stations.length]!.id, distanceKm,
+        durationMinutes: Math.round(distanceKm * 1.2) + 30,
+        status: i % 5 === 4 && r === 1 ? "inactive" : "active",
+      };
+    });
+    store.routes.push(...routes);
+
+    const fleet: Fleet = { id: uid(19, fleetSeq++), companyId: id, name: "Flotte principale", depotId: stations[0]!.id };
+    store.fleets.push(fleet);
+
+    const vendors: Vendor[] = VENDORS.slice(0, 1 + (i % 2 === 0 ? 1 : 0)).map((v, k) => ({
+      id: uid(20, vendorSeq++), companyId: id,
+      name: k === 0 ? `${v.name} ${stations[0]!.city}` : v.name, kind: v.kind,
+    }));
+    store.vendors.push(...vendors);
+
+    const limits = store.limits[id];
+    const busCount = Math.max(2, limits ? Math.min(limits.maxBuses, limits.usedBuses) : 2);
+
+    const crewMember = (role: CrewRole): string => {
+      const n = crewSeq++;
+      const member: CrewMember = {
+        id: uid(23, n), companyId: id, role,
+        // Shifting the last name by 3 every 11 members keeps the first 66 names distinct.
+        name: `${CREW_FIRST[n % CREW_FIRST.length]} ${CREW_LAST[(n + 3 * Math.floor(n / CREW_FIRST.length)) % CREW_LAST.length]}`,
+      };
+      store.crew.push(member);
+      return member.id;
+    };
+
+    for (let b = 0; b < busCount; b++) {
+      const model = BUS_MODELS[(i + b) % BUS_MODELS.length]!;
+      const last = b === busCount - 1;
+      const retired = last && i === RETIRED_COMPANY_INDEX;
+      const inMaintenance = b === 0 && i % 4 === 0;
+      const route = retired ? null : routes[b % routes.length]!;
+      const age = 1 + ((i + b) % 9);
+      const gps = b % 2 === 0;
+      const bus: Bus = {
+        id: uid(7, busSeq++), companyId: id, fleetId: last && i % 3 === 1 ? null : fleet.id,
+        busCode: `BUS-${String(i + 1).padStart(2, "0")}${String(b + 1).padStart(2, "0")}`,
+        plate: `DK-${1000 + i * 10 + b}-AB`, brand: model.brand, model: model.model, year: 2026 - age,
+        busType: model.busType, fuelType: model.fuelType,
+        engineNumber: `ENG-${(0x3a000 + i * 211 + b * 17).toString(16).toUpperCase()}`,
+        color: COLORS[(i + b) % COLORS.length]!,
+        seatCapacity: model.seats, standingCapacity: model.standing, luggageCapacity: model.luggage,
+        wheelchairAccessible: b % 3 === 0, airConditioned: b % 4 !== 3,
+        gpsEnabled: gps, gpsDeviceId: gps ? `GPS-${String(i + 1).padStart(2, "0")}${b + 1}` : null,
+        cameraInstalled: (i + b) % 2 === 0, fuelSensorInstalled: b % 3 !== 2,
+        status: retired ? "retired" : inMaintenance ? "maintenance" : "active",
+        routeId: route?.id ?? null, depotId: stations[0]!.id,
+        driverId: last ? null : crewMember("DRIVER"),
+        driverAssistantId: !last && b % 2 === 0 ? crewMember("DRIVER_ASSISTANT") : null,
+        controllerId: !last && b % 3 === 0 ? crewMember("CONTROLLER") : null,
+        lastMaintenanceDate: iso(-(20 + ((i * 7 + b * 11) % 60))),
+        nextMaintenanceDate: iso(10 + ((i * 13 + b * 7) % 80)),
+        insuranceExpiry: iso(INSURANCE_DAYS[(i + b) % INSURANCE_DAYS.length]!),
+        technicalInspectionExpiry: iso(INSPECTION_DAYS[(i * 2 + b) % INSPECTION_DAYS.length]!),
+        registrationExpiry: iso(REGISTRATION_DAYS[(i + b * 3) % REGISTRATION_DAYS.length]!),
+        purchaseDate: iso(-365 * age), purchasePrice: model.price,
+        retiredAt: retired ? iso(-15) : null,
+      };
+      store.buses.push(bus);
+
+      // Trips: a retired bus has none; a bus in maintenance only has a past trip.
+      if (route) {
+        const plan = TRIP_PATTERNS[inMaintenance ? 3 : (i + b) % TRIP_PATTERNS.length]!;
+        plan.forEach(({ status, day }, t) => {
+          const tripId = uid(8, tripSeq++);
+          const rows = Math.ceil(bus.seatCapacity / SEAT_COLUMNS);
+          const seats = Array.from({ length: bus.seatCapacity }, (_, k) => ({
+            code: `${Math.floor(k / SEAT_COLUMNS) + 1}${"ABCD"[k % SEAT_COLUMNS]}`,
+            state: seatState(status, k, t),
+          }));
+          store.seatMaps.push({
+            id: uid(21, seatMapSeq++), companyId: id, busId: bus.id, tripId, rows, columns: SEAT_COLUMNS, seats,
+          });
+          store.trips.push({
+            id: tripId, companyId: id, routeId: route.id, busId: bus.id,
+            departure: iso(day), arrival: iso(day + route.durationMinutes / 1440),
+            price: Math.round((2000 + route.distanceKm * 25) / 500) * 500, currency: company.currency,
+            totalSeats: bus.seatCapacity, availableSeats: seats.filter((x) => x.state === "free").length, status,
+          });
+        });
+      }
+    }
+
+    // Maintenances (done by the company's garage, or in-house for the cancelled ones): an in-progress
+    // one for each bus in maintenance, a completed and a planned one per company, and a cancelled one
+    // for every third company.
+    const companyBuses = store.buses.filter((x) => x.companyId === id);
+    const maintenance = (busId: string, status: MaintenanceStatus, scheduled: number, k: number) => {
+      const n = maintenanceSeq++;
+      const kind = MAINTENANCE_TYPES[(i + k) % MAINTENANCE_TYPES.length]!;
+      const laborCost = 25_000 + ((i * 13 + k * 7) % 10) * 5_000;
+      const partsCost = kind.category === "INSPECTION" ? 0 : 40_000 + ((i * 7 + k * 11) % 12) * 10_000;
+      store.maintenances.push({
+        id: uid(22, n), companyId: id, busId, vendorId: k === 3 ? null : vendors[0]!.id,
+        code: `MNT-${String(1000 + n)}`, type: kind.type, category: kind.category, status,
+        scheduledDate: iso(scheduled),
+        startedAt: status === "IN_PROGRESS" || status === "COMPLETED" ? iso(scheduled + 0.25) : null,
+        completedAt: status === "COMPLETED" ? iso(scheduled + 1) : null,
+        laborCost, partsCost, totalCost: laborCost + partsCost,
+      });
+    };
+    for (const bus of companyBuses) if (bus.status === "maintenance") maintenance(bus.id, "IN_PROGRESS", -1, 0);
+    maintenance(companyBuses[1]!.id, "COMPLETED", -30, 1);
+    maintenance(companyBuses[0]!.id, "PLANNED", 12, 2);
+    if (i % 3 === 2) maintenance(companyBuses[1]!.id, "CANCELLED", -8, 3);
+  });
+}
+
+/** Deterministic seat state: seat 1A is always blocked; the rest depends on the trip status. */
+function seatState(status: TripStatus, k: number, t: number): SeatState {
+  if (k === 0) return "blocked";
+  if (status === "cancelled") return "free";
+  if (status === "departed") return k % 5 === 4 ? "free" : "occupied";
+  if (status === "boarding") return k % 3 === 0 ? "occupied" : k % 3 === 1 ? "booked" : "free";
+  return (k + t) % 3 === 0 ? "booked" : "free";
 }
