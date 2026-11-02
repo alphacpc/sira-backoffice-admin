@@ -4,6 +4,7 @@ const requireSession = vi.fn();
 vi.mock("@/lib/auth/session", () => ({ requireSession: () => requireSession() }));
 
 import { searchEverywhere } from "@/app/(admin)/recherche/actions";
+import { searchRepo } from "@/lib/repos/search";
 import { resetStore } from "@/lib/repos/store";
 
 beforeEach(() => {
@@ -16,6 +17,14 @@ describe("searchEverywhere", () => {
   it("reads nothing without a session", async () => {
     requireSession.mockRejectedValue(new Error("Non authentifié"));
     expect(await searchEverywhere("bk-")).toEqual({ ok: false, error: "Session expirée, reconnecte-toi" });
+  });
+
+  it("does not run the search at all without a session", async () => {
+    const spy = vi.spyOn(searchRepo, "search");
+    requireSession.mockRejectedValue(new Error("Non authentifié"));
+    await searchEverywhere("bk-");
+    expect(spy).not.toHaveBeenCalled();
+    spy.mockRestore();
   });
 
   it("returns at most four hits per type, flattened, without companies", async () => {
