@@ -578,6 +578,28 @@ test("routes, stations, fleets, maintenance and vendors are readable lists", asy
   await expect(page.getByText("Ligne introuvable")).toBeVisible();
 });
 
+test("the fleet section is navigable and the company fleet tab links each bus and trip", async ({ page }) => {
+  // Read-only.
+  await login(page);
+  await page.goto("/flotte/bus");
+  const sidebar = page.getByRole("navigation", { name: "Navigation principale" });
+  await expect(sidebar.getByRole("link", { name: "Plans de sièges" })).not.toContainText("bientôt");
+  await expect(page.getByRole("navigation", { name: "Fil d'Ariane" })).toContainText("Flotte");
+
+  await openCompany(page, "casamance", /Casamance Trans/);
+  await page.getByRole("tab", { name: "Flotte et trajets" }).click();
+  await page.getByRole("tabpanel").getByRole("link", { name: "DK-1050-AB" }).click();
+  await expect(page.getByRole("heading", { name: "DK-1050-AB" })).toBeVisible();
+  const crumbs = page.getByRole("navigation", { name: "Fil d'Ariane" });
+  await expect(crumbs.getByRole("link", { name: "Bus" })).toHaveAttribute("href", "/flotte/bus");
+  await expect(crumbs.getByRole("link", { name: "Flotte" })).toHaveCount(0);
+
+  await openCompany(page, "casamance", /Casamance Trans/);
+  await page.getByRole("tab", { name: "Flotte et trajets" }).click();
+  await page.getByRole("tabpanel").getByRole("link", { name: "Ziguinchor → Dakar" }).click();
+  await expect(page.getByRole("heading", { name: "Trajet Ziguinchor → Dakar" })).toBeVisible();
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
@@ -596,6 +618,10 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   const employeeUserPath = await detailPath("/utilisateurs", "khady-faye.matam", "Rechercher un utilisateur…", /khady-faye\.matam-express/);
   const adminUserPath = await detailPath("/utilisateurs", "moustapha", "Rechercher un utilisateur…", /moustapha\.ndiaye/);
   const clientUserPath = await detailPath("/utilisateurs", "lamine", "Rechercher un utilisateur…", /lamine\.camara/);
+  const busPath = await detailPath("/flotte/bus", "DK-1022", "Rechercher un bus…", /DK-1022-AB/);
+  const routePath = await detailPath("/flotte/lignes", "Casamance", "Rechercher une ligne…", /Dakar → Touba/);
+  const tripPath = await detailPath("/flotte/plans-de-sieges", "DK-1022", "Rechercher un plan de sièges…", /DK-1022-AB/);
+  const casamancePath = await detailPath("/compagnies", "casamance", "Rechercher une compagnie…", /Casamance Trans/);
 
   const CONTACT_EMAIL = /contact@[a-z0-9-]+\.sn/;
   const ANY_SN_EMAIL = /[a-z0-9._-]+@[a-z0-9-]+\.sn/;
@@ -611,6 +637,11 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     "/utilisateurs", "/utilisateurs?role=ADMIN", "/utilisateurs?statut=suspended",
     employeeUserPath, `${employeeUserPath}?onglet=sessions`, adminUserPath, `${clientUserPath}?onglet=sessions`,
     "/acces/roles", "/acces/permissions", "/acces/sessions", "/acces/sessions?role=USER",
+    "/flotte/bus", "/flotte/bus?conducteur=sans", "/flotte/bus?statut=maintenance", busPath,
+    `${busPath}?onglet=equipage`, `${busPath}?onglet=maintenance`, `${busPath}?onglet=trajets`,
+    "/flotte/flottes", "/flotte/gares", "/flotte/lignes", routePath, "/flotte/trajets", "/flotte/trajets?statut=boarding",
+    tripPath, "/flotte/plans-de-sieges", "/flotte/maintenance", "/flotte/maintenance?statut=IN_PROGRESS",
+    "/flotte/fournisseurs", `${casamancePath}?onglet=flotte`,
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
@@ -625,9 +656,13 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     for (const re of PHONES) expect(rendered, `dom ${path}`).not.toMatch(re);
     expect(rendered, `dom ${path}`).not.toMatch(FULL_IP);
   }
-  // The truncated form is really rendered (the negative checks above would pass on an empty page).
+  // The pages are really rendered (the negative checks above would pass on an empty page).
   await page.goto("/acces/sessions");
   await expect(page.getByRole("cell", { name: /^(41\.82|196\.207)\.\d{1,3}\.0$/ }).first()).toBeVisible();
   await page.goto(employeeUserPath);
   await expect(page.getByTestId("masked-email")).toHaveText("k•••@matam-express.sn");
+  await page.goto(`${busPath}?onglet=equipage`);
+  await expect(page.getByTestId("crew-DRIVER")).toHaveText("Babacar Seck");
+  await page.goto(tripPath);
+  await expect(page.getByRole("list", { name: "Plan de sièges" }).locator("[data-seat]")).toHaveCount(29);
 });

@@ -6,11 +6,13 @@ describe("nav", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1, lot 2 and lot 3 pages as implemented", () => {
+  it("marks only lot 1 to lot 4 pages as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
     expect(done).toEqual([
       "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/compagnies", "/compagnies/kyc",
       "/facturation/abonnements", "/facturation/factures", "/facturation/impayes", "/facturation/paiements",
+      "/flotte/bus", "/flotte/flottes", "/flotte/fournisseurs", "/flotte/gares", "/flotte/lignes",
+      "/flotte/maintenance", "/flotte/plans-de-sieges", "/flotte/trajets",
       "/offre/fonctionnalites", "/offre/paliers-partenaires", "/offre/plans", "/offre/types-documents-kyc",
       "/utilisateurs",
     ]);
@@ -67,5 +69,22 @@ describe("lot 3 breadcrumbs", () => {
     expect(labelForSegment("acces")).toBe("Accès");
     expect(labelForSegment("roles")).toBe("Rôles");
     expect(labelForSegment("utilisateurs")).toBe("Utilisateurs");
+  });
+});
+
+describe("lot 4 breadcrumbs", () => {
+  it("links the bus, route and trip lists from their detail pages, not the bare fleet prefix", () => {
+    expect(isLinkablePath("/flotte/bus/abc")).toBe(true);
+    expect(isLinkablePath("/flotte/lignes/abc")).toBe(true);
+    expect(isLinkablePath("/flotte/trajets/abc")).toBe(true);
+    expect(isLinkablePath("/flotte/plans-de-sieges")).toBe(true);
+    expect(isLinkablePath("/flotte/gares/abc")).toBe(false);
+    expect(isLinkablePath("/flotte")).toBe(false);
+  });
+  it("labels the fleet segments with their accents", () => {
+    expect(["flotte", "bus", "flottes", "gares", "lignes", "trajets", "plans-de-sieges", "maintenance", "fournisseurs"]
+      .map(labelForSegment)).toEqual([
+      "Flotte", "Bus", "Flottes", "Gares", "Lignes", "Trajets", "Plans de sièges", "Maintenance", "Fournisseurs",
+    ]);
   });
 });

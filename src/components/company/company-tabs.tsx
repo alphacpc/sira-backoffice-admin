@@ -191,7 +191,10 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
             {detail.buses.length === 0 ? <Empty>Aucun bus.</Empty> : (
               <ul className="space-y-1 text-sm">
                 {detail.buses.map((b) => (
-                  <li key={b.id} className="flex justify-between">{b.plate}{(() => { const badge = busStatusBadge(b.status); return <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>; })()}</li>
+                  <li key={b.id} className="flex justify-between">
+                    <Link href={`/flotte/bus/${b.id}`} className="hover:underline">{b.plate}</Link>
+                    {(() => { const badge = busStatusBadge(b.status); return <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>; })()}
+                  </li>
                 ))}
               </ul>
             )}
@@ -201,7 +204,10 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
             {detail.trips.length === 0 ? <Empty>Aucun trajet.</Empty> : (
               <ul className="space-y-1 text-sm">
                 {detail.trips.map((t) => (
-                  <li key={t.id} className="flex justify-between"><span>{t.route}</span><span className="text-muted-foreground">{formatDateTime(t.departure)}</span></li>
+                  <li key={t.id} className="flex justify-between">
+                    <Link href={`/flotte/trajets/${t.id}`} className="hover:underline">{t.route}</Link>
+                    <span className="text-muted-foreground">{formatDateTime(t.departure)}</span>
+                  </li>
                 ))}
               </ul>
             )}

@@ -29,14 +29,14 @@ export const NAV: NavSection[] = [
     { label: "Sessions", href: "/acces/sessions", implemented: true },
   ] },
   { label: "Flotte", items: [
-    todo("Bus", "/flotte/bus"),
-    todo("Flottes", "/flotte/flottes"),
-    todo("Gares", "/flotte/gares"),
-    todo("Lignes", "/flotte/lignes"),
-    todo("Trajets", "/flotte/trajets"),
-    todo("Plans de sièges", "/flotte/plans-de-sieges"),
-    todo("Maintenance", "/flotte/maintenance"),
-    todo("Fournisseurs", "/flotte/fournisseurs"),
+    { label: "Bus", href: "/flotte/bus", implemented: true },
+    { label: "Flottes", href: "/flotte/flottes", implemented: true },
+    { label: "Gares", href: "/flotte/gares", implemented: true },
+    { label: "Lignes", href: "/flotte/lignes", implemented: true },
+    { label: "Trajets", href: "/flotte/trajets", implemented: true },
+    { label: "Plans de sièges", href: "/flotte/plans-de-sieges", implemented: true },
+    { label: "Maintenance", href: "/flotte/maintenance", implemented: true },
+    { label: "Fournisseurs", href: "/flotte/fournisseurs", implemented: true },
   ] },
   { label: "Ventes et paiements", items: [
     todo("Réservations", "/ventes/reservations"),
@@ -91,7 +91,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   facturation: "Facturation", flotte: "Flotte", ventes: "Ventes", clients: "Clients",
   communication: "Communication", conformite: "Conformité", supervision: "Supervision",
   parametres: "Paramètres", acces: "Accès", utilisateurs: "Utilisateurs", colis: "Colis",
-  recherche: "Recherche", roles: "Rôles",
+  recherche: "Recherche", roles: "Rôles", bus: "Bus", flottes: "Flottes", gares: "Gares", lignes: "Lignes",
+  trajets: "Trajets", "plans-de-sieges": "Plans de sièges", maintenance: "Maintenance", fournisseurs: "Fournisseurs",
 };
 
 export function labelForSegment(segment: string): string {
@@ -102,6 +103,7 @@ export function labelForSegment(segment: string): string {
 
 const ROUTE_PREFIXES = [
   "/compagnies", "/offre/plans", "/facturation/abonnements", "/facturation/factures", "/utilisateurs",
+  "/flotte/bus", "/flotte/lignes", "/flotte/trajets",
 ];
 
 /** True when a breadcrumb path leads to a real screen (a nav item or a company route), so it may be a link. */
