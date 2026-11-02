@@ -229,6 +229,20 @@ describe("consents", () => {
     expect(rows.some((r) => r.consentType === "MARKETING_SMS" && r.companyName !== "Plateforme")).toBe(true);
   });
 
+  it("keeps the latest consent as current even when it was stored before an older one", () => {
+    const s = getStore();
+    const base = s.consentRecords.find((r) => r.consentType === "COOKIES_ANALYTICS")!;
+    const mk = (id: string, status: "GRANTED" | "WITHDRAWN", at: string) => ({ ...base, id, status, createdAt: at });
+    const newer = mk("zz-newer", "WITHDRAWN", NOW.toISOString());
+    const older = mk("zz-older", "GRANTED", new Date(NOW.getTime() - DAY).toISOString());
+    s.consentRecords.push(newer, older); // newer stored first, older appended after
+    const view = consentsRepo.consult(base.userId, "SUPPORT_REQUEST", "t", NOW);
+    const same = view.filter((e) => e.consentType === "COOKIES_ANALYTICS" && e.companyName === null);
+    expect(same.find((e) => e.id === "zz-newer")!.isCurrent).toBe(true);
+    expect(same.find((e) => e.id === "zz-older")!.isCurrent).toBe(false);
+    expect(same.filter((e) => e.isCurrent)).toHaveLength(1);
+  });
+
   it("offers the users who have at least one consent, labelled without contact data", () => {
     const s = getStore();
     const options = consentsRepo.userOptions();
@@ -266,17 +280,40 @@ describe("retention", () => {
   });
 
   it("sees lines become pending when the retention is shortened and when the clock moves", () => {
-    const s = getStore();
     const casamance = companyNamed("Casamance Trans");
-    expect(retentionRepo.listRows(NOW).find((r) => r.companyId === casamance.id)).toMatchObject({ olderRows: 0, pendingRows: 0, effectiveDays: 730 });
+    const rowOf = (at: Date) => retentionRepo.listRows(at).find((r) => r.companyId === casamance.id);
+    expect(rowOf(NOW)).toMatchObject({ olderRows: 0, pendingRows: 0, effectiveDays: 730 });
     casamance.dataRetentionDays = 90;
-    const shortened = retentionRepo.listRows(NOW).find((r) => r.companyId === casamance.id)!;
-    // create + two subscription lines carry an IP; the system activation (305 days) has none
-    expect(shortened.pendingRows).toBeGreaterThanOrEqual(3);
-    expect(shortened.olderRows).toBeGreaterThan(shortened.pendingRows);
+    // 4 lines older than 90 days; 3 of them still carry an IP (the system activation line has none)
+    expect(rowOf(NOW)).toMatchObject({ olderRows: 4, pendingRows: 3, effectiveDays: 90, configuredDays: 90, isCustom: true });
     casamance.dataRetentionDays = null;
-    const later = new Date(NOW.getTime() + 500 * DAY);
-    expect(retentionRepo.listRows(later).find((r) => r.companyId === casamance.id)!.pendingRows).toBeGreaterThan(0);
-    expect(s.auditLogs.length).toBeGreaterThan(0);
+    // 500 days later, against the 730 day default
+    expect(rowOf(new Date(NOW.getTime() + 500 * DAY))).toMatchObject({ olderRows: 3, pendingRows: 2, effectiveDays: 730 });
+  });
+
+  it("counts a line only once it is strictly older than the retention (exact boundary excluded)", () => {
+    const s = getStore();
+    const company = companyNamed("Baobab Lines");
+    company.dataRetentionDays = 100;
+    const line = (id: string, ageMs: number, ip: string | null) => ({
+      id, actorUserId: null, actorLabel: "t", actorType: "USER" as const, action: "UPDATE" as const, entityType: "X",
+      entityId: id, companyId: company.id, beforeState: null, afterState: null, sourceService: null, ipAddress: ip,
+      userAgent: null, occurredAt: null, createdAt: new Date(NOW.getTime() - ageMs).toISOString(),
+    });
+    const rowOf = () => retentionRepo.listRows(NOW).find((r) => r.companyId === company.id)!;
+    const before = rowOf();
+    s.auditLogs.push(line("edge-exact", 100 * DAY, "10.0.0.1"));
+    expect(rowOf()).toMatchObject({ olderRows: before.olderRows, pendingRows: before.pendingRows });
+    s.auditLogs.push(line("edge-older", 100 * DAY + 1, "10.0.0.2"));
+    expect(rowOf()).toMatchObject({ olderRows: before.olderRows + 1, pendingRows: before.pendingRows + 1 });
+    s.auditLogs.push(line("edge-older-noip", 100 * DAY + 1, null));
+    expect(rowOf()).toMatchObject({ olderRows: before.olderRows + 2, pendingRows: before.pendingRows + 1 });
+  });
+
+  it("with its own 365 days, Sahel Express has two old lines, both already anonymised", () => {
+    const sahel = companyNamed("Sahel Express");
+    expect(retentionRepo.listRows(NOW).find((r) => r.companyId === sahel.id)).toMatchObject({
+      olderRows: 2, pendingRows: 0, effectiveDays: 365, isCustom: true,
+    });
   });
 });
