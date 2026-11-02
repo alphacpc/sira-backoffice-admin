@@ -544,6 +544,40 @@ test("the seat maps list counts the seats and opens the trip", async ({ page }) 
   await expect(page.getByText("Trajet introuvable")).toBeVisible();
 });
 
+test("routes, stations, fleets, maintenance and vendors are readable lists", async ({ page }) => {
+  // Read-only.
+  await login(page);
+  await page.goto("/flotte/lignes");
+  await page.getByPlaceholder("Rechercher une ligne…").fill("Casamance");
+  await expect(page.getByText("3 résultat(s)")).toBeVisible();
+  await page.getByRole("row", { name: /Dakar → Touba/ }).click();
+  await expect(page.getByRole("heading", { name: "Ligne Dakar → Touba" })).toBeVisible();
+  await expect(page.getByText("Gare routière de Dakar")).toBeVisible();
+  await expect(page.getByRole("link", { name: "DK-1051-AB" })).toBeVisible();
+  await expect(page.getByText("Trajets (2)")).toBeVisible();
+
+  await page.goto("/flotte/gares");
+  await page.getByPlaceholder("Rechercher une gare…").fill("Casamance");
+  await expect(page.getByText("4 résultat(s)")).toBeVisible();
+  await page.goto("/flotte/flottes");
+  await expect(page.getByText("12 résultat(s)")).toBeVisible();
+
+  await page.goto("/flotte/fournisseurs");
+  await page.getByPlaceholder("Rechercher un fournisseur…").fill("Ziguinchor");
+  const vendor = page.getByRole("row", { name: /Garage Central Ziguinchor/ });
+  await expect(vendor).toContainText("Garage");
+  await expect(vendor).toContainText(/175\s000/);
+
+  await page.goto("/flotte/maintenance?statut=IN_PROGRESS");
+  await expect(page.getByText("3 résultat(s)")).toBeVisible();
+  await page.getByRole("row", { name: /DK-1040-AB/ }).click();
+  await expect(page.getByRole("heading", { name: "DK-1040-AB" })).toBeVisible();
+  await expect(page.getByRole("tabpanel").getByRole("cell", { name: "MNT-1011" })).toBeVisible();
+
+  await page.goto("/flotte/lignes/00000000-0000-4000-8000-00000000dead");
+  await expect(page.getByText("Ligne introuvable")).toBeVisible();
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
