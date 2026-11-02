@@ -140,6 +140,8 @@ export interface ActivityEntry {
   id: string; companyId: string | null; at: string; actor: string; action: string;
   /** Platform account the entry is about (role change, session revocation, contact reveal). */
   userId?: string;
+  /** « backoffice » marks the Sira admin-team journal; it is kept out of the Vue 360 recent activity. */
+  scope?: "backoffice";
 }
 
 export interface ServiceHealth {

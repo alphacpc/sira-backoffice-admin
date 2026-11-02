@@ -54,3 +54,19 @@ describe("dashboardRepo.overview", () => {
     expect([...at].sort().reverse()).toEqual(at);
   });
 });
+
+describe("backoffice-scoped activity", () => {
+  it("is left out of the Vue 360 recent activity but still listed by the journal", async () => {
+    const { journalRepo, adminsRepo } = await import("@/lib/repos/backoffice");
+    const seeded = getStore().activity.filter((a) => a.scope === "backoffice");
+    expect(seeded.length).toBeGreaterThan(0);
+    adminsRepo.invite({ identifier: "nouveau.admin@sira.app", displayName: "Nouveau Admin" }, "admin@sira.app");
+    const ids = new Set(dashboardRepo.overview().activity.map((a) => a.id));
+    const scoped = getStore().activity.filter((a) => a.scope === "backoffice");
+    expect(scoped.length).toBe(seeded.length + 1);
+    expect(scoped.some((a) => ids.has(a.id))).toBe(false);
+    const journalIds = new Set(journalRepo.list({}, new Date()).map((r) => r.id));
+    expect(scoped.filter((a) => journalIds.has(a.id)).length).toBeGreaterThan(0);
+    expect(journalRepo.list({}, new Date()).some((r) => r.action.includes("nouveau.admin@sira.app"))).toBe(true);
+  });
+});

@@ -1650,6 +1650,6 @@ function seedBackofficeTeam(store: Store, iso: (offsetDays: number) => string): 
   addSession(seynabou, "Firefox · Ubuntu", "41.82.23.15", -24 * 20, -24 * 20 + 1, { revokedReason: "Compte suspendu" });
 
   for (const [days, username, action] of TEAM_JOURNAL) {
-    store.activity.push({ id: uid(83, journalSeq++), companyId: null, at: iso(days), actor: `${username}@sira.app`, action });
+    store.activity.push({ id: uid(83, journalSeq++), companyId: null, at: iso(days), actor: `${username}@sira.app`, action, scope: "backoffice" });
   }
 }

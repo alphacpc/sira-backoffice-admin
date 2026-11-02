@@ -64,6 +64,11 @@ function requireMotif(reason: string): string {
   return checkReason(reason, "Un motif est obligatoire", "Motif invalide");
 }
 
+/** Team-journal entry: tagged so the Vue 360 recent activity leaves it out. */
+function journal(actor: string, action: string, now: Date): void {
+  addActivity(null, actor, action, now).scope = "backoffice";
+}
+
 function requireAdmin(id: string): BackofficeAdmin {
   const admin = getStore().backofficeAdmins.find((a) => a.id === id);
   if (!admin) throw new Error("Administrateur introuvable");
@@ -108,7 +113,7 @@ export const adminsRepo = {
       totpEnrolledAt: null, recoveryCodesRemaining: 0, lastLoginAt: null, createdAt: now.toISOString(),
     };
     s.backofficeAdmins.push(admin);
-    addActivity(null, actor, `Administrateur invité : ${identifier}`, now);
+    journal(actor, `Administrateur invité : ${identifier}`, now);
     return admin;
   },
 
@@ -124,7 +129,7 @@ export const adminsRepo = {
     }
     admin.status = "suspended";
     const revoked = revokeAll(activeSessionsOf(admin.id, now), "Compte suspendu", now);
-    addActivity(null, actor, `Administrateur ${admin.identifier} suspendu (${revoked} session(s) révoquée(s)). Motif : ${motif}`, now);
+    journal(actor, `Administrateur ${admin.identifier} suspendu (${revoked} session(s) révoquée(s)). Motif : ${motif}`, now);
     return admin;
   },
 
@@ -134,7 +139,7 @@ export const adminsRepo = {
     const motif = requireMotif(reason);
     if (admin.status !== "suspended") throw new Error("Le compte n'est pas suspendu");
     admin.status = "active";
-    addActivity(null, actor, `Administrateur ${admin.identifier} réactivé. Motif : ${motif}`, now);
+    journal(actor, `Administrateur ${admin.identifier} réactivé. Motif : ${motif}`, now);
     return admin;
   },
 
@@ -149,7 +154,7 @@ export const adminsRepo = {
     admin.totpEnrolledAt = null;
     admin.recoveryCodesRemaining = 0;
     const revoked = revokeAll(activeSessionsOf(admin.id, now), "TOTP réinitialisé", now);
-    addActivity(null, actor, `TOTP de ${admin.identifier} réinitialisé (${revoked} session(s) révoquée(s)). Motif : ${motif}`, now);
+    journal(actor, `TOTP de ${admin.identifier} réinitialisé (${revoked} session(s) révoquée(s)). Motif : ${motif}`, now);
     return admin;
   },
 
@@ -161,7 +166,7 @@ export const adminsRepo = {
     const active = activeSessionsOf(admin.id, now);
     if (active.length === 0) throw new Error("Aucune session active à révoquer");
     revokeAll(active, motif, now);
-    addActivity(null, actor, `${active.length} session(s) de ${admin.identifier} révoquée(s). Motif : ${motif}`, now);
+    journal(actor, `${active.length} session(s) de ${admin.identifier} révoquée(s). Motif : ${motif}`, now);
     return active.length;
   },
 };
@@ -203,7 +208,7 @@ export const profileRepo = {
     if (!displayName) throw new Error("Le nom est obligatoire");
     if (displayName.length > MAX_NAME) throw new Error("Le nom est trop long (100 caractères maximum)");
     admin.displayName = displayName;
-    addActivity(null, actor, `Nom affiché de ${admin.identifier} modifié`, now);
+    journal(actor, `Nom affiché de ${admin.identifier} modifié`, now);
     return admin;
   },
 
@@ -215,7 +220,7 @@ export const profileRepo = {
     if (session.current) throw new Error("Utilise la déconnexion pour fermer la session courante");
     if (backofficeSessionState(session, now) !== "active") throw new Error("La session est déjà révoquée ou expirée");
     revokeAll([session], "Révoquée par le titulaire", now);
-    addActivity(null, actor, `Session révoquée (${session.deviceLabel})`, now);
+    journal(actor, `Session révoquée (${session.deviceLabel})`, now);
     return session;
   },
 
@@ -225,7 +230,7 @@ export const profileRepo = {
     const others = activeSessionsOf(admin.id, now).filter((s) => !s.current);
     if (others.length === 0) throw new Error("Aucune autre session active");
     revokeAll(others, "Révoquée par le titulaire", now);
-    addActivity(null, actor, `${others.length} autre(s) session(s) révoquée(s)`, now);
+    journal(actor, `${others.length} autre(s) session(s) révoquée(s)`, now);
     return others.length;
   },
 
@@ -236,7 +241,7 @@ export const profileRepo = {
     const codes = new Set<string>();
     while (codes.size < RECOVERY_CODE_COUNT) codes.add(newRecoveryCode());
     admin.recoveryCodesRemaining = RECOVERY_CODE_COUNT;
-    addActivity(null, actor, "Codes de récupération régénérés", now);
+    journal(actor, "Codes de récupération régénérés", now);
     return [...codes];
   },
 };
