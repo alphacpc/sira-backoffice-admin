@@ -50,6 +50,33 @@ describe("declareIncident", () => {
   });
 });
 
+describe("non-string incident input", () => {
+  it("declareIncident rejects a null/non-object input and non-string fields with a clean message, writing nothing", async () => {
+    const n = getStore().systemIncidents.length;
+    for (const bad of [null, undefined, 5, "x"]) {
+      expect(await declareIncident(bad as unknown as IncidentInput)).toEqual({ ok: false, error: "Incident invalide" });
+    }
+    const labels = { title: "Titre", serviceName: "Service", description: "Description" } as const;
+    for (const [field, label] of Object.entries(labels)) {
+      for (const bad of [null, undefined, 42, {}]) {
+        expect(await declareIncident(input({ [field]: bad } as Partial<IncidentInput>))).toEqual({ ok: false, error: `${label} invalide` });
+      }
+    }
+    expect(getStore().systemIncidents).toHaveLength(n);
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("setIncidentPostmortem rejects a non-string url with a clean message, writing nothing", async () => {
+    const target = titled("Échecs de réservation sur une compagnie");
+    const before = JSON.stringify(target);
+    for (const bad of [null, undefined, 7]) {
+      expect(await setIncidentPostmortem(target.id, bad as unknown as string)).toEqual({ ok: false, error: "URL invalide" });
+    }
+    expect(JSON.stringify(target)).toBe(before);
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+});
+
 describe("advanceIncident", () => {
   it("writes nothing without a session", async () => {
     requireSession.mockRejectedValue(new Error("Non authentifié"));
