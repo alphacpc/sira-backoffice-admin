@@ -10,6 +10,7 @@ import type {
   Customer, Feedback, FeedbackStatus, FeedbackType, LoyaltyAccount, LoyaltyProgram, LoyaltyTransaction, MembershipType,
   Parcel, ParcelHistoryEntry, ParcelLeg, ParcelStatus, ParcelType, Sponsorship, SponsorshipRewardType, SponsorshipStatus,
   AppNotification, CampaignObjective, CampaignStatus, MarketingCampaign, MarketingMessage, MarketingMessageStatus, MarketingSchedule, MarketingSegment, NotificationChannel, NotificationStatus, ScheduleStatus,
+  ApiUsageRow, ImpactScope, IncidentSeverity, IncidentStatus, ServiceHealthCheck, ServiceStatus, SystemIncident,
   CancelReason, TripStatus, UsageMetric, UserSession, UserStatus, Vendor, VendorKind,
 } from "@/lib/types";
 
@@ -34,6 +35,9 @@ export interface Store {
   consentRecords: ConsentRecord[];
   auditLogs: AuditLog[];
   dataAccessLogs: DataAccessLog[];
+  serviceChecks: ServiceHealthCheck[];
+  systemIncidents: SystemIncident[];
+  apiUsage: ApiUsageRow[];
   plans: Plan[];
   featureDefs: FeatureDef[];
   partnerTiers: PartnerTier[];
@@ -262,6 +266,7 @@ export function buildSeed(now: Date = new Date()): Store {
     companies: [], documents: [], subscriptions: [], invoices: [], limits: {},
     features: {}, usage: {}, referrals: {}, employees: [], buses: [], trips: [],
     activity: [], services: [], incidents: [], dataSubjectRequests: [], consentRecords: [], auditLogs: [], dataAccessLogs: [],
+    serviceChecks: [], systemIncidents: [], apiUsage: [],
     plans: [], featureDefs: [], partnerTiers: [], kycTypes: [],
     subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
     users: [], roles: [], permissions: [], rolePermissions: [], sessions: [],
@@ -529,6 +534,8 @@ export function buildSeed(now: Date = new Date()): Store {
   seedConsents(store, iso);
   seedAuditLogs(store, now, iso);
   seedDataAccessLogs(store, now);
+  seedServiceChecks(store, now);
+  seedSystemIncidents(store, iso);
 
   return store;
 }
@@ -1452,4 +1459,77 @@ function seedDataAccessLogs(store: Store, now: Date): void {
   reads.forEach(([reason, days], k) => {
     add(admins[k % admins.length]!, clients[k % clients.length]!, "CONSENT", reason, "VIEW", new Date(nowMs + days * DAY_MS).toISOString());
   });
+}
+
+const SERVICE_BASE_MS: [string, number][] = [
+  ["identity-service", 42], ["company-service", 55], ["fleet-service", 61], ["booking-service", 88],
+  ["parcel-service", 70], ["hr-service", 70], ["customer-service", 64], ["notification-service", 52],
+  ["audit-compliance-service", 49], ["monitoring-service", 38],
+];
+
+/**
+ * Forty-eight health checks per live service, one every 30 minutes, the last 20 seconds before the seed date;
+ * notification-service is down for its last six, parcel-service degraded for its last four, booking-service has one
+ * isolated blip. A retired `gateway` keeps twelve checks from two days ago: the "stale" case.
+ */
+function seedServiceChecks(store: Store, now: Date): void {
+  let seq = 1;
+  const nowMs = now.getTime();
+  const STEP = 30 * 60_000;
+  const push = (serviceName: string, status: ServiceStatus, responseTimeMs: number, checkedAtMs: number): void => {
+    store.serviceChecks.push({
+      id: uid(71, seq++), serviceName, environment: "production", status, responseTimeMs, errorRatePercent: null,
+      checkedAt: new Date(checkedAtMs).toISOString(),
+    });
+  };
+
+  SERVICE_BASE_MS.forEach(([name, base], i) => {
+    for (let k = 0; k < 48; k++) {
+      const fromEnd = 47 - k;
+      let status: ServiceStatus = "healthy";
+      let ms = base + ((k * 7 + i * 13) % 20);
+      if (name === "notification-service" && fromEnd < 6) { status = "down"; ms = 8000 + (k % 5) * 20; }
+      if (name === "parcel-service" && fromEnd < 4) { status = "degraded"; ms = 1400 + (k % 4) * 25; }
+      if (name === "booking-service" && k === 20) { status = "degraded"; ms = 1100; }
+      push(name, status, ms, nowMs - 20_000 - fromEnd * STEP);
+    }
+  });
+  for (let k = 0; k < 12; k++) push("gateway", "healthy", 14 + (k % 3), nowMs - 2 * 86_400_000 - (11 - k) * STEP);
+}
+
+/** Eight platform incidents: three open (investigating, identified, monitoring), five resolved, two with a postmortem. */
+function seedSystemIncidents(store: Store, iso: (offsetDays: number) => string): void {
+  let seq = 1;
+  const active = store.companies.filter((c) => c.status === "active");
+  const add = (
+    incidentCode: string, serviceName: string, severity: IncidentSeverity, status: IncidentStatus, title: string,
+    description: string | null, impactScope: ImpactScope, affectedCompanyId: string | null,
+    detectedDays: number, resolvedDays: number | null, postmortemUrl: string | null,
+  ): void => {
+    store.systemIncidents.push({
+      id: uid(72, seq++), incidentCode, serviceName, severity, status, title, description, impactScope, affectedCompanyId,
+      detectedAt: iso(detectedDays), resolvedAt: resolvedDays === null ? null : iso(resolvedDays),
+      reportedBy: "admin@sira.app", postmortemUrl, createdAt: iso(detectedDays),
+      updatedAt: status === "INVESTIGATING" ? null : iso(detectedDays + 0.1),
+    });
+  };
+
+  add("SYS-A1B2C3D4", "notification-service", "HIGH", "INVESTIGATING", "Notifications non envoyées",
+    "Les envois d'e-mail et de SMS échouent depuis ce matin.", "PLATFORM_WIDE", null, -0.2, null, null);
+  add("SYS-E5F6G7H8", "parcel-service", "MEDIUM", "MONITORING", "Latence élevée sur les colis",
+    "Le suivi des colis répond lentement ; un correctif est en observation.", "MULTI_COMPANY", null, -1, null, null);
+  add("SYS-J9K1L2M3", "identity-service", "LOW", "RESOLVED", "Échec de connexion intermittent",
+    "Quelques connexions échouaient sans cause visible.", "PLATFORM_WIDE", null, -6, -5.5, null);
+  add("SYS-M4N5P6Q7", "booking-service", "HIGH", "IDENTIFIED", "Échecs de réservation sur une compagnie",
+    "Les réservations d'une compagnie échouent à la création ; la cause est identifiée.", "SINGLE_COMPANY", active[1]!.id, -2, null, null);
+  add("SYS-R8S9T1U2", "fleet-service", "CRITICAL", "RESOLVED", "Indisponibilité de la flotte",
+    "Le service de flotte était injoignable pendant plusieurs minutes.", "PLATFORM_WIDE", null, -20, -19.9,
+    "https://status.sira.app/postmortems/2026-10-13");
+  add("SYS-V3W4X5Y6", "hr-service", "MEDIUM", "RESOLVED", "Retard de synchronisation RH",
+    "Les embauches d'une compagnie n'apparaissaient pas dans les comptes.", "SINGLE_COMPANY", active[2]!.id, -35, -34.5, null);
+  add("SYS-Z7A8B9C1", "audit-compliance-service", "LOW", "RESOLVED", "Rapports de conformité lents",
+    null, "MULTI_COMPANY", null, -50, -49.5, null);
+  add("SYS-D2E3F4G5", "company-service", "HIGH", "RESOLVED", "Authentification des API partenaires",
+    "Les clés d'API de partenaires étaient refusées.", "PLATFORM_WIDE", null, -70, -69.8,
+    "https://status.sira.app/postmortems/2026-08-24");
 }

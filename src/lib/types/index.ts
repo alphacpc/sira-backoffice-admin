@@ -514,3 +514,39 @@ export interface DataAccessLog {
   dataSubjectType: DataSubjectType; dataSubjectId: string; dataCategory: DataCategory;
   accessReason: AccessReason; accessType: AccessType; ipAddress: string | null; createdAt: string;
 }
+
+export type ServiceStatus = "healthy" | "degraded" | "down";
+
+/** One poll of a service (`monitoring-service`). The error rate is never computed by the backend. */
+export interface ServiceHealthCheck {
+  id: string; serviceName: string; environment: "production";
+  status: ServiceStatus; responseTimeMs: number; errorRatePercent: number | null; checkedAt: string;
+}
+
+export type IncidentSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type IncidentStatus = "INVESTIGATING" | "IDENTIFIED" | "MONITORING" | "RESOLVED";
+export type ImpactScope = "SINGLE_COMPANY" | "MULTI_COMPANY" | "PLATFORM_WIDE";
+
+/** Platform incident, declared and followed by hand. Only its current state is kept. */
+export interface SystemIncident {
+  id: string; incidentCode: string; serviceName: string;
+  severity: IncidentSeverity; status: IncidentStatus; title: string; description: string | null;
+  impactScope: ImpactScope;
+  /** Set if and only if the scope is `SINGLE_COMPANY`. */
+  affectedCompanyId: string | null;
+  detectedAt: string;
+  /** Set if and only if the incident is resolved. */
+  resolvedAt: string | null;
+  /** Label of the backoffice identity that declared it (the backend stores a user id). */
+  reportedBy: string;
+  postmortemUrl: string | null;
+  createdAt: string; updatedAt: string | null;
+}
+
+export type ApiStatusClass = "2xx" | "4xx" | "5xx";
+
+/** Daily API traffic aggregate, the shape `GET /usage/api` returns (raw log lines never leave the server). */
+export interface ApiUsageRow {
+  day: string; companyId: string | null; endpoint: string; method: "GET" | "POST" | "PATCH";
+  statusClass: ApiStatusClass; count: number; avgResponseMs: number; maxResponseMs: number;
+}
