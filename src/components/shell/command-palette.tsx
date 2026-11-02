@@ -7,7 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { searchEverywhere } from "@/app/(admin)/recherche/actions";
 import { Button } from "@/components/ui/button";
 import { allNavItems } from "@/lib/nav";
-import { filterByQuery } from "@/lib/palette";
+import { filterByQuery, hitsAfterResponse, paletteSections } from "@/lib/palette";
 import type { SearchHit } from "@/lib/repos/search";
 import { queryProblem } from "@/lib/search-query";
 
@@ -34,13 +34,17 @@ export function CommandPalette({ companies }: { companies: { id: string; name: s
   // Records come from the server after a short pause; a late answer to an older query is dropped.
   useEffect(() => {
     const id = ++latest.current;
-    if (queryProblem(query) !== null) {
-      setHits([]);
-      return;
-    }
+    // Hits of the previous text never show under the new text.
+    setHits([]);
+    if (queryProblem(query) !== null) return;
     const timer = setTimeout(async () => {
-      const r = await searchEverywhere(query);
-      if (id === latest.current && r.ok) setHits(r.value);
+      let r: Awaited<ReturnType<typeof searchEverywhere>> | null = null;
+      try {
+        r = await searchEverywhere(query);
+      } catch {
+        r = null;
+      }
+      setHits((cur) => hitsAfterResponse(cur, id, latest.current, r));
     }, 250);
     return () => clearTimeout(timer);
   }, [query]);
@@ -82,15 +86,6 @@ export function CommandPalette({ companies }: { companies: { id: string; name: s
         />
         <Command.List className="max-h-80 overflow-y-auto p-2">
           {nothing && <p className="px-3 py-6 text-center text-sm text-muted-foreground">Aucun résultat</p>}
-          {canSearchAll && (
-            <Command.Group heading="Recherche" className="text-xs text-muted-foreground">
-              <Command.Item
-                value={`tous ${trimmed}`} onSelect={() => go(`/recherche?q=${encodeURIComponent(trimmed)}`)} className={ITEM}
-              >
-                Voir tous les résultats pour « {trimmed} »
-              </Command.Item>
-            </Command.Group>
-          )}
           {pages.length > 0 && (
             <Command.Group heading="Pages" className="text-xs text-muted-foreground">
               {pages.map((i) => (
@@ -117,6 +112,15 @@ export function CommandPalette({ companies }: { companies: { id: string; name: s
                   <span className="ml-2 text-xs text-muted-foreground">{h.sublabel}</span>
                 </Command.Item>
               ))}
+            </Command.Group>
+          )}
+          {canSearchAll && (
+            <Command.Group heading="Recherche" className="text-xs text-muted-foreground">
+              <Command.Item
+                value={`tous ${trimmed}`} onSelect={() => go(`/recherche?q=${encodeURIComponent(trimmed)}`)} className={ITEM}
+              >
+                Voir tous les résultats pour « {trimmed} »
+              </Command.Item>
             </Command.Group>
           )}
         </Command.List>
