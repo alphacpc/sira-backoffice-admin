@@ -6,6 +6,8 @@ import type {
   PlatformUser, Referral, RetryOutcome, Role, RolePermission, Route, SeatMap, SeatState, ServiceHealth,
   Station, Subscription, SubscriptionChangeKind, SubscriptionHistoryEntry, SubscriptionStatus, Trip,
   PaymentMethod, PaymentMethodKind, Ticket, TicketStatus, Transaction, TransactionStatus,
+  Customer, Feedback, FeedbackStatus, FeedbackType, LoyaltyAccount, LoyaltyProgram, LoyaltyTransaction, MembershipType,
+  Parcel, ParcelHistoryEntry, ParcelLeg, ParcelStatus, ParcelType, Sponsorship, SponsorshipRewardType, SponsorshipStatus,
   CancelReason, TripStatus, UsageMetric, UserSession, UserStatus, Vendor, VendorKind,
 } from "@/lib/types";
 
@@ -50,6 +52,15 @@ export interface Store {
   bookings: Booking[];
   transactions: Transaction[];
   tickets: Ticket[];
+  parcels: Parcel[];
+  parcelLegs: ParcelLeg[];
+  parcelHistory: ParcelHistoryEntry[];
+  customers: Customer[];
+  loyaltyPrograms: LoyaltyProgram[];
+  loyaltyAccounts: LoyaltyAccount[];
+  loyaltyTransactions: LoyaltyTransaction[];
+  sponsorships: Sponsorship[];
+  feedbacks: Feedback[];
 
 }
 
@@ -246,6 +257,8 @@ export function buildSeed(now: Date = new Date()): Store {
     users: [], roles: [], permissions: [], rolePermissions: [], sessions: [],
     stations: [], routes: [], fleets: [], vendors: [], seatMaps: [], maintenances: [], crew: [],
     paymentMethods: [], bookings: [], transactions: [], tickets: [],
+    parcels: [], parcelLegs: [], parcelHistory: [], customers: [], loyaltyPrograms: [],
+    loyaltyAccounts: [], loyaltyTransactions: [], sponsorships: [], feedbacks: [],
   };
   let docSeq = 1, subSeq = 1, invSeq = 1, empSeq = 1, actSeq = 1;
   let attSeq = 1, histSeq = 1, userSeq = 1, sessionSeq = 1;
@@ -458,6 +471,7 @@ export function buildSeed(now: Date = new Date()): Store {
   });
 
   seedSales(store, now, iso);
+  seedCustomers(store, iso);
 
   // Sessions: 1 to 3 per active account (some revoked, some expired); a suspended account only
   // keeps the session revoked at its suspension. lastLoginAt is the start of the newest session.
@@ -802,4 +816,75 @@ function seedSales(store: Store, now: Date, iso: (offsetDays: number) => string)
   counter.find((b) =>
     b.paymentStatus === "paid" && b.ticketIssued && txsOf(b.id).every((t) => t.amount === b.amount),
   )!.passengerName = SCENARIO_NAMES.paid;
+}
+
+const MEMBERSHIPS: MembershipType[] = ["REGULAR", "VIP", "PREMIUM"];
+
+/**
+ * Customers (one per client account), loyalty programs for the first eight active companies (one inactive),
+ * loyalty accounts and point movements derived from the customers' paid online bookings, and three sponsorships.
+ */
+function seedCustomers(store: Store, iso: (offsetDays: number) => string): void {
+  let customerSeq = 1, programSeq = 1, accountSeq = 1, movementSeq = 1, sponsorSeq = 1;
+
+  const customers = CLIENTS.map((c, k) => {
+    const user = store.users.find((u) => u.username === c.username)!;
+    const customer: Customer = {
+      id: uid(44, customerSeq++), userId: user.id, name: user.displayName, isCorporate: k === CLIENTS.length - 1,
+      sponsorshipId: null, sponsoredAt: null, createdAt: user.createdAt,
+    };
+    store.customers.push(customer);
+    return customer;
+  });
+
+  const activeCompanies = store.companies.filter((c) => c.status === "active");
+  activeCompanies.slice(0, 8).forEach((company, k) => {
+    store.loyaltyPrograms.push({
+      id: uid(45, programSeq++), companyId: company.id, name: `Fidélité ${company.name}`,
+      pointsPerCurrencyUnit: 0.01, redemptionRate: 5, minPointsForRedemption: 1000,
+      status: k === 5 ? "INACTIVE" : "ACTIVE", createdAt: iso(-(300 - k * 20)),
+    });
+  });
+
+  const paidOnline = store.bookings
+    .filter((b) => b.channel === "online" && b.status === "confirmed" && b.paymentStatus === "paid")
+    .sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+  for (const booking of paidOnline) {
+    const customer = customers.find((c) => c.userId === booking.userId);
+    const program = store.loyaltyPrograms.find((p) => p.companyId === booking.companyId && p.status === "ACTIVE");
+    if (!customer || !program) continue;
+    let account = store.loyaltyAccounts.find((a) => a.customerId === customer.id && a.companyId === booking.companyId);
+    if (!account) {
+      account = {
+        id: uid(46, accountSeq), customerId: customer.id, companyId: booking.companyId, points: 0,
+        membershipType: MEMBERSHIPS[accountSeq % MEMBERSHIPS.length]!, createdAt: booking.createdAt,
+      };
+      accountSeq++;
+      store.loyaltyAccounts.push(account);
+    }
+    const points = Math.floor(booking.amount * program.pointsPerCurrencyUnit);
+    account.points += points;
+    store.loyaltyTransactions.push({
+      id: uid(47, movementSeq++), accountId: account.id, bookingId: booking.id, points, createdAt: booking.createdAt,
+    });
+  }
+
+  const sponsor = (
+    companyIndex: number, who: Customer, status: SponsorshipStatus, rewardType: SponsorshipRewardType,
+    rewardValue: number, createdDays: number, expiresDays: number,
+  ): Sponsorship => {
+    const sponsorship: Sponsorship = {
+      id: uid(48, sponsorSeq), companyId: activeCompanies[companyIndex]!.id, sponsorCustomerId: who.id,
+      code: hashCode("SPN-", sponsorSeq), rewardType, rewardValue, status,
+      createdAt: iso(createdDays), expiresAt: iso(expiresDays),
+    };
+    sponsorSeq++;
+    store.sponsorships.push(sponsorship);
+    return sponsorship;
+  };
+  sponsor(0, customers[0]!, "ACTIVE", "LOYALTY_POINTS", 500, -20, 70);
+  const redeemed = sponsor(0, customers[0]!, "REDEEMED", "LOYALTY_POINTS", 500, -60, 30);
+  sponsor(1, customers[1]!, "EXPIRED", "DISCOUNT", 10, -120, -30);
+  customers[2]!.sponsorshipId = redeemed.id;
+  customers[2]!.sponsoredAt = iso(-45);
 }

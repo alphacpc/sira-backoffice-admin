@@ -346,3 +346,71 @@ export interface Ticket {
   /** ISO dates of the scans, oldest first. */
   scans: string[];
 }
+
+export type ParcelStatus = "PENDING" | "IN_TRANSIT" | "AT_HUB" | "DELIVERED" | "CANCELLED" | "RETURNED" | "LOST";
+export type ParcelType = "DOCUMENT" | "PACKAGE" | "FRAGILE" | "PERISHABLE" | "OTHER";
+export type ParcelPaymentStatus = "PENDING" | "PAID" | "REFUNDED";
+
+/** Parcel (`parcel-service`). `recipientPhone` never leaves the server unmasked. */
+export interface Parcel {
+  id: string; companyId: string; parcelCode: string; trackingNumber: string;
+  senderName: string; senderCustomerId: string | null;
+  recipientName: string; recipientPhone: string;
+  weightKg: number; parcelType: ParcelType; description: string;
+  tripId: string; originStationId: string; destinationStationId: string;
+  pickupAt: string; expectedDeliveryAt: string; actualDeliveryAt: string | null;
+  status: ParcelStatus; shippingFee: number; currency: string; paymentStatus: ParcelPaymentStatus;
+  createdAt: string;
+}
+
+/** One trip a parcel is assigned to (a parcel going through a hub has two). */
+export interface ParcelLeg {
+  id: string; parcelId: string; companyId: string; tripId: string; assignmentCode: string; sequence: number;
+}
+
+export interface ParcelHistoryEntry {
+  id: string; parcelId: string; previousStatus: ParcelStatus | null; newStatus: ParcelStatus;
+  notes: string | null; changedBy: string | null; changedAt: string;
+}
+
+export type MembershipType = "REGULAR" | "VIP" | "PREMIUM";
+
+/** Client profile (`customer-service`). Points and tier live on the per-company loyalty account. */
+export interface Customer {
+  id: string; userId: string; name: string; isCorporate: boolean;
+  sponsorshipId: string | null; sponsoredAt: string | null; createdAt: string;
+}
+
+export type LoyaltyProgramStatus = "ACTIVE" | "INACTIVE";
+
+export interface LoyaltyProgram {
+  id: string; companyId: string; name: string; pointsPerCurrencyUnit: number; redemptionRate: number;
+  minPointsForRedemption: number; status: LoyaltyProgramStatus; createdAt: string;
+}
+
+export interface LoyaltyAccount {
+  id: string; customerId: string; companyId: string; points: number; membershipType: MembershipType; createdAt: string;
+}
+
+export interface LoyaltyTransaction {
+  id: string; accountId: string; bookingId: string; points: number; createdAt: string;
+}
+
+export type SponsorshipRewardType = "DISCOUNT" | "LOYALTY_POINTS" | "CASH";
+export type SponsorshipStatus = "ACTIVE" | "REDEEMED" | "EXPIRED";
+
+export interface Sponsorship {
+  id: string; companyId: string; sponsorCustomerId: string; code: string;
+  rewardType: SponsorshipRewardType; rewardValue: number; status: SponsorshipStatus;
+  createdAt: string; expiresAt: string;
+}
+
+export type FeedbackType = "TRIP" | "BUS" | "STATION" | "SERVICE" | "PARCEL";
+export type FeedbackStatus = "PENDING" | "REVIEWED" | "RESOLVED" | "IGNORED";
+
+export interface Feedback {
+  id: string; companyId: string; customerId: string;
+  tripId: string | null; parcelId: string | null; bookingId: string | null;
+  rating: number; feedbackType: FeedbackType; title: string; comment: string;
+  status: FeedbackStatus; response: string | null; respondedAt: string | null; createdAt: string;
+}
