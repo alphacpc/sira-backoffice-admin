@@ -39,11 +39,11 @@ export const NAV: NavSection[] = [
     { label: "Fournisseurs", href: "/flotte/fournisseurs", implemented: true },
   ] },
   { label: "Ventes et paiements", items: [
-    todo("Réservations", "/ventes/reservations"),
-    todo("Paiements voyageurs", "/ventes/paiements"),
-    todo("Billets", "/ventes/billets"),
-    todo("Moyens de paiement", "/ventes/moyens-de-paiement"),
-    todo("Libre-service en ligne", "/ventes/en-ligne"),
+    { label: "Réservations", href: "/ventes/reservations", implemented: true },
+    { label: "Paiements voyageurs", href: "/ventes/paiements", implemented: true },
+    { label: "Billets", href: "/ventes/billets", implemented: true },
+    { label: "Moyens de paiement", href: "/ventes/moyens-de-paiement", implemented: true },
+    { label: "Libre-service en ligne", href: "/ventes/en-ligne", implemented: true },
   ] },
   { label: "Colis et clients", items: [
     todo("Colis", "/colis"),
@@ -93,6 +93,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   parametres: "Paramètres", acces: "Accès", utilisateurs: "Utilisateurs", colis: "Colis",
   recherche: "Recherche", roles: "Rôles", bus: "Bus", flottes: "Flottes", gares: "Gares", lignes: "Lignes",
   trajets: "Trajets", "plans-de-sieges": "Plans de sièges", maintenance: "Maintenance", fournisseurs: "Fournisseurs",
+  reservations: "Réservations", "en-ligne": "Libre-service en ligne",
 };
 
 export function labelForSegment(segment: string): string {
@@ -104,6 +105,7 @@ export function labelForSegment(segment: string): string {
 const ROUTE_PREFIXES = [
   "/compagnies", "/offre/plans", "/facturation/abonnements", "/facturation/factures", "/utilisateurs",
   "/flotte/bus", "/flotte/lignes", "/flotte/trajets",
+  "/ventes/reservations", "/ventes/paiements", "/ventes/billets",
 ];
 
 /** True when a breadcrumb path leads to a real screen (a nav item or a company route), so it may be a link. */

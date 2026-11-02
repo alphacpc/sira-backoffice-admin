@@ -1,12 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { NAV, allNavItems, isKnownPath, labelForSegment } from "@/lib/nav";
+import { NAV, allNavItems, isKnownPath, isLinkablePath, labelForSegment } from "@/lib/nav";
 
 describe("nav", () => {
   it("has unique hrefs", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1 to lot 4 pages as implemented", () => {
+  it("marks only lot 1 to lot 5 pages as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
     expect(done).toEqual([
       "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/compagnies", "/compagnies/kyc",
@@ -15,6 +15,7 @@ describe("nav", () => {
       "/flotte/maintenance", "/flotte/plans-de-sieges", "/flotte/trajets",
       "/offre/fonctionnalites", "/offre/paliers-partenaires", "/offre/plans", "/offre/types-documents-kyc",
       "/utilisateurs",
+      "/ventes/billets", "/ventes/en-ligne", "/ventes/moyens-de-paiement", "/ventes/paiements", "/ventes/reservations",
     ]);
   });
   it("covers every sitemap section", () => {
@@ -34,7 +35,6 @@ describe("nav", () => {
   });
 });
 
-import { isLinkablePath } from "@/lib/nav";
 describe("isLinkablePath", () => {
   it("links known pages and company routes, not bare section prefixes", () => {
     expect(isLinkablePath("/")).toBe(true);
@@ -86,5 +86,20 @@ describe("lot 4 breadcrumbs", () => {
       .map(labelForSegment)).toEqual([
       "Flotte", "Bus", "Flottes", "Gares", "Lignes", "Trajets", "Plans de sièges", "Maintenance", "Fournisseurs",
     ]);
+  });
+});
+
+describe("lot 5 breadcrumbs", () => {
+  it("links the parent list of booking, payment and ticket details, nothing else under sales", () => {
+    expect(isLinkablePath("/ventes/reservations/abc")).toBe(true);
+    expect(isLinkablePath("/ventes/paiements/abc")).toBe(true);
+    expect(isLinkablePath("/ventes/billets/TK-ABC12345")).toBe(true);
+    expect(isLinkablePath("/ventes/en-ligne")).toBe(true);
+    expect(isLinkablePath("/ventes")).toBe(false);
+  });
+  it("labels the sales segments with their accents", () => {
+    expect(labelForSegment("reservations")).toBe("Réservations");
+    expect(labelForSegment("en-ligne")).toBe("Libre-service en ligne");
+    expect(labelForSegment("moyens-de-paiement")).toBe("Moyens de paiement");
   });
 });

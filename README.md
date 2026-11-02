@@ -34,7 +34,11 @@ Connexion de démonstration : `admin@sira.app` / `sira-demo`, puis le code `1234
 - Données personnelles : l'e-mail et le téléphone de contact d'une compagnie ou d'un compte ne sont jamais présents dans le HTML de la page, seulement leur forme masquée ; les adresses IP des sessions sont tronquées. La valeur réelle n'est renvoyée que par une Server Action de révélation (session vérifiée, révélation journalisée sans la valeur).
 - `docs/sitemap.md` : sitemap complet ; `docs/superpowers/` : spec et plan.
 
-## Limites connues (lots 1 à 4)
+## Lot 5 : ventes et paiements des voyageurs
+
+Huit écrans : réservations (filtres canal, paiement, statut ; détail avec chronologie et billets), paiements voyageurs (avec les incohérences détectées : paiement bloqué, montant différent, billet manquant), billets (détail avec scans), moyens de paiement et tableau de bord du libre-service en ligne (indicateurs et réservations proches de l'expiration). Une seule action : « Annuler la réservation » (motif obligatoire).
+
+## Limites connues (lots 1 à 5)
 
 - Authentification et TOTP simulés (le rôle administrateur plateforme et le TOTP réels sont des prérequis backend).
 - État en mémoire : il est réinitialisé à chaque redémarrage du serveur.
@@ -47,7 +51,8 @@ Connexion de démonstration : `admin@sira.app` / `sira-demo`, puis le code `1234
 - Flotte en lecture seule hors « Mettre hors service » : pas de remise en service d'un bus hors service, affectations d'équipage non modifiables, aucune création ni modification de flotte, bus, ligne, gare ou trajet, ni démarrage, clôture ou annulation de maintenance.
 - L'équipage est un registre du backoffice sans compte, sans e-mail ni téléphone (côté plateforme, les affectations pointent des employés de `hr-service`) ; il n'existe pas de fiche employé vers laquelle le lier.
 - Les états des sièges sont figés par la graine (pas de réservation en direct) ; aucune alerte d'échéance automatique, pas de GPS ni de suivi en temps réel.
-- Les sections autres que Vue 360, Compagnies, Offre, Facturation, Utilisateurs et accès, Flotte affichent « Bientôt disponible ».
+- Ventes : pas de remboursement ni de reprise d'un paiement bloqué (le backend n'en a pas : une transaction `PENDING` reste bloquée jusqu'à intervention en base) ; une réservation payée n'est pas annulable ; l'expiration des réservations en ligne est affichée mais jamais exécutée ; moyens de paiement, billets et scans en lecture seule ; le passager n'a pas de fiche (nom seulement, avec un lien vers le compte pour une réservation en ligne) ; pas de versement aux compagnies ; les incohérences sont calculées à la lecture avec l'horloge du serveur.
+- Les sections autres que Vue 360, Compagnies, Offre, Facturation, Utilisateurs et accès, Flotte, Ventes affichent « Bientôt disponible ».
 - Navigation latérale masquée sous 768 px (outil de bureau).
 
 > **Démonstration seulement : identifiants et TOTP simulés, ne jamais déployer ce lot tel quel.**

@@ -135,7 +135,7 @@ test("the command palette opens with the keyboard and navigates to a company", a
 
 test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await login(page);
-  await page.goto("/ventes/reservations");
+  await page.goto("/colis");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
 });
 
@@ -600,6 +600,114 @@ test("the fleet section is navigable and the company fleet tab links each bus an
   await expect(page.getByRole("heading", { name: "Trajet Ziguinchor → Dakar" })).toBeVisible();
 });
 
+test("bookings can be filtered by channel and payment and opened with their timeline and tickets", async ({ page }) => {
+  await login(page);
+  await page.goto("/ventes/reservations");
+  await expect(page.getByRole("heading", { name: "Réservations" })).toBeVisible();
+  await page.getByRole("link", { name: "Guichet", exact: true }).click();
+  await expect(page).toHaveURL(/canal=counter/);
+  await page.getByRole("link", { name: "Payées", exact: true }).click();
+  await expect(page).toHaveURL(/canal=counter/);
+  await expect(page).toHaveURL(/paiement=paid/);
+  await page.getByPlaceholder("Rechercher une réservation…").fill("Coumba Lô");
+  await page.getByRole("row", { name: /Coumba Lô/ }).click();
+  await expect(page).toHaveURL(/\/ventes\/reservations\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("booking-status")).toHaveText("Confirmée");
+  await expect(page.getByTestId("booking-payment")).toHaveText("Payée");
+  await page.getByRole("tab", { name: "Chronologie" }).click();
+  await expect(page.getByText("Paiement réussi")).toBeVisible();
+  await page.getByRole("tab", { name: "Billets" }).click();
+  await expect(page.getByRole("link", { name: /^TK-/ })).toHaveCount(1);
+});
+
+test("a booking without payment is cancelled with a mandatory reason", async ({ page }) => {
+  await login(page);
+  await page.goto("/ventes/reservations");
+  await page.getByPlaceholder("Rechercher une réservation…").fill("Rokhaya Thiaw");
+  await page.getByRole("row", { name: /Rokhaya Thiaw/ }).click();
+  await expect(page.getByTestId("booking-status")).toHaveText("Confirmée");
+  await page.getByRole("button", { name: "Annuler la réservation" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Confirmer l'annulation" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Demande du passager au guichet");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("booking-status")).toHaveText("Annulée");
+  await page.getByRole("tab", { name: "Chronologie" }).click();
+  await expect(page.getByText("Réservation annulée : Annulée par l'équipe Sira")).toBeVisible();
+});
+
+test("a booking with a payment in progress cannot be cancelled", async ({ page }) => {
+  await login(page);
+  await page.goto("/ventes/reservations");
+  await page.getByPlaceholder("Rechercher une réservation…").fill("Samba Kébé");
+  await page.getByRole("row", { name: /Samba Kébé/ }).click();
+  await expect(page.getByTestId("cancel-blocked")).toContainText("Un paiement est en cours sur cette réservation");
+  await page.getByRole("button", { name: "Annuler la réservation" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Tentative de test");
+  await dialog.getByRole("button", { name: "Confirmer l'annulation" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Un paiement est en cours sur cette réservation");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByTestId("booking-status")).toHaveText("Confirmée");
+});
+
+test("a paid booking cannot be cancelled", async ({ page }) => {
+  await login(page);
+  await page.goto("/ventes/reservations");
+  await page.getByPlaceholder("Rechercher une réservation…").fill("Coumba Lô");
+  await page.getByRole("row", { name: /Coumba Lô/ }).click();
+  await page.getByRole("button", { name: "Annuler la réservation" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Tentative de test");
+  await dialog.getByRole("button", { name: "Confirmer l'annulation" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Une réservation payée ne peut pas être annulée");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByTestId("booking-status")).toHaveText("Confirmée");
+});
+
+test("payment anomalies are listed and explained", async ({ page }) => {
+  await login(page);
+  await page.goto("/ventes/paiements?anomalie=oui");
+  await expect(page.getByText("4 résultat(s)")).toBeVisible();
+  await expect(page.getByText("Paiement bloqué", { exact: true })).toHaveCount(2);
+  await expect(page.getByText("Montant différent", { exact: true })).toHaveCount(1);
+  await expect(page.getByText("Billet manquant", { exact: true })).toHaveCount(1);
+  await page.getByRole("row", { name: /Paiement bloqué/ }).first().click();
+  await expect(page).toHaveURL(/\/ventes\/paiements\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("anomaly-STUCK")).toContainText("en attente depuis plus de 30 minutes");
+  await expect(page.getByTestId("transaction-status")).toHaveText("En attente");
+});
+
+test("a used ticket shows its status and scans", async ({ page }) => {
+  await login(page);
+  await page.goto("/ventes/billets?statut=USED");
+  await page.getByRole("row").nth(1).click();
+  await expect(page).toHaveURL(/\/ventes\/billets\/TK-[0-9A-Z]{8}$/);
+  await expect(page.getByTestId("ticket-status")).toHaveText("Utilisé");
+  await expect(page.getByTestId("ticket-scans").locator("li")).toHaveCount(1);
+});
+
+test("an inactive payment method is shown as inactive", async ({ page }) => {
+  await login(page);
+  await page.goto("/ventes/moyens-de-paiement");
+  await expect(page.getByRole("heading", { name: "Moyens de paiement" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Wave.*Inactif/ }).first()).toBeVisible();
+  await expect(page.getByRole("row", { name: /Espèces au guichet.*Actif/ }).first()).toBeVisible();
+});
+
+test("the online dashboard shows the indicators and the bookings about to expire", async ({ page }) => {
+  await login(page);
+  await page.goto("/ventes/en-ligne");
+  await expect(page.getByRole("heading", { name: "Libre-service en ligne" })).toBeVisible();
+  for (const id of ["online-total", "online-conversion", "online-failed", "online-expired", "online-stuck"]) {
+    await expect(page.getByTestId(id)).toBeVisible();
+  }
+  await expect(page.getByTestId("online-stuck")).toContainText("2");
+  expect(await page.getByTestId("expiring-row").count()).toBeGreaterThan(0);
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
@@ -622,6 +730,9 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   const routePath = await detailPath("/flotte/lignes", "Casamance", "Rechercher une ligne…", /Dakar → Touba/);
   const tripPath = await detailPath("/flotte/plans-de-sieges", "DK-1022", "Rechercher un plan de sièges…", /DK-1022-AB/);
   const casamancePath = await detailPath("/compagnies", "casamance", "Rechercher une compagnie…", /Casamance Trans/);
+  const bookingPath = await detailPath("/ventes/reservations", "Coumba", "Rechercher une réservation…", /Coumba Lô/);
+  const transactionPath = await detailPath("/ventes/paiements", "Samba", "Rechercher un paiement…", /Samba Kébé/);
+  const ticketPath = await detailPath("/ventes/billets", "Coumba", "Rechercher un billet…", /Coumba Lô/);
 
   const CONTACT_EMAIL = /contact@[a-z0-9-]+\.sn/;
   const ANY_SN_EMAIL = /[a-z0-9._-]+@[a-z0-9-]+\.sn/;
@@ -642,6 +753,9 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     "/flotte/flottes", "/flotte/gares", "/flotte/lignes", routePath, "/flotte/trajets", "/flotte/trajets?statut=boarding",
     tripPath, "/flotte/plans-de-sieges", "/flotte/maintenance", "/flotte/maintenance?statut=IN_PROGRESS",
     "/flotte/fournisseurs", `${casamancePath}?onglet=flotte`,
+    "/ventes/reservations", "/ventes/reservations?canal=online", "/ventes/reservations?statut=cancelled", bookingPath,
+    `${bookingPath}?onglet=chronologie`, "/ventes/paiements", "/ventes/paiements?anomalie=oui", transactionPath,
+    "/ventes/billets", ticketPath, "/ventes/moyens-de-paiement", "/ventes/en-ligne",
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
