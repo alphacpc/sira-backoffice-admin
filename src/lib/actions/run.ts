@@ -41,3 +41,23 @@ export async function run(body: (actor: string) => void): Promise<ActionResult> 
     return { ok: false, error: errorMessage(e) };
   }
 }
+
+export type RevealResult = { ok: true; value: string } | { ok: false; error: string };
+
+/**
+ * Same contract as `run` for an action that hands back one personal value: the session is
+ * checked first, and the value only leaves the server when the body (which journals the reveal) succeeds.
+ */
+export async function runReveal(body: (actor: string) => string): Promise<RevealResult> {
+  let actor: string;
+  try {
+    actor = (await requireSession()).sub;
+  } catch {
+    return { ok: false, error: SESSION_EXPIRED };
+  }
+  try {
+    return { ok: true, value: body(actor) };
+  } catch (e) {
+    return { ok: false, error: errorMessage(e) };
+  }
+}
