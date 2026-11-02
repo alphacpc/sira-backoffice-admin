@@ -1,6 +1,7 @@
 import { truncateIp } from "@/lib/mask";
 import { addActivity } from "@/lib/repos/activity";
 import { getStore } from "@/lib/repos/store";
+import { checkReason } from "@/lib/validation";
 import type { AdminStatus, BackofficeAdmin, BackofficeSession } from "@/lib/types";
 
 export const ADMIN_STATUSES = ["active", "suspended", "invited"] as const;
@@ -57,15 +58,10 @@ export interface AdminInviteInput { identifier: string; displayName: string }
 
 const IDENTIFIER_FORMAT = /^[a-z0-9._-]{3,40}@sira\.app$/;
 const MAX_NAME = 100;
-const MAX_MOTIF = 500;
 let boSeq = 1;
 
 function requireMotif(reason: string): string {
-  if (typeof reason !== "string") throw new Error("Motif invalide");
-  const motif = reason.trim();
-  if (!motif) throw new Error("Un motif est obligatoire");
-  if (motif.length > MAX_MOTIF) throw new Error("Motif trop long (500 caractères maximum)");
-  return motif;
+  return checkReason(reason, "Un motif est obligatoire", "Motif invalide");
 }
 
 function requireAdmin(id: string): BackofficeAdmin {

@@ -2,8 +2,9 @@ import { requireSession } from "@/lib/auth/session";
 
 export type ActionResult = { ok: true } | { ok: false; error: string };
 
-export const MAX_REASON = 500;
-export const REASON_TOO_LONG = "Motif trop long (500 caractères maximum)";
+import { checkReason } from "@/lib/validation";
+
+export { MAX_REASON, REASON_TOO_LONG } from "@/lib/validation";
 export const SESSION_EXPIRED = "Session expirée, reconnecte-toi";
 
 export function requireString(value: unknown, label: string): string {
@@ -13,9 +14,7 @@ export function requireString(value: unknown, label: string): string {
 
 /** A mandatory reason: trimmed, at most 500 characters. */
 export function requireReason(value: unknown): string {
-  const reason = requireString(value, "Motif").trim();
-  if (reason.length > MAX_REASON) throw new Error(REASON_TOO_LONG);
-  return reason;
+  return checkReason(value, "Motif invalide");
 }
 
 export function errorMessage(e: unknown): string {
