@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { parseFilter } from "@/lib/filters";
+import { firstString } from "@/lib/search-params";
 import { SEARCH_TYPES, searchRepo } from "@/lib/repos/search";
 import { CONTACT_QUERY_MESSAGE, isContactLike, PAGE_LIMIT, queryProblem } from "@/lib/search-query";
 
@@ -13,15 +14,15 @@ export const dynamic = "force-dynamic";
 
 export default async function SearchPage({
   searchParams,
-}: { searchParams: Promise<{ q?: string; type?: string; refus?: string }> }) {
+}: { searchParams: Promise<{ q?: string | string[]; type?: string | string[]; refus?: string | string[] }> }) {
   const sp = await searchParams;
-  const raw = (sp.q ?? "").trim();
+  const raw = (firstString(sp.q) ?? "").trim();
   // A contact-like value never stays in the URL or on the page.
   if (raw && isContactLike(raw)) redirect("/recherche?refus=contact");
 
-  const problem = sp.refus === "contact" ? CONTACT_QUERY_MESSAGE : raw ? queryProblem(raw) : null;
+  const problem = firstString(sp.refus) === "contact" ? CONTACT_QUERY_MESSAGE : raw ? queryProblem(raw) : null;
   const result = raw && !problem ? searchRepo.search(raw, { limitPerType: PAGE_LIMIT }) : null;
-  const type = parseFilter(sp.type, SEARCH_TYPES);
+  const type = parseFilter(firstString(sp.type), SEARCH_TYPES);
   const shown = result ? result.groups.filter((g) => !type || g.type === type) : [];
   const grandTotal = result ? result.groups.reduce((n, g) => n + g.total, 0) : 0;
 
