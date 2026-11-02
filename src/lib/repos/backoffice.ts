@@ -1,4 +1,5 @@
 import { truncateIp } from "@/lib/mask";
+import { addActivity } from "@/lib/repos/activity";
 import { getStore } from "@/lib/repos/store";
 import type { AdminStatus, BackofficeAdmin, BackofficeSession } from "@/lib/types";
 
@@ -52,6 +53,36 @@ function adminRow(admin: BackofficeAdmin, now: Date, self: string | undefined): 
   };
 }
 
+export interface AdminInviteInput { identifier: string; displayName: string }
+
+const IDENTIFIER_FORMAT = /^[a-z0-9._-]{3,40}@sira\.app$/;
+const MAX_NAME = 100;
+const MAX_MOTIF = 500;
+let boSeq = 1;
+
+function requireMotif(reason: string): string {
+  if (typeof reason !== "string") throw new Error("Motif invalide");
+  const motif = reason.trim();
+  if (!motif) throw new Error("Un motif est obligatoire");
+  if (motif.length > MAX_MOTIF) throw new Error("Motif trop long (500 caractères maximum)");
+  return motif;
+}
+
+function requireAdmin(id: string): BackofficeAdmin {
+  const admin = getStore().backofficeAdmins.find((a) => a.id === id);
+  if (!admin) throw new Error("Administrateur introuvable");
+  return admin;
+}
+
+function activeSessionsOf(adminId: string, now: Date): BackofficeSession[] {
+  return sessionsOf(adminId).filter((s) => backofficeSessionState(s, now) === "active");
+}
+
+function revokeAll(sessions: BackofficeSession[], reason: string, now: Date): number {
+  for (const s of sessions) { s.revokedAt = now.toISOString(); s.revokedReason = reason; }
+  return sessions.length;
+}
+
 export const adminsRepo = {
   listRows(filter: { status?: AdminStatus } = {}, now: Date = new Date(), self?: string): AdminRow[] {
     return getStore().backofficeAdmins
@@ -62,6 +93,80 @@ export const adminsRepo = {
 
   get(id: string): BackofficeAdmin | undefined {
     return getStore().backofficeAdmins.find((a) => a.id === id);
+  },
+
+  /** Invites an administrator. Guards, in this order: identifier present, well formed, name, identifier free. */
+  invite(input: AdminInviteInput, actor = "admin@sira.app", now: Date = new Date()): BackofficeAdmin {
+    const s = getStore();
+    if (typeof input?.identifier !== "string") throw new Error("L'identifiant est obligatoire");
+    const identifier = input.identifier.trim().toLowerCase();
+    if (!identifier) throw new Error("L'identifiant est obligatoire");
+    if (!IDENTIFIER_FORMAT.test(identifier)) throw new Error("L'identifiant doit avoir la forme prenom.nom@sira.app");
+    if (typeof input.displayName !== "string") throw new Error("Le nom est obligatoire");
+    const displayName = input.displayName.trim();
+    if (!displayName) throw new Error("Le nom est obligatoire");
+    if (displayName.length > MAX_NAME) throw new Error("Le nom est trop long (100 caractères maximum)");
+    if (s.backofficeAdmins.some((a) => a.identifier === identifier)) throw new Error("Cet identifiant existe déjà");
+    const admin: BackofficeAdmin = {
+      id: `bo-admin-${now.getTime()}-${boSeq++}`, identifier, displayName, status: "invited", totpEnabled: false,
+      totpEnrolledAt: null, recoveryCodesRemaining: 0, lastLoginAt: null, createdAt: now.toISOString(),
+    };
+    s.backofficeAdmins.push(admin);
+    addActivity(null, actor, `Administrateur invité : ${identifier}`, now);
+    return admin;
+  },
+
+  /** Guards, in this order: exists, motif, not oneself, active, not the last active one. */
+  suspend(id: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): BackofficeAdmin {
+    const s = getStore();
+    const admin = requireAdmin(id);
+    const motif = requireMotif(reason);
+    if (admin.identifier === actor) throw new Error("Impossible de suspendre son propre compte");
+    if (admin.status !== "active") throw new Error("Le compte n'est pas actif");
+    if (s.backofficeAdmins.filter((a) => a.status === "active").length === 1) {
+      throw new Error("Impossible de suspendre le dernier administrateur actif");
+    }
+    admin.status = "suspended";
+    const revoked = revokeAll(activeSessionsOf(admin.id, now), "Compte suspendu", now);
+    addActivity(null, actor, `Administrateur ${admin.identifier} suspendu (${revoked} session(s) révoquée(s)). Motif : ${motif}`, now);
+    return admin;
+  },
+
+  /** Guards, in this order: exists, motif, suspended. Sessions are not restored. */
+  reactivate(id: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): BackofficeAdmin {
+    const admin = requireAdmin(id);
+    const motif = requireMotif(reason);
+    if (admin.status !== "suspended") throw new Error("Le compte n'est pas suspendu");
+    admin.status = "active";
+    addActivity(null, actor, `Administrateur ${admin.identifier} réactivé. Motif : ${motif}`, now);
+    return admin;
+  },
+
+  /** Guards, in this order: exists, motif, not oneself, active, TOTP enabled. */
+  resetTotp(id: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): BackofficeAdmin {
+    const admin = requireAdmin(id);
+    const motif = requireMotif(reason);
+    if (admin.identifier === actor) throw new Error("Impossible de réinitialiser son propre TOTP");
+    if (admin.status !== "active") throw new Error("Le compte n'est pas actif");
+    if (!admin.totpEnabled) throw new Error("Aucun TOTP à réinitialiser");
+    admin.totpEnabled = false;
+    admin.totpEnrolledAt = null;
+    admin.recoveryCodesRemaining = 0;
+    const revoked = revokeAll(activeSessionsOf(admin.id, now), "TOTP réinitialisé", now);
+    addActivity(null, actor, `TOTP de ${admin.identifier} réinitialisé (${revoked} session(s) révoquée(s)). Motif : ${motif}`, now);
+    return admin;
+  },
+
+  /** Guards, in this order: exists, motif, not oneself, at least one active session. */
+  revokeSessions(id: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): number {
+    const admin = requireAdmin(id);
+    const motif = requireMotif(reason);
+    if (admin.identifier === actor) throw new Error("Pour tes propres sessions, utilise ton profil");
+    const active = activeSessionsOf(admin.id, now);
+    if (active.length === 0) throw new Error("Aucune session active à révoquer");
+    revokeAll(active, motif, now);
+    addActivity(null, actor, `${active.length} session(s) de ${admin.identifier} révoquée(s). Motif : ${motif}`, now);
+    return active.length;
   },
 };
 
