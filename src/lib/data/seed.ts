@@ -536,6 +536,7 @@ export function buildSeed(now: Date = new Date()): Store {
   seedDataAccessLogs(store, now);
   seedServiceChecks(store, now);
   seedSystemIncidents(store, iso);
+  seedApiUsage(store, now);
 
   return store;
 }
@@ -1532,4 +1533,68 @@ function seedSystemIncidents(store: Store, iso: (offsetDays: number) => string):
   add("SYS-D2E3F4G5", "company-service", "HIGH", "RESOLVED", "Authentification des API partenaires",
     "Les clés d'API de partenaires étaient refusées.", "PLATFORM_WIDE", null, -70, -69.8,
     "https://status.sira.app/postmortems/2026-08-24");
+}
+
+interface ApiEndpointDef {
+  method: "GET" | "POST" | "PATCH"; endpoint: string; perDay: number; ms: number; p4: number; p5: number; open?: boolean;
+}
+const API_ENDPOINTS: ApiEndpointDef[] = [
+  { method: "POST", endpoint: "/auth/login", perDay: 420, ms: 180, p4: 0.08, p5: 0.002, open: true },
+  { method: "GET", endpoint: "/public/trips/search", perDay: 900, ms: 140, p4: 0.01, p5: 0.004, open: true },
+  { method: "POST", endpoint: "/me/bookings", perDay: 160, ms: 420, p4: 0.06, p5: 0.01 },
+  { method: "GET", endpoint: "/me/bookings/{id}", perDay: 380, ms: 90, p4: 0.005, p5: 0.002 },
+  { method: "POST", endpoint: "/me/bookings/{id}/payment", perDay: 110, ms: 650, p4: 0.04, p5: 0.02 },
+  { method: "GET", endpoint: "/bookings", perDay: 300, ms: 110, p4: 0.01, p5: 0.003 },
+  { method: "GET", endpoint: "/bookings/{id}", perDay: 260, ms: 70, p4: 0.02, p5: 0.002 },
+  { method: "GET", endpoint: "/trips", perDay: 280, ms: 95, p4: 0.005, p5: 0.001 },
+  { method: "PATCH", endpoint: "/trips/{id}/status", perDay: 60, ms: 85, p4: 0.03, p5: 0.002 },
+  { method: "GET", endpoint: "/parcels/track/{id}", perDay: 340, ms: 120, p4: 0.15, p5: 0.004, open: true },
+  { method: "GET", endpoint: "/notifications/me", perDay: 500, ms: 60, p4: 0.002, p5: 0.001 },
+  { method: "POST", endpoint: "/parcels", perDay: 70, ms: 380, p4: 0.04, p5: 0.01 },
+  { method: "GET", endpoint: "/companies/{id}", perDay: 150, ms: 55, p4: 0.01, p5: 0.001 },
+  { method: "GET", endpoint: "/health/services", perDay: 90, ms: 45, p4: 0, p5: 0 },
+];
+const API_SHARES = [0.4, 0.3, 0.2, 0.1];
+
+/**
+ * Thirty days of API traffic aggregates for four active companies (and anonymous callers on the public endpoints),
+ * with a weekly rhythm and a degradation of the parcel and notification endpoints during the last two days.
+ */
+function seedApiUsage(store: Store, now: Date): void {
+  const DAY_MS = 86_400_000;
+  const companyIds = store.companies.filter((c) => c.status === "active").slice(0, 4).map((c) => c.id);
+
+  for (let d = 0; d < 30; d++) {
+    const at = new Date(now.getTime() - d * DAY_MS);
+    const day = at.toISOString().slice(0, 10);
+    const dow = at.getUTCDay();
+    API_ENDPOINTS.forEach((e, ei) => {
+      const factor = (dow === 0 ? 0.6 : dow === 6 ? 0.8 : 1) * (1 + ((d * 31 + ei * 17) % 11) / 50);
+      const degraded = d <= 1 && (e.endpoint.startsWith("/parcels") || e.endpoint === "/notifications/me");
+      const p5 = degraded ? e.p5 * 8 + 0.03 : e.p5;
+      const slow = degraded ? 3 : 1;
+      const noise = ((d * 13 + ei * 7) % 9) / 40 - 0.1;
+      const targets: [string | null, number][] = [
+        ...companyIds.map((id, k): [string | null, number] => [id, e.open ? API_SHARES[k]! * 0.8 : API_SHARES[k]!]),
+        ...(e.open ? [[null, 0.2] as [string | null, number]] : []),
+      ];
+      for (const [companyId, share] of targets) {
+        const total = Math.round(e.perDay * factor * share);
+        if (total === 0) continue;
+        const n5 = Math.round(total * p5);
+        const n4 = Math.round(total * e.p4);
+        const n2 = Math.max(0, total - n4 - n5);
+        const ok = Math.max(1, Math.round(e.ms * slow * (1 + noise)));
+        const classes: [ApiUsageRow["statusClass"], number, number, number][] = [
+          ["2xx", n2, ok, ok * (4 + (d % 3))],
+          ["4xx", n4, Math.max(1, Math.round(e.ms * 0.6)), Math.max(1, Math.round(e.ms * 0.6)) * 3],
+          ["5xx", n5, Math.round(e.ms * slow * 2.5), Math.round(e.ms * slow * 2.5) * 4],
+        ];
+        for (const [statusClass, count, avgResponseMs, maxResponseMs] of classes) {
+          if (count <= 0) continue;
+          store.apiUsage.push({ day, companyId, endpoint: e.endpoint, method: e.method, statusClass, count, avgResponseMs, maxResponseMs });
+        }
+      }
+    });
+  }
 }
