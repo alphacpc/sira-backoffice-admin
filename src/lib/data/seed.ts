@@ -482,6 +482,7 @@ export function buildSeed(now: Date = new Date()): Store {
   seedParcels(store, now);
   seedFeedbacks(store, now);
   seedMarketing(store, iso);
+  seedNotifications(store);
 
   // Sessions: 1 to 3 per active account (some revoked, some expired); a suspended account only
   // keeps the session revoked at its suspension. lastLoginAt is the start of the newest session.
@@ -1141,4 +1142,80 @@ function seedMarketing(store: Store, iso: (offsetDays: number) => string): void 
       schedule(done, doneMessage, premium, "SENT", -20);
     }
   });
+}
+
+const PARCEL_STATUS_TEXT: Record<ParcelStatus, string> = {
+  PENDING: "enregistré", IN_TRANSIT: "en transit", AT_HUB: "arrivé au hub", DELIVERED: "livré",
+  CANCELLED: "annulé", RETURNED: "retourné", LOST: "déclaré perdu",
+};
+const BOOKING_CHANNELS: NotificationChannel[] = ["EMAIL", "SMS", "IN_APP"];
+
+/**
+ * Notifications derived from the other domains: three channels for the confirmation and the cancellation of an
+ * online booking, one in-app notification for a confirmed payment, one SMS per parcel history line (the recipient
+ * has no account), one in-app notification per resolved review and per recipient of a sent marketing schedule.
+ * An expired booking sends nothing (as in the backend). One e-mail in fifteen has failed, one SMS in forty is pending.
+ */
+function seedNotifications(store: Store): void {
+  let seq = 1;
+
+  const push = (
+    companyId: string, entityType: string, entityId: string, notificationType: string, sentTo: string | null,
+    channel: NotificationChannel, messageContent: string, createdAt: string,
+  ): void => {
+    const n = seq++;
+    const status: NotificationStatus =
+      channel === "EMAIL" && n % 15 === 0 ? "FAILED" : channel === "SMS" && n % 40 === 0 ? "PENDING" : "SENT";
+    store.notifications.push({
+      id: uid(51, n), companyId, entityType, entityId, notificationCode: hashCode("NTF-", n), notificationType, sentTo,
+      channel, status, scheduledAt: null,
+      sentAt: status === "SENT" ? new Date(Date.parse(createdAt) + 2_000).toISOString() : null,
+      retryCount: 0, read: channel === "IN_APP" && status === "SENT" && n % 3 === 0, messageContent, createdAt,
+    });
+  };
+
+  for (const b of store.bookings.filter((x) => x.channel === "online" && x.userId)) {
+    for (const channel of BOOKING_CHANNELS) {
+      push(b.companyId, "booking", b.id, "booking_confirmed", b.userId, channel,
+        `Réservation ${b.bookingCode} confirmée, siège ${b.seatNumber ?? "—"}.`, b.createdAt);
+    }
+    if (b.paymentStatus === "paid") {
+      push(b.companyId, "booking", b.id, "payment_completed", b.userId, "IN_APP",
+        `Paiement reçu pour la réservation ${b.bookingCode}.`, new Date(Date.parse(b.createdAt) + 180_000).toISOString());
+    }
+    if (b.status === "cancelled" && b.cancelReason !== "EXPIRED" && b.cancelledAt) {
+      for (const channel of BOOKING_CHANNELS) {
+        push(b.companyId, "booking", b.id, "booking_cancelled", b.userId, channel,
+          `Réservation ${b.bookingCode} annulée.`, b.cancelledAt);
+      }
+    }
+  }
+
+  for (const p of store.parcels) {
+    for (const h of store.parcelHistory.filter((x) => x.parcelId === p.id)) {
+      push(p.companyId, "parcel", p.id, h.previousStatus === null ? "parcel_created" : `parcel_status_${h.newStatus.toLowerCase()}`,
+        null, "SMS", `Colis ${p.parcelCode} : ${PARCEL_STATUS_TEXT[h.newStatus]}.`, h.changedAt);
+    }
+  }
+
+  for (const f of store.feedbacks.filter((x) => x.status === "RESOLVED" && x.respondedAt)) {
+    const customer = store.customers.find((c) => c.id === f.customerId)!;
+    push(f.companyId, "feedback", f.id, "feedback_response", customer.userId, "IN_APP",
+      "La compagnie a répondu à votre avis.", f.respondedAt!);
+  }
+
+  for (const sc of store.marketingSchedules.filter((x) => x.status === "SENT")) {
+    const segment = store.marketingSegments.find((x) => x.id === sc.segmentId)!;
+    const message = store.marketingMessages.find((x) => x.id === sc.messageId)!;
+    const wanted = segment.criteria.membershipType;
+    const accounts = store.loyaltyAccounts.filter((a) =>
+      a.companyId === sc.companyId && (wanted === undefined || a.membershipType === wanted.toUpperCase()));
+    for (const a of accounts) {
+      const customer = store.customers.find((c) => c.id === a.customerId)!;
+      push(sc.companyId, "marketing_schedule", sc.id, "marketing_message", customer.userId, "IN_APP", message.content, sc.sentAt!);
+    }
+  }
+
+  // Keep the log chronological for readers of the raw store; consumers sort anyway.
+  store.notifications.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
 }
