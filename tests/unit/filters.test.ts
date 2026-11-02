@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseFilter } from "@/lib/filters";
+import { parseFilter, serviceFilterHref } from "@/lib/filters";
 
 describe("parseFilter", () => {
   const allowed = ["paid", "failed"] as const;
@@ -26,5 +26,14 @@ describe("filterHref", () => {
   });
   it("never keeps a stale value of the parameter it sets", () => {
     expect(filterHref("/utilisateurs", "role", "USER", { role: "ADMIN" })).toBe("/utilisateurs?role=USER");
+  });
+});
+
+describe("serviceFilterHref", () => {
+  it("percent-encodes the service name", () => {
+    expect(serviceFilterHref("/supervision/services", "booking-service")).toBe("/supervision/services?service=booking-service");
+    const href = serviceFilterHref("/supervision/incidents", "a b&c=d");
+    expect(href).toBe("/supervision/incidents?service=a%20b%26c%3Dd");
+    expect(new URL(href, "http://x").searchParams.get("service")).toBe("a b&c=d");
   });
 });

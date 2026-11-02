@@ -5,6 +5,7 @@ import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { IncidentActions } from "@/components/monitoring/incident-actions";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { serviceFilterHref } from "@/lib/filters";
 import { formatDateTime } from "@/lib/format";
 import { impactScopeLabel, incidentStatusBadge, severityBadge } from "@/lib/labels";
 import { incidentsRepo } from "@/lib/repos/monitoring";
@@ -49,7 +50,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
             <DetailRow label="Gravité"><StatusBadge tone={severity.tone}>{severity.label}</StatusBadge></DetailRow>
             <DetailRow label="Statut"><StatusBadge tone={status.tone}>{status.label}</StatusBadge></DetailRow>
             <DetailRow label="Service">
-              <Link href={`/supervision/services?service=${i.serviceName}`} className="hover:underline">{i.serviceName}</Link>
+              <Link href={serviceFilterHref("/supervision/services", i.serviceName)} className="hover:underline">{i.serviceName}</Link>
             </DetailRow>
             <DetailRow label="Portée">{impactScopeLabel(i.impactScope)}</DetailRow>
             <DetailRow label="Compagnie touchée">

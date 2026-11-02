@@ -16,3 +16,8 @@ export function filterHref(
   const qs = query.toString();
   return qs ? `${basePath}?${qs}` : basePath;
 }
+
+/** Link to a supervision page filtered on one service; the name is percent-encoded (the page validates it against the known names). */
+export function serviceFilterHref(basePath: string, name: string): string {
+  return `${basePath}?service=${encodeURIComponent(name)}`;
+}

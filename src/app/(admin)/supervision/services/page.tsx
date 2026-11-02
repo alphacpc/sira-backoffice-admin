@@ -6,6 +6,7 @@ import { StatusFilterNav } from "@/components/data/status-filter-nav";
 import { ServiceHistoryChart } from "@/components/monitoring/service-history-chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, formatNumber } from "@/lib/format";
+import { serviceFilterHref } from "@/lib/filters";
 import { serviceStatusBadge } from "@/lib/labels";
 import { servicesRepo } from "@/lib/repos/monitoring";
 
@@ -61,7 +62,7 @@ export default async function ServicesPage({
                 return (
                   <tr key={r.name} className="border-b border-border last:border-0">
                     <td className="px-3 py-2">
-                      <Link href={`/supervision/services?service=${r.name}`} className="font-medium hover:underline">{r.name}</Link>
+                      <Link href={serviceFilterHref("/supervision/services", r.name)} className="font-medium hover:underline">{r.name}</Link>
                     </td>
                     <td className="px-3 py-2">
                       {r.stale ? <StatusBadge tone="neutral">Obsolète</StatusBadge> : <StatusBadge tone={badge.tone}>{badge.label}</StatusBadge>}
@@ -72,7 +73,7 @@ export default async function ServicesPage({
                     <td className="px-3 py-2">{r.lastChangeAt ? formatDateTime(r.lastChangeAt) : "—"}</td>
                     <td className="px-3 py-2 tabular-nums">
                       {r.openIncidents > 0
-                        ? <Link href={`/supervision/incidents?service=${r.name}`} className="text-accent hover:underline">{r.openIncidents}</Link>
+                        ? <Link href={serviceFilterHref("/supervision/incidents", r.name)} className="text-accent hover:underline">{r.openIncidents}</Link>
                         : 0}
                     </td>
                     <td className="px-3 py-2">{formatDateTime(r.checkedAt)}</td>
