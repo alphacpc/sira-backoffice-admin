@@ -15,3 +15,10 @@ export function maskPhone(value: string): string {
   }
   return `${"•".repeat(digits.length - 2)}${tail}`;
 }
+
+/** Truncates an IPv4 address to its /24 network (`a.b.c.0`); anything else is fully masked. */
+export function truncateIp(value: string): string {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(value.trim());
+  if (!m || m.slice(1).some((part) => Number(part) > 255)) return "••••";
+  return `${m[1]}.${m[2]}.${m[3]}.0`;
+}

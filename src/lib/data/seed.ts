@@ -2,8 +2,9 @@ import { KYC_TYPES } from "@/lib/types/kyc";
 import type {
   ActivityEntry, Company, CompanyStatus, DsrRequest, Employee, FeatureDef, FeatureFlag,
   FleetBus, FleetTrip, Incident, Invoice, KycDocument, KycDocumentType, PartnerTier,
-  PaymentAttempt, Plan, PlanLimits, Referral, RetryOutcome, ServiceHealth, Subscription,
-  SubscriptionChangeKind, SubscriptionHistoryEntry, SubscriptionStatus, UsageMetric,
+  PaymentAttempt, PermissionDef, Plan, PlanLimits, PlatformUser, Referral, RetryOutcome, Role,
+  RolePermission, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionHistoryEntry,
+  SubscriptionStatus, UsageMetric, UserSession, UserStatus,
 } from "@/lib/types";
 
 const DAY = 86_400_000;
@@ -31,6 +32,11 @@ export interface Store {
   subscriptionHistory: SubscriptionHistoryEntry[];
   paymentAttempts: PaymentAttempt[];
   retryOutcomes: Record<string, RetryOutcome>;
+  users: PlatformUser[];
+  roles: Role[];
+  permissions: PermissionDef[];
+  rolePermissions: RolePermission[];
+  sessions: UserSession[];
 }
 
 const NAMES = [
@@ -92,6 +98,68 @@ const TIERS: PartnerTier[] = [
   { code: "GOLD", minMonths: 12, discountPercent: 10 },
 ];
 
+/** Real permission codes of the platform (`identity-service` migrations), grouped by domain. */
+const PERMISSIONS: PermissionDef[] = [
+  { code: "COMPANY_MANAGE", domain: "companies", description: "Gérer les compagnies et leur facturation" },
+  { code: "COMPANY_KYC_SUBMIT", domain: "companies", description: "Déposer les documents KYC de sa compagnie" },
+  { code: "COMPANY_KYC_REVIEW", domain: "companies", description: "Revoir les documents KYC et forcer une activation" },
+  { code: "COMPANY_PARTNERSHIP_MANAGE", domain: "companies", description: "Gérer le parrainage et les crédits de sa compagnie" },
+  { code: "FLEET_MANAGE", domain: "fleet", description: "Gérer gares, lignes, bus et trajets" },
+  { code: "FLEET_MAINTENANCE_MANAGE", domain: "fleet", description: "Gérer la maintenance des bus et les fournisseurs" },
+  { code: "BOOKING_MANAGE", domain: "bookings", description: "Vendre et gérer les réservations et billets" },
+  { code: "PARCEL_MANAGE", domain: "parcels", description: "Gérer les colis" },
+  { code: "EMPLOYEE_MANAGE", domain: "hr", description: "Gérer les employés, congés, paie et avantages" },
+  { code: "EMPLOYEE_CONFIDENTIAL_ACCESS", domain: "hr", description: "Accéder aux documents RH confidentiels" },
+  { code: "CUSTOMER_MANAGE", domain: "customers", description: "Gérer les clients, la fidélité et les avis" },
+  { code: "MARKETING_MANAGE", domain: "marketing", description: "Gérer les campagnes marketing" },
+  { code: "NOTIFICATION_MANAGE", domain: "notifications", description: "Consulter et gérer les notifications" },
+  { code: "COMPLIANCE_READ", domain: "compliance", description: "Lire les consentements et les journaux d'audit" },
+  { code: "COMPLIANCE_MANAGE", domain: "compliance", description: "Traiter les demandes des personnes concernées" },
+  { code: "MONITORING_READ", domain: "monitoring", description: "Lire la santé des services, les incidents et l'usage" },
+  { code: "MONITORING_MANAGE", domain: "monitoring", description: "Déclarer et suivre les incidents" },
+  { code: "RBAC_MANAGE", domain: "platform", description: "Gérer les rôles des comptes" },
+  { code: "USER_MANAGE", domain: "platform", description: "Consulter les comptes utilisateurs" },
+];
+
+const ROLES: Role[] = [
+  { code: "ADMIN", name: "Administrateur", description: "Équipe plateforme Sira : toutes les permissions de plateforme." },
+  { code: "MANAGER", name: "Responsable de compagnie", description: "Gère sa compagnie ; jamais les permissions de plateforme." },
+  { code: "GUICHETIER", name: "Agent de vente", description: "Vend des billets au guichet de sa compagnie." },
+  { code: "CHAUFFEUR", name: "Chauffeur", description: "Rôle métier réservé, sans permission." },
+  { code: "USER", name: "Utilisateur", description: "Client final : réservation en libre-service, sans permission." },
+];
+
+/** Grants as seeded by the platform migrations (EMPLOYEE_CONFIDENTIAL_ACCESS is granted to no role). */
+const ROLE_GRANTS: Record<string, string[]> = {
+  ADMIN: [
+    "COMPANY_MANAGE", "COMPANY_KYC_SUBMIT", "COMPANY_KYC_REVIEW", "FLEET_MANAGE", "FLEET_MAINTENANCE_MANAGE",
+    "BOOKING_MANAGE", "PARCEL_MANAGE", "EMPLOYEE_MANAGE", "CUSTOMER_MANAGE", "MARKETING_MANAGE",
+    "NOTIFICATION_MANAGE", "COMPLIANCE_READ", "COMPLIANCE_MANAGE", "MONITORING_READ", "MONITORING_MANAGE",
+    "RBAC_MANAGE", "USER_MANAGE",
+  ],
+  MANAGER: [
+    "COMPANY_MANAGE", "COMPANY_KYC_SUBMIT", "COMPANY_PARTNERSHIP_MANAGE", "FLEET_MANAGE", "FLEET_MAINTENANCE_MANAGE",
+    "BOOKING_MANAGE", "PARCEL_MANAGE", "EMPLOYEE_MANAGE", "CUSTOMER_MANAGE", "MARKETING_MANAGE",
+    "NOTIFICATION_MANAGE", "USER_MANAGE",
+  ],
+  GUICHETIER: ["BOOKING_MANAGE", "FLEET_MANAGE", "USER_MANAGE"],
+  CHAUFFEUR: [],
+  USER: [],
+};
+
+const SESSION_TTL_DAYS = 7;
+const DEVICES = ["Chrome · Windows", "Safari · iPhone", "Application Android", "Firefox · Ubuntu", "Edge · Windows"];
+const PLATFORM_ADMINS: { username: string; displayName: string; status: UserStatus }[] = [
+  { username: "moustapha.ndiaye", displayName: "Moustapha Ndiaye", status: "active" },
+  { username: "seynabou.kane", displayName: "Seynabou Kane", status: "suspended" },
+];
+const CLIENTS: { username: string; displayName: string; status: UserStatus }[] = [
+  { username: "aissatou.sarr", displayName: "Aïssatou Sarr", status: "active" },
+  { username: "pape.mbaye", displayName: "Pape Mbaye", status: "suspended" },
+  { username: "ndeye.diouf", displayName: "Ndèye Diouf", status: "active" },
+  { username: "lamine.camara", displayName: "Lamine Camara", status: "active" },
+];
+
 const ROUTES = [
   "Dakar → Saint-Louis", "Dakar → Touba", "Dakar → Ziguinchor",
   "Thiès → Kaolack", "Mbour → Dakar",
@@ -122,9 +190,10 @@ export function buildSeed(now: Date = new Date()): Store {
     activity: [], services: [], incidents: [], dsr: [],
     plans: [], featureDefs: [], partnerTiers: [], kycTypes: [],
     subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
+    users: [], roles: [], permissions: [], rolePermissions: [], sessions: [],
   };
   let docSeq = 1, subSeq = 1, invSeq = 1, empSeq = 1, busSeq = 1, tripSeq = 1, actSeq = 1;
-  let attSeq = 1, histSeq = 1;
+  let attSeq = 1, histSeq = 1, userSeq = 1, sessionSeq = 1;
 
   store.plans = [...PLANS, LEGACY_PLAN].map((p, n) => ({
     id: uid(12, n + 1), code: p.code, name: p.name, priceMonthly: p.price, priceYearly: p.yearly,
@@ -134,6 +203,10 @@ export function buildSeed(now: Date = new Date()): Store {
   store.featureDefs = FEATURE_DEFS.map((f) => ({ ...f }));
   store.partnerTiers = TIERS.map((t) => ({ ...t }));
   store.kycTypes = KYC_TYPES.map((t) => ({ code: t.code, name: t.name, required: true, active: true }));
+  store.permissions = PERMISSIONS.map((p) => ({ ...p }));
+  store.roles = ROLES.map((r) => ({ ...r }));
+  store.rolePermissions = Object.entries(ROLE_GRANTS).flatMap(([roleCode, codes]) =>
+    codes.map((permissionCode) => ({ roleCode, permissionCode })));
 
   NAMES.forEach((name, i) => {
     const draftIdx = DRAFT_INDEXES.indexOf(i);
@@ -285,12 +358,18 @@ export function buildSeed(now: Date = new Date()): Store {
     const peopleCount = status === "draft" ? 1 : 3;
     for (let p = 0; p < peopleCount; p++) {
       const person = PEOPLE[(i + p) % PEOPLE.length]!;
-      store.employees.push({
-        id: uid(6, empSeq++), companyId: id, name: person,
-        email: `${slugify(person)}@${slug}.sn`,
-        phone: `+2217865${String(10000 + i * 211 + p * 17).padStart(5, "0")}`,
-        role: roles[p]!,
-      });
+      const email = `${slugify(person)}@${slug}.sn`;
+      const phone = `+2217865${String(10000 + i * 211 + p * 17).padStart(5, "0")}`;
+      // A draft company has no platform account yet: its accounts are created at activation.
+      const userId = status === "draft" ? null : uid(15, userSeq++);
+      store.employees.push({ id: uid(6, empSeq++), companyId: id, name: person, email, phone, role: roles[p]!, userId });
+      if (userId) {
+        store.users.push({
+          id: userId, username: `${slugify(person)}.${slug}`, displayName: person, email, phone,
+          roleCode: roles[p]!, status: "active", companyId: id, lastLoginAt: null,
+          createdAt: iso(-(378 - i * 15)),
+        });
+      }
     }
     if (status === "active") {
       for (let b = 0; b < 2 + (i % 3); b++) {
@@ -318,6 +397,42 @@ export function buildSeed(now: Date = new Date()): Store {
         actor: "admin@sira.app", action: "Compagnie activée",
       });
     }
+  });
+
+  PLATFORM_ADMINS.forEach((a, k) => {
+    store.users.push({
+      id: uid(15, userSeq++), username: a.username, displayName: a.displayName, email: `${a.username}@sira.sn`,
+      phone: `+22178659${String(1000 + k * 37).padStart(4, "0")}`, roleCode: "ADMIN", status: a.status,
+      companyId: null, lastLoginAt: null, createdAt: iso(-(500 - k * 20)),
+    });
+  });
+  CLIENTS.forEach((c, k) => {
+    store.users.push({
+      id: uid(15, userSeq++), username: c.username, displayName: c.displayName, email: `${c.username}@client.sn`,
+      phone: `+22178659${String(5000 + k * 41).padStart(4, "0")}`, roleCode: "USER", status: c.status,
+      companyId: null, lastLoginAt: null, createdAt: iso(-(200 - k * 20)),
+    });
+  });
+
+  // Sessions: 1 to 3 per active account (some revoked, some expired); a suspended account only
+  // keeps the session revoked at its suspension. lastLoginAt is the start of the newest session.
+  const ip = (u: number, k: number) =>
+    `${u % 2 ? "196.207" : "41.82"}.${(u * 7 + k) % 250}.${10 + ((u * 31 + k * 17) % 240)}`;
+  store.users.forEach((user, u) => {
+    const starts = user.status === "suspended" ? [-(20 + (u % 5))] : Array.from(
+      { length: 1 + (u % 3) }, (_, k) => -(k * 3 + (u % 5) + 0.5),
+    );
+    starts.forEach((start, k) => {
+      const revoked = user.status === "suspended" ? start + 1 : k === 1 && u % 4 === 0 ? start + 0.5 : null;
+      store.sessions.push({
+        id: uid(16, sessionSeq++), userId: user.id, deviceLabel: DEVICES[(u + k) % DEVICES.length]!,
+        ipAddress: ip(u, k), createdAt: iso(start), lastSeenAt: iso(start + 0.25),
+        expiresAt: iso(start + SESSION_TTL_DAYS),
+        revokedAt: revoked === null ? null : iso(revoked),
+        revokedReason: revoked === null ? null : user.status === "suspended" ? "Compte suspendu" : "Déconnexion",
+      });
+    });
+    user.lastLoginAt = iso(Math.max(...starts));
   });
 
   store.services = [

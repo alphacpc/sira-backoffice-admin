@@ -124,6 +124,8 @@ export interface Referral { code: string | null; credits: ReferralCredit[] }
 export interface Employee {
   id: string; companyId: string; name: string; email: string; phone: string;
   role: "MANAGER" | "GUICHETIER" | "CHAUFFEUR";
+  /** Platform account of the employee (`identity-service` user), null while the company is a draft. */
+  userId: string | null;
 }
 export interface FleetBus {
   id: string; companyId: string; plate: string; status: "active" | "maintenance";
@@ -135,6 +137,8 @@ export interface FleetTrip {
 
 export interface ActivityEntry {
   id: string; companyId: string | null; at: string; actor: string; action: string;
+  /** Platform account the entry is about (role change, session revocation, contact reveal). */
+  userId?: string;
 }
 
 export interface ServiceHealth {
@@ -165,4 +169,43 @@ export interface CompanyDetail {
   buses: FleetBus[];
   trips: FleetTrip[];
   activity: ActivityEntry[];
+}
+
+export type UserStatus = "active" | "suspended";
+
+/** Platform account (`identity-service`). `email` and `phone` never leave the server. */
+export interface PlatformUser {
+  id: string;
+  username: string;
+  displayName: string;
+  email: string;
+  phone: string;
+  roleCode: string;
+  status: UserStatus;
+  companyId: string | null;
+  lastLoginAt: string | null;
+  createdAt: string;
+}
+
+export interface Role { code: string; name: string; description: string }
+
+export type PermissionDomain =
+  | "companies" | "fleet" | "bookings" | "parcels" | "hr" | "customers"
+  | "marketing" | "notifications" | "compliance" | "monitoring" | "platform";
+
+export interface PermissionDef { code: string; domain: PermissionDomain; description: string }
+
+export interface RolePermission { roleCode: string; permissionCode: string }
+
+/** A refresh-token session. `ipAddress` is the full address and never leaves the server. */
+export interface UserSession {
+  id: string;
+  userId: string;
+  deviceLabel: string;
+  ipAddress: string;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+  revokedReason: string | null;
 }

@@ -34,3 +34,16 @@ describe("maskPhone", () => {
     expect(maskPhone("+33612345678")).toBe("+336••••••78");
   });
 });
+
+import { truncateIp } from "@/lib/mask";
+describe("truncateIp", () => {
+  it("keeps the /24 network of an IPv4 address", () => {
+    expect(truncateIp("41.82.14.72")).toBe("41.82.14.0");
+    expect(truncateIp(" 196.207.7.41 ")).toBe("196.207.7.0");
+  });
+  it("masks anything that is not a valid IPv4 address", () => {
+    expect(truncateIp("2001:db8::1")).toBe("••••");
+    expect(truncateIp("300.1.1.1")).toBe("••••");
+    expect(truncateIp("")).toBe("••••");
+  });
+});
