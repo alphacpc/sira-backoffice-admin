@@ -414,3 +414,52 @@ export interface Feedback {
   rating: number; feedbackType: FeedbackType; title: string; comment: string;
   status: FeedbackStatus; response: string | null; respondedAt: string | null; createdAt: string;
 }
+
+export type NotificationChannel = "EMAIL" | "SMS" | "IN_APP" | "PUSH" | "WHATSAPP";
+export type NotificationStatus = "PENDING" | "SENT" | "FAILED";
+
+/** Delivered (or failed) message (`notification-service`). `messageContent` never leaves the server except on a journaled reveal. */
+export interface AppNotification {
+  id: string; companyId: string; entityType: string; entityId: string;
+  notificationCode: string; notificationType: string;
+  /** Receiving account; `null` for the SMS of a parcel recipient who has no account. */
+  sentTo: string | null;
+  channel: NotificationChannel; status: NotificationStatus;
+  scheduledAt: string | null; sentAt: string | null; retryCount: number; read: boolean;
+  messageContent: string; createdAt: string;
+}
+
+export type CampaignObjective = "ACQUISITION" | "RETENTION" | "PROMOTION" | "REACTIVATION";
+export type CampaignStatus = "DRAFT" | "SCHEDULED" | "RUNNING" | "COMPLETED" | "CANCELLED";
+
+export interface MarketingCampaign {
+  id: string; companyId: string; name: string; objective: CampaignObjective; status: CampaignStatus;
+  startDate: string; endDate: string; budget: number; currency: string;
+  /** Platform account of the author (the dbml points to an Employee; `customer-service` stores the account). */
+  createdByUserId: string | null;
+  createdAt: string; updatedAt: string | null;
+}
+
+export interface MarketingSegment {
+  id: string; companyId: string;
+  /** `null` for a segment that can be reused by several campaigns. */
+  campaignId: string | null;
+  name: string;
+  /** Targeting rules; only `membershipType` is ever evaluated. */
+  criteria: Record<string, string>;
+  estimatedSize: number; createdAt: string;
+}
+
+export type MarketingMessageStatus = "DRAFT" | "APPROVED" | "SENT";
+
+export interface MarketingMessage {
+  id: string; companyId: string; campaignId: string; channel: NotificationChannel;
+  subject: string; content: string; status: MarketingMessageStatus; createdAt: string;
+}
+
+export type ScheduleStatus = "PENDING" | "SENT" | "FAILED" | "CANCELLED";
+
+export interface MarketingSchedule {
+  id: string; companyId: string; campaignId: string; messageId: string; segmentId: string;
+  scheduledAt: string; sentAt: string | null; status: ScheduleStatus; recipientsCount: number; createdAt: string;
+}

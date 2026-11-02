@@ -8,6 +8,7 @@ import type {
   PaymentMethod, PaymentMethodKind, Ticket, TicketStatus, Transaction, TransactionStatus,
   Customer, Feedback, FeedbackStatus, FeedbackType, LoyaltyAccount, LoyaltyProgram, LoyaltyTransaction, MembershipType,
   Parcel, ParcelHistoryEntry, ParcelLeg, ParcelStatus, ParcelType, Sponsorship, SponsorshipRewardType, SponsorshipStatus,
+  AppNotification, CampaignObjective, CampaignStatus, MarketingCampaign, MarketingMessage, MarketingMessageStatus, MarketingSchedule, MarketingSegment, NotificationChannel, NotificationStatus, ScheduleStatus,
   CancelReason, TripStatus, UsageMetric, UserSession, UserStatus, Vendor, VendorKind,
 } from "@/lib/types";
 
@@ -61,6 +62,11 @@ export interface Store {
   loyaltyTransactions: LoyaltyTransaction[];
   sponsorships: Sponsorship[];
   feedbacks: Feedback[];
+  notifications: AppNotification[];
+  marketingCampaigns: MarketingCampaign[];
+  marketingSegments: MarketingSegment[];
+  marketingMessages: MarketingMessage[];
+  marketingSchedules: MarketingSchedule[];
 
 }
 
@@ -259,6 +265,7 @@ export function buildSeed(now: Date = new Date()): Store {
     paymentMethods: [], bookings: [], transactions: [], tickets: [],
     parcels: [], parcelLegs: [], parcelHistory: [], customers: [], loyaltyPrograms: [],
     loyaltyAccounts: [], loyaltyTransactions: [], sponsorships: [], feedbacks: [],
+    notifications: [], marketingCampaigns: [], marketingSegments: [], marketingMessages: [], marketingSchedules: [],
   };
   let docSeq = 1, subSeq = 1, invSeq = 1, empSeq = 1, actSeq = 1;
   let attSeq = 1, histSeq = 1, userSeq = 1, sessionSeq = 1;
@@ -474,6 +481,7 @@ export function buildSeed(now: Date = new Date()): Store {
   seedCustomers(store, iso);
   seedParcels(store, now);
   seedFeedbacks(store, now);
+  seedMarketing(store, iso);
 
   // Sessions: 1 to 3 per active account (some revoked, some expired); a suspended account only
   // keeps the session revoked at its suspension. lastLoginAt is the start of the newest session.
@@ -1031,4 +1039,106 @@ function seedFeedbacks(store: Store, now: Date): void {
 
   store.feedbacks.find((f) => f.status === "PENDING")!.title = FEEDBACK_SCENARIOS.ignorable;
   store.feedbacks.find((f) => f.status === "RESOLVED")!.title = FEEDBACK_SCENARIOS.resolved;
+}
+
+const MARKETING_SCENARIOS = {
+  tabaski: "Offre de la Tabaski", yearEnd: "Offre de fin d'année", cancelled: "Campagne d'été annulée", completed: "Bilan de rentrée",
+} as const;
+
+/**
+ * Same targeting as `customer-service`'s dispatcher: only `membershipType` is evaluated (case-insensitive) over the
+ * company's loyalty accounts; no rule targets every account; an unknown tier targets nobody.
+ */
+function eligibleCount(store: Store, companyId: string, criteria: Record<string, string>): number {
+  const accounts = store.loyaltyAccounts.filter((a) => a.companyId === companyId);
+  const wanted = criteria.membershipType;
+  return wanted === undefined ? accounts.length : accounts.filter((a) => a.membershipType === wanted.toUpperCase()).length;
+}
+
+/**
+ * Campaigns of the first four companies with an active loyalty program: a scheduled campaign (a sent and a pending
+ * schedule), a cancelled one (cancelled schedule, reusable segment); the first company also has a year-end campaign
+ * (pending schedule) and a completed one; the others a draft campaign targeting an unknown tier.
+ */
+function seedMarketing(store: Store, iso: (offsetDays: number) => string): void {
+  let campaignSeq = 1, segmentSeq = 1, messageSeq = 1, scheduleSeq = 1;
+  const S = MARKETING_SCENARIOS;
+  const companyIds = store.loyaltyPrograms.filter((p) => p.status === "ACTIVE").slice(0, 4).map((p) => p.companyId);
+
+  companyIds.forEach((companyId, k) => {
+    const company = store.companies.find((c) => c.id === companyId)!;
+    const creator = store.users.find((u) => u.companyId === companyId);
+
+    const campaign = (
+      name: string, objective: CampaignObjective, status: CampaignStatus, startDays: number, endDays: number, budget: number,
+    ): MarketingCampaign => {
+      const c: MarketingCampaign = {
+        id: uid(52, campaignSeq++), companyId, name, objective, status, startDate: iso(startDays), endDate: iso(endDays),
+        budget, currency: company.currency, createdByUserId: creator?.id ?? null, createdAt: iso(startDays - 10),
+        updatedAt: status === "CANCELLED" ? iso(-2) : null,
+      };
+      store.marketingCampaigns.push(c);
+      return c;
+    };
+    const segment = (campaignId: string | null, name: string, criteria: Record<string, string>, estimatedSize: number): MarketingSegment => {
+      const seg: MarketingSegment = {
+        id: uid(53, segmentSeq++), companyId, campaignId, name, criteria, estimatedSize, createdAt: iso(-12),
+      };
+      store.marketingSegments.push(seg);
+      return seg;
+    };
+    const message = (
+      campaignId: string, channel: NotificationChannel, subject: string, content: string, status: MarketingMessageStatus,
+    ): MarketingMessage => {
+      const m: MarketingMessage = {
+        id: uid(54, messageSeq++), companyId, campaignId, channel, subject, content, status, createdAt: iso(-11),
+      };
+      store.marketingMessages.push(m);
+      return m;
+    };
+    const schedule = (
+      c: MarketingCampaign, m: MarketingMessage, seg: MarketingSegment, status: ScheduleStatus, days: number,
+    ): void => {
+      const scheduledAt = iso(days);
+      store.marketingSchedules.push({
+        id: uid(55, scheduleSeq++), companyId, campaignId: c.id, messageId: m.id, segmentId: seg.id, scheduledAt,
+        sentAt: status === "SENT" ? new Date(Date.parse(scheduledAt) + 60_000).toISOString() : null, status,
+        recipientsCount: status === "SENT" ? eligibleCount(store, companyId, seg.criteria) : 0,
+        createdAt: iso(Math.min(days, 0) - 1),
+      });
+    };
+
+    // Scheduled campaign: a schedule already sent and one still pending.
+    const scheduled = campaign(
+      k === 0 ? S.tabaski : `Promotion VIP ${company.name}`, "PROMOTION", "SCHEDULED", -5, 20, 250_000 + k * 50_000,
+    );
+    const vip = segment(scheduled.id, `VIP ${company.name}`, { membershipType: "vip" }, 12 + k * 3);
+    const promo = message(scheduled.id, "IN_APP", scheduled.name, "Profitez de -20 % sur votre prochain trajet.", "APPROVED");
+    schedule(scheduled, promo, vip, "SENT", -3);
+    schedule(scheduled, promo, vip, "PENDING", 2);
+
+    if (k === 0) {
+      const yearEnd = campaign(S.yearEnd, "RETENTION", "SCHEDULED", -2, 30, 120_000);
+      const everyone = segment(yearEnd.id, `Tous les clients ${company.name}`, {}, 40);
+      const m = message(yearEnd.id, "IN_APP", yearEnd.name, "Voyagez en fin d'année avec 15 % de réduction.", "APPROVED");
+      schedule(yearEnd, m, everyone, "PENDING", 10);
+    } else {
+      const draft = campaign(`Réactivation ${company.name}`, "REACTIVATION", "DRAFT", 5, 40, 80_000);
+      segment(draft.id, `Palier gold ${company.name}`, { membershipType: "gold", lastBookingDays: "90" }, 8);
+      message(draft.id, "EMAIL", `Nous vous attendons chez ${company.name}`, "Revenez voyager, une surprise vous attend.", "DRAFT");
+    }
+
+    // Cancelled campaign: its schedule was cancelled with it; its segment is reusable.
+    const cancelled = campaign(k === 0 ? S.cancelled : `Campagne annulée ${company.name}`, "ACQUISITION", "CANCELLED", -15, -1, 60_000);
+    const reusable = segment(null, `Nouveaux clients ${company.name}`, {}, 25);
+    const cancelledMessage = message(cancelled.id, "IN_APP", cancelled.name, "Découvrez nos nouvelles lignes.", "APPROVED");
+    schedule(cancelled, cancelledMessage, reusable, "CANCELLED", 5);
+
+    if (k === 0) {
+      const done = campaign(S.completed, "PROMOTION", "COMPLETED", -40, -10, 200_000);
+      const premium = segment(done.id, `Clients premium ${company.name}`, { membershipType: "premium" }, 6);
+      const doneMessage = message(done.id, "IN_APP", done.name, "Merci pour votre fidélité : bilan et avantages.", "SENT");
+      schedule(done, doneMessage, premium, "SENT", -20);
+    }
+  });
 }
