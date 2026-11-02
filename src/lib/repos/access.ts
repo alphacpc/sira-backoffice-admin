@@ -1,3 +1,4 @@
+import { addActivity } from "@/lib/repos/activity";
 import { getStore } from "@/lib/repos/store";
 import { truncateIp } from "@/lib/mask";
 import type {
@@ -68,6 +69,8 @@ export const PERMISSION_DOMAINS: readonly PermissionDomain[] = [
   "marketing", "notifications", "compliance", "monitoring", "platform",
 ];
 
+export const ROLE_CHANGE_REASON = "Changement de rôle";
+
 /** A session counts as active only when it is neither revoked nor expired at `now`. */
 export function sessionState(session: UserSession, now: Date): SessionState {
   if (session.revokedAt !== null) return "revoked";
@@ -116,6 +119,23 @@ function byNewest<T>(key: (x: T) => string): (a: T, b: T) => number {
   return (a, b) => key(b).localeCompare(key(a));
 }
 
+function requireUser(id: string): PlatformUser {
+  const user = getStore().users.find((u) => u.id === id);
+  if (!user) throw new Error("Utilisateur introuvable");
+  return user;
+}
+
+function requireMotif(reason: string): string {
+  const motif = reason.trim();
+  if (!motif) throw new Error("Un motif est obligatoire");
+  return motif;
+}
+
+function revoke(session: UserSession, reason: string, now: Date): void {
+  session.revokedAt = now.toISOString();
+  session.revokedReason = reason;
+}
+
 export const usersRepo = {
   listRows(filter: { roleCode?: string; status?: UserStatus } = {}, now: Date = new Date()): UserRow[] {
     return getStore().users
@@ -145,6 +165,56 @@ export const usersRepo = {
       activeSessions: sessions.filter((x) => x.state === "active").length,
       activity: s.activity.filter((a) => a.userId === id).sort(byNewest((a) => a.at)),
     };
+  },
+
+  /**
+   * Changes the role of an account and revokes all its active sessions (as `PATCH /api/users/{id}/role`).
+   * `actor` is the identity of the session (e-mail or username): nobody changes their own role.
+   */
+  changeRole(
+    userId: string, roleCode: string, reason: string, actor = "admin@sira.app", now: Date = new Date(),
+  ): { user: PlatformUser; revoked: number } {
+    const s = getStore();
+    const user = requireUser(userId);
+    if (!s.roles.some((r) => r.code === roleCode)) throw new Error("Rôle inconnu");
+    const motif = requireMotif(reason);
+    if (user.roleCode === roleCode) throw new Error("Le compte a déjà ce rôle");
+    if (actor === user.email || actor === user.username) {
+      throw new Error("Impossible de changer son propre rôle");
+    }
+    const activeAdmins = s.users.filter((u) => u.roleCode === "ADMIN" && u.status === "active");
+    if (user.roleCode === "ADMIN" && user.status === "active" && activeAdmins.length === 1) {
+      throw new Error("Impossible de rétrograder le dernier administrateur actif");
+    }
+    const previous = user.roleCode;
+    user.roleCode = roleCode;
+    const active = activeSessionsOf(user.id, now);
+    for (const session of active) revoke(session, ROLE_CHANGE_REASON, now);
+    addActivity(
+      null, actor,
+      `Rôle de ${user.username} changé : ${roleName(previous)} → ${roleName(roleCode)} (${active.length} session(s) révoquée(s)). Motif : ${motif}`,
+      now, user.id,
+    );
+    return { user, revoked: active.length };
+  },
+
+  revokeAllSessions(userId: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): number {
+    const user = requireUser(userId);
+    const motif = requireMotif(reason);
+    const active = activeSessionsOf(user.id, now);
+    if (active.length === 0) throw new Error("Aucune session active à révoquer");
+    for (const session of active) revoke(session, motif, now);
+    addActivity(null, actor, `${active.length} session(s) de ${user.username} révoquée(s). Motif : ${motif}`, now, user.id);
+    return active.length;
+  },
+
+  logReveal(userId: string, field: "email" | "phone", actor = "admin@sira.app", now: Date = new Date()): void {
+    const user = requireUser(userId);
+    addActivity(
+      null, actor,
+      `Donnée personnelle révélée : ${field === "email" ? "e-mail" : "téléphone"} de ${user.username}`,
+      now, user.id,
+    );
   },
 };
 
@@ -204,5 +274,19 @@ export const sessionsRepo = {
 
   get(id: string): UserSession | undefined {
     return getStore().sessions.find((x) => x.id === id);
+  },
+
+  revoke(sessionId: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): UserSession {
+    const session = getStore().sessions.find((x) => x.id === sessionId);
+    if (!session) throw new Error("Session introuvable");
+    const motif = requireMotif(reason);
+    if (sessionState(session, now) !== "active") throw new Error("La session est déjà révoquée ou expirée");
+    revoke(session, motif, now);
+    const user = getStore().users.find((u) => u.id === session.userId);
+    addActivity(
+      null, actor, `Session de ${user?.username ?? "compte inconnu"} révoquée (${session.deviceLabel}). Motif : ${motif}`,
+      now, session.userId,
+    );
+    return session;
   },
 };
