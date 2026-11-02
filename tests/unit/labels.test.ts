@@ -208,3 +208,49 @@ describe("client labels", () => {
     expect(ratingStars(5)).toBe("★★★★★");
   });
 });
+
+import {
+  campaignStatusBadge, messageStatusBadge, notificationChannelLabel, notificationStatusBadge, notificationTypeLabel,
+  objectiveLabel, scheduleStatusBadge,
+} from "@/lib/labels";
+
+describe("communication labels", () => {
+  it("labels notification statuses, channels and types", () => {
+    expect(notificationStatusBadge("PENDING")).toEqual({ label: "En attente", tone: "warning" });
+    expect(notificationStatusBadge("SENT")).toEqual({ label: "Envoyée", tone: "success" });
+    expect(notificationStatusBadge("FAILED")).toEqual({ label: "Échouée", tone: "danger" });
+    expect(notificationChannelLabel("EMAIL")).toBe("E-mail");
+    expect(notificationChannelLabel("SMS")).toBe("SMS");
+    expect(notificationChannelLabel("IN_APP")).toBe("Dans l'application");
+    expect(notificationChannelLabel("PUSH")).toBe("Notification push");
+    expect(notificationChannelLabel("WHATSAPP")).toBe("WhatsApp");
+    expect(notificationTypeLabel("booking_confirmed")).toBe("Réservation confirmée");
+    expect(notificationTypeLabel("booking_cancelled")).toBe("Réservation annulée");
+    expect(notificationTypeLabel("payment_completed")).toBe("Paiement confirmé");
+    expect(notificationTypeLabel("parcel_created")).toBe("Colis enregistré");
+    expect(notificationTypeLabel("parcel_status_in_transit")).toBe("Colis : en transit");
+    expect(notificationTypeLabel("parcel_status_at_hub")).toBe("Colis : au hub");
+    expect(notificationTypeLabel("feedback_response")).toBe("Réponse à un avis");
+    expect(notificationTypeLabel("marketing_message")).toBe("Message marketing");
+    expect(notificationTypeLabel("inconnu_type")).toBe("inconnu_type");
+  });
+
+  it("labels campaigns, objectives, messages and schedules", () => {
+    expect(campaignStatusBadge("DRAFT")).toEqual({ label: "Brouillon", tone: "neutral" });
+    expect(campaignStatusBadge("SCHEDULED")).toEqual({ label: "Programmée", tone: "info" });
+    expect(campaignStatusBadge("RUNNING")).toEqual({ label: "En cours", tone: "info" });
+    expect(campaignStatusBadge("COMPLETED")).toEqual({ label: "Terminée", tone: "success" });
+    expect(campaignStatusBadge("CANCELLED")).toEqual({ label: "Annulée", tone: "neutral" });
+    expect(objectiveLabel("ACQUISITION")).toBe("Acquisition");
+    expect(objectiveLabel("RETENTION")).toBe("Fidélisation");
+    expect(objectiveLabel("PROMOTION")).toBe("Promotion");
+    expect(objectiveLabel("REACTIVATION")).toBe("Réactivation");
+    expect(messageStatusBadge("DRAFT")).toEqual({ label: "Brouillon", tone: "neutral" });
+    expect(messageStatusBadge("APPROVED")).toEqual({ label: "Approuvé", tone: "success" });
+    expect(messageStatusBadge("SENT")).toEqual({ label: "Envoyé", tone: "info" });
+    expect(scheduleStatusBadge("PENDING")).toEqual({ label: "En attente", tone: "warning" });
+    expect(scheduleStatusBadge("SENT")).toEqual({ label: "Envoyée", tone: "success" });
+    expect(scheduleStatusBadge("FAILED")).toEqual({ label: "Échouée", tone: "danger" });
+    expect(scheduleStatusBadge("CANCELLED")).toEqual({ label: "Annulée", tone: "neutral" });
+  });
+});

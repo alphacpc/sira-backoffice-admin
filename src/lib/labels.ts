@@ -6,6 +6,7 @@ import type {
   BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, Incident, Invoice, KycDocumentStatus,
   MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
   FeedbackStatus, FeedbackType, MembershipType, SponsorshipRewardType, SponsorshipStatus,
+  CampaignObjective, CampaignStatus, MarketingMessageStatus, NotificationChannel, NotificationStatus, ScheduleStatus,
   ParcelPaymentStatus, ParcelStatus, ParcelType, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, TripStatus, UserStatus, VendorKind,
 } from "@/lib/types";
 
@@ -293,3 +294,59 @@ export const rewardLabel = (type: SponsorshipRewardType, value: number, currency
     : `Remise de ${formatMoney(value, currency)}`;
 
 export const ratingStars = (rating: number): string => "★".repeat(rating) + "☆".repeat(5 - rating);
+
+export const notificationStatusBadge = (s: NotificationStatus): Badge =>
+  pick({
+    PENDING: { label: "En attente", tone: "warning" },
+    SENT: { label: "Envoyée", tone: "success" },
+    FAILED: { label: "Échouée", tone: "danger" },
+  }, s);
+
+export const notificationChannelLabel = (c: NotificationChannel): string =>
+  ({ EMAIL: "E-mail", SMS: "SMS", IN_APP: "Dans l'application", PUSH: "Notification push", WHATSAPP: "WhatsApp" })[c];
+
+const NOTIFICATION_TYPE_LABELS: Record<string, string> = {
+  booking_confirmed: "Réservation confirmée",
+  booking_cancelled: "Réservation annulée",
+  payment_completed: "Paiement confirmé",
+  parcel_created: "Colis enregistré",
+  parcel_status_pending: "Colis : en attente",
+  parcel_status_in_transit: "Colis : en transit",
+  parcel_status_at_hub: "Colis : au hub",
+  parcel_status_delivered: "Colis : livré",
+  parcel_status_cancelled: "Colis : annulé",
+  parcel_status_returned: "Colis : retourné",
+  parcel_status_lost: "Colis : perdu",
+  feedback_response: "Réponse à un avis",
+  marketing_message: "Message marketing",
+};
+
+/** French label of a `notification_type`; an unknown type is shown as is. */
+export const notificationTypeLabel = (type: string): string => NOTIFICATION_TYPE_LABELS[type] ?? type;
+
+export const campaignStatusBadge = (s: CampaignStatus): Badge =>
+  pick({
+    DRAFT: { label: "Brouillon", tone: "neutral" },
+    SCHEDULED: { label: "Programmée", tone: "info" },
+    RUNNING: { label: "En cours", tone: "info" },
+    COMPLETED: { label: "Terminée", tone: "success" },
+    CANCELLED: { label: "Annulée", tone: "neutral" },
+  }, s);
+
+export const objectiveLabel = (o: CampaignObjective): string =>
+  ({ ACQUISITION: "Acquisition", RETENTION: "Fidélisation", PROMOTION: "Promotion", REACTIVATION: "Réactivation" })[o];
+
+export const messageStatusBadge = (s: MarketingMessageStatus): Badge =>
+  pick({
+    DRAFT: { label: "Brouillon", tone: "neutral" },
+    APPROVED: { label: "Approuvé", tone: "success" },
+    SENT: { label: "Envoyé", tone: "info" },
+  }, s);
+
+export const scheduleStatusBadge = (s: ScheduleStatus): Badge =>
+  pick({
+    PENDING: { label: "En attente", tone: "warning" },
+    SENT: { label: "Envoyée", tone: "success" },
+    FAILED: { label: "Échouée", tone: "danger" },
+    CANCELLED: { label: "Annulée", tone: "neutral" },
+  }, s);
