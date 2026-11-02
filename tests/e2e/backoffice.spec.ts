@@ -135,7 +135,7 @@ test("the command palette opens with the keyboard and navigates to a company", a
 
 test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await login(page);
-  await page.goto("/supervision/services");
+  await page.goto("/parametres/profil");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
 });
 
@@ -1145,6 +1145,141 @@ test("a company's retention can be shortened within the allowed range", async ({
   await expect(row.getByTestId("retention-pending")).not.toHaveText("0");
 });
 
+test("service health shows the indicators, the outage, the stale service and the history chart", async ({ page }) => {
+  await login(page);
+  await page.goto("/supervision/services");
+  await expect(page.getByRole("heading", { name: "Santé des services" })).toBeVisible();
+  await expect(page.getByTestId("svc-healthy")).toContainText("8");
+  await expect(page.getByTestId("svc-degraded")).toContainText("1");
+  await expect(page.getByTestId("svc-down")).toContainText("1");
+  await expect(page.getByTestId("svc-stale")).toContainText("1");
+  await expect(page.getByTestId("svc-reference")).toContainText("Dernier sondage");
+  await expect(page.getByRole("row", { name: /notification-service.*En panne/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /parcel-service.*Dégradé/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /gateway.*Obsolète/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /identity-service.*Opérationnel.*100 %/ })).toBeVisible();
+  await expect(page.getByRole("img", { name: /notification-service/ })).toBeVisible();
+  await page.getByRole("link", { name: "identity-service", exact: true }).last().click();
+  await expect(page).toHaveURL(/service=identity-service/);
+  await expect(page.getByRole("img", { name: /identity-service/ })).toBeVisible();
+});
+
+test("incidents can be filtered by status and opened", async ({ page }) => {
+  await login(page);
+  await page.goto("/supervision/incidents");
+  await expect(page.getByRole("heading", { name: "Incidents" })).toBeVisible();
+  await page.getByRole("link", { name: "Résolus", exact: true }).click();
+  await expect(page).toHaveURL(/statut=RESOLVED/);
+  await expect(page.getByRole("row", { name: /Indisponibilité de la flotte/ })).toBeVisible();
+  await page.getByRole("link", { name: "Critique", exact: true }).click();
+  await expect(page).toHaveURL(/gravite=CRITICAL/);
+  await expect(page).toHaveURL(/statut=RESOLVED/);
+  await page.getByRole("row", { name: /Indisponibilité de la flotte/ }).click();
+  await expect(page).toHaveURL(/\/supervision\/incidents\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("incident-status")).toHaveText("Résolu");
+  await expect(page.getByTestId("incident-resolved-note")).toBeVisible();
+  await expect(page.getByTestId("incident-postmortem")).toHaveAttribute("href", /status\.sira\.app\/postmortems/);
+  await expect(page.getByTestId("incident-duration")).not.toHaveText("");
+});
+
+test("declaring an incident adds it to the list and refuses a company scope without a company", async ({ page }) => {
+  await login(page);
+  await page.goto("/supervision/incidents");
+  await page.getByRole("button", { name: "Déclarer un incident" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Déclarer l'incident" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Titre").fill("Incident de démonstration E2E");
+  await dialog.getByLabel("Service").selectOption("booking-service");
+  await dialog.getByLabel("Gravité").selectOption({ label: "Haute" });
+  await dialog.getByLabel("Portée").selectOption({ label: "Une compagnie" });
+  await expect(dialog.getByLabel("Compagnie touchée")).toBeVisible();
+  await confirm.click();
+  await expect(dialog.getByRole("alert")).toHaveText("Une compagnie est obligatoire pour un incident limité à une compagnie");
+
+  await dialog.getByLabel("Portée").selectOption({ label: "Toute la plateforme" });
+  await expect(dialog.getByLabel("Compagnie touchée")).toHaveCount(0);
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /Incident de démonstration E2E.*booking-service.*Haute.*En investigation/ })).toBeVisible();
+});
+
+test("an incident can only move forward in status", async ({ page }) => {
+  await login(page);
+  await page.goto("/supervision/incidents");
+  await page.getByPlaceholder("Rechercher un incident…").fill("Échecs de réservation");
+  await page.getByRole("row", { name: /Échecs de réservation sur une compagnie/ }).click();
+  await expect(page.getByTestId("incident-status")).toHaveText("Identifié");
+  await page.getByRole("button", { name: "Changer le statut" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Nouveau statut").selectOption({ label: "En investigation" });
+  await dialog.getByRole("button", { name: "Confirmer le changement" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Un incident ne peut pas revenir en arrière");
+  await dialog.getByLabel("Nouveau statut").selectOption({ label: "Sous surveillance" });
+  await dialog.getByRole("button", { name: "Confirmer le changement" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("incident-status")).toHaveText("Sous surveillance");
+});
+
+test("resolving an incident closes it and keeps only the postmortem editable", async ({ page }) => {
+  await login(page);
+  await page.goto("/supervision/incidents");
+  await page.getByPlaceholder("Rechercher un incident…").fill("Latence élevée");
+  await page.getByRole("row", { name: /Latence élevée sur les colis/ }).click();
+  await expect(page.getByTestId("incident-status")).toHaveText("Sous surveillance");
+  await page.getByRole("button", { name: "Changer le statut" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Nouveau statut").selectOption({ label: "Résolu" });
+  await dialog.getByRole("button", { name: "Confirmer le changement" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("incident-status")).toHaveText("Résolu");
+  await expect(page.getByTestId("incident-resolved-note")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Changer le statut" })).toHaveCount(0);
+  await expect(page.getByRole("button", { name: "Renseigner le postmortem" })).toBeVisible();
+});
+
+test("a postmortem address must be an http or https link", async ({ page }) => {
+  await login(page);
+  await page.goto("/supervision/incidents?statut=RESOLVED");
+  await page.getByPlaceholder("Rechercher un incident…").fill("connexion intermittent");
+  await page.getByRole("row", { name: /Échec de connexion intermittent/ }).click();
+  await expect(page.getByTestId("incident-postmortem")).toHaveText("Aucun");
+  await page.getByRole("button", { name: "Renseigner le postmortem" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Adresse du postmortem").fill("ftp://example.org/p");
+  await dialog.getByRole("button", { name: "Enregistrer le postmortem" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("L'adresse du postmortem doit commencer par http:// ou https://");
+  await dialog.getByLabel("Adresse du postmortem").fill("https://status.sira.app/postmortems/2026-10-28");
+  await dialog.getByRole("button", { name: "Enregistrer le postmortem" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("incident-postmortem")).toHaveAttribute("href", "https://status.sira.app/postmortems/2026-10-28");
+  await expect(page.getByRole("button", { name: "Modifier le postmortem" })).toBeVisible();
+});
+
+test("API traffic shows the indicators, a daily chart and the endpoints, for a chosen period", async ({ page }) => {
+  await login(page);
+  await page.goto("/supervision/api");
+  await expect(page.getByRole("heading", { name: "Trafic API" })).toBeVisible();
+  for (const id of ["api-requests", "api-latency", "api-4xx", "api-5xx"]) await expect(page.getByTestId(id)).toBeVisible();
+  await expect(page.getByRole("img", { name: /Requêtes par jour/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /POST.*\/auth\/login/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /GET.*\/parcels\/track\/\{id\}/ })).toBeVisible();
+  await page.getByRole("link", { name: "30 jours", exact: true }).click();
+  await expect(page).toHaveURL(/jours=30/);
+  await expect(page.getByRole("row", { name: /GET.*\/health\/services/ })).toBeVisible();
+});
+
+test("product usage shows the derived events and the daily chart", async ({ page }) => {
+  await login(page);
+  await page.goto("/supervision/usage?jours=30");
+  await expect(page.getByRole("heading", { name: "Usage" })).toBeVisible();
+  await expect(page.getByTestId("usage-events")).toBeVisible();
+  await expect(page.getByTestId("usage-users")).toBeVisible();
+  await expect(page.getByRole("img", { name: /Événements produit par jour/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /booking_created.*Réservations/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /parcel_created.*Colis/ })).toBeVisible();
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
@@ -1176,6 +1311,7 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   const notificationPath = await detailPath("/communication/notifications", "Réservation confirmée", "Rechercher une notification…", /Réservation confirmée/);
   const campaignPath = await detailPath("/communication/campagnes", "Bilan de rentrée", "Rechercher une campagne…", /Bilan de rentrée/);
   const auditPath = await detailPath("/conformite/journal-audit", "LOGIN", "Rechercher dans le journal…", /Connexion/);
+  const incidentPath = await detailPath("/supervision/incidents", "flotte", "Rechercher un incident…", /Indisponibilité de la flotte/);
   const requestPath = await detailPath("/conformite/demandes-rgpd", "Aïssatou", "Rechercher une demande…", /Aïssatou Sarr.*Portabilité/);
 
   const CONTACT_EMAIL = /contact@[a-z0-9-]+\.sn/;
@@ -1210,6 +1346,9 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     "/conformite/acces-donnees", "/conformite/acces-donnees?categorie=CONSENT",
     "/conformite/demandes-rgpd", "/conformite/demandes-rgpd?retard=oui", requestPath,
     "/conformite/consentements", "/conformite/retention",
+    "/supervision/services", "/supervision/services?service=notification-service", "/supervision/incidents",
+    "/supervision/incidents?statut=RESOLVED", incidentPath, "/supervision/api", "/supervision/api?jours=30",
+    "/supervision/usage", "/supervision/usage?jours=30",
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
@@ -1285,4 +1424,29 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   const consentRaw = await (await page.request.get("/conformite/consentements")).text();
   for (const fragment of ["consent-entry", "v1.0", "v1.1"]) expect(consentRaw, `consents ${fragment}`).not.toContain(fragment);
   await expect(page.getByTestId("consent-entry")).toHaveCount(0);
+  // The supervision pages are really rendered in the production build (an error page cannot pass).
+  await page.goto("/supervision/services");
+  await expect(page.getByRole("heading", { name: "Santé des services" })).toBeVisible();
+  await expect(page.getByTestId("svc-down")).toBeVisible();
+  await page.goto("/supervision/services?service=notification-service");
+  await expect(page.getByRole("img", { name: /notification-service/ })).toBeVisible();
+  await page.goto("/supervision/incidents");
+  await expect(page.getByRole("heading", { name: "Incidents" })).toBeVisible();
+  expect(await page.getByRole("row").count()).toBeGreaterThan(1);
+  await page.goto(incidentPath);
+  await expect(page.getByTestId("incident-status")).toHaveText("Résolu");
+  await expect(page.getByText("admin@sira.app").first()).toBeVisible();
+  await page.goto("/supervision/api");
+  await expect(page.getByRole("heading", { name: "Trafic API" })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Requêtes par jour/ })).toBeVisible();
+  await page.goto("/supervision/usage");
+  await expect(page.getByRole("heading", { name: "Usage" })).toBeVisible();
+  await expect(page.getByRole("img", { name: /Événements produit par jour/ })).toBeVisible();
+  // The author of an incident appears in the detail only, never in the list payload or the API pages.
+  for (const path of ["/supervision/incidents", "/supervision/incidents?statut=RESOLVED", "/supervision/api", "/supervision/usage", "/supervision/services"]) {
+    const raw = await (await page.request.get(path)).text();
+    expect(raw, `raw ${path} reportedBy`).not.toContain("admin@sira.app");
+    await page.goto(path);
+    expect(await page.content(), `dom ${path} reportedBy`).not.toContain("admin@sira.app");
+  }
 });

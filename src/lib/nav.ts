@@ -66,10 +66,10 @@ export const NAV: NavSection[] = [
     { label: "Rétention", href: "/conformite/retention", implemented: true },
   ] },
   { label: "Supervision", items: [
-    todo("Services", "/supervision/services"),
-    todo("Incidents", "/supervision/incidents"),
-    todo("Trafic API", "/supervision/api"),
-    todo("Usage", "/supervision/usage"),
+    { label: "Services", href: "/supervision/services", implemented: true },
+    { label: "Incidents", href: "/supervision/incidents", implemented: true },
+    { label: "Trafic API", href: "/supervision/api", implemented: true },
+    { label: "Usage", href: "/supervision/usage", implemented: true },
   ] },
   { label: "Paramètres", items: [
     todo("Mon profil", "/parametres/profil"),
@@ -95,7 +95,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   trajets: "Trajets", "plans-de-sieges": "Plans de sièges", maintenance: "Maintenance", fournisseurs: "Fournisseurs",
   reservations: "Réservations", fidelite: "Fidélité", "en-ligne": "Libre-service en ligne",
   "journal-audit": "Journal d'audit", "acces-donnees": "Accès aux données", "demandes-rgpd": "Demandes RGPD",
-  consentements: "Consentements", retention: "Rétention",
+  consentements: "Consentements", retention: "Rétention", api: "Trafic API",
 };
 
 export function labelForSegment(segment: string): string {
@@ -111,6 +111,7 @@ const ROUTE_PREFIXES = [
   "/colis", "/clients/comptes", "/clients/avis",
   "/communication/notifications", "/communication/campagnes",
   "/conformite/journal-audit", "/conformite/demandes-rgpd",
+  "/supervision/incidents",
 ];
 
 /** True when a breadcrumb path leads to a real screen (a nav item or a company route), so it may be a link. */
