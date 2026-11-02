@@ -303,3 +303,45 @@ export type CrewRole = "DRIVER" | "DRIVER_ASSISTANT" | "CONTROLLER";
  * no account, no e-mail, no phone.
  */
 export interface CrewMember { id: string; companyId: string; name: string; role: CrewRole }
+
+export type BookingStatus = "confirmed" | "cancelled";
+export type BookingPaymentStatus = "pending" | "paid" | "failed";
+export type BookingChannel = "counter" | "online";
+/** Who ended the booking: the unpaid-booking expiry, the client, or the platform team. */
+export type CancelReason = "EXPIRED" | "CLIENT" | "PLATFORM";
+
+/** Traveller booking (`booking-service`). A passenger has a name only: no e-mail, no phone. */
+export interface Booking {
+  id: string; companyId: string; tripId: string;
+  /** Client account for an online booking, `null` at the counter. */
+  userId: string | null;
+  passengerName: string;
+  bookingCode: string;
+  seatNumber: string | null;
+  status: BookingStatus; paymentStatus: BookingPaymentStatus; channel: BookingChannel;
+  amount: number; currency: string; ticketIssued: boolean;
+  createdAt: string; cancelledAt: string | null; cancelReason: CancelReason | null;
+}
+
+export type PaymentMethodKind = "MOBILE_MONEY" | "CARD" | "CASH";
+
+export interface PaymentMethod {
+  id: string; companyId: string; name: string; kind: PaymentMethodKind; provider: string | null; active: boolean;
+}
+
+export type TransactionStatus = "PENDING" | "COMPLETED" | "FAILED";
+
+export interface Transaction {
+  id: string; companyId: string; bookingId: string; paymentMethodId: string; reference: string;
+  amount: number; currency: string; status: TransactionStatus; failureReason: string | null;
+  createdAt: string; completedAt: string | null;
+}
+
+export type TicketStatus = "ISSUED" | "CHECKED_IN" | "USED" | "CANCELLED";
+
+export interface Ticket {
+  id: string; companyId: string; bookingId: string; tripId: string; ticketCode: string;
+  seatNumber: string | null; status: TicketStatus; issuedAt: string;
+  /** ISO dates of the scans, oldest first. */
+  scans: string[];
+}

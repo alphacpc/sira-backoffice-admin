@@ -1,11 +1,12 @@
 import { KYC_TYPES } from "@/lib/types/kyc";
 import type {
-  ActivityEntry, Bus, BusMaintenance, BusType, Company, CompanyStatus, CrewMember, CrewRole, DsrRequest,
+  ActivityEntry, Booking, BookingChannel, BookingPaymentStatus, BookingStatus, Bus, BusMaintenance, BusType, Company, CompanyStatus, CrewMember, CrewRole, DsrRequest,
   Employee, FeatureDef, FeatureFlag, Fleet, FuelType, Incident, Invoice, KycDocument, KycDocumentType,
   MaintenanceCategory, MaintenanceStatus, PartnerTier, PaymentAttempt, PermissionDef, Plan, PlanLimits,
   PlatformUser, Referral, RetryOutcome, Role, RolePermission, Route, SeatMap, SeatState, ServiceHealth,
   Station, Subscription, SubscriptionChangeKind, SubscriptionHistoryEntry, SubscriptionStatus, Trip,
-  TripStatus, UsageMetric, UserSession, UserStatus, Vendor, VendorKind,
+  PaymentMethod, PaymentMethodKind, Ticket, TicketStatus, Transaction, TransactionStatus,
+  CancelReason, TripStatus, UsageMetric, UserSession, UserStatus, Vendor, VendorKind,
 } from "@/lib/types";
 
 const DAY = 86_400_000;
@@ -45,6 +46,11 @@ export interface Store {
   seatMaps: SeatMap[];
   maintenances: BusMaintenance[];
   crew: CrewMember[];
+  paymentMethods: PaymentMethod[];
+  bookings: Booking[];
+  transactions: Transaction[];
+  tickets: Ticket[];
+
 }
 
 const NAMES = [
@@ -239,6 +245,7 @@ export function buildSeed(now: Date = new Date()): Store {
     subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
     users: [], roles: [], permissions: [], rolePermissions: [], sessions: [],
     stations: [], routes: [], fleets: [], vendors: [], seatMaps: [], maintenances: [], crew: [],
+    paymentMethods: [], bookings: [], transactions: [], tickets: [],
   };
   let docSeq = 1, subSeq = 1, invSeq = 1, empSeq = 1, actSeq = 1;
   let attSeq = 1, histSeq = 1, userSeq = 1, sessionSeq = 1;
@@ -450,6 +457,8 @@ export function buildSeed(now: Date = new Date()): Store {
     });
   });
 
+  seedSales(store, now, iso);
+
   // Sessions: 1 to 3 per active account (some revoked, some expired); a suspended account only
   // keeps the session revoked at its suspension. lastLoginAt is the start of the newest session.
   const ip = (u: number, k: number) =>
@@ -638,4 +647,159 @@ function seatState(status: TripStatus, k: number, t: number): SeatState {
   if (status === "departed") return k % 5 === 4 ? "free" : "occupied";
   if (status === "boarding") return k % 3 === 0 ? "occupied" : k % 3 === 1 ? "booked" : "free";
   return (k + t) % 3 === 0 ? "booked" : "free";
+}
+
+const SCENARIO_NAMES = { cancellable: "Rokhaya Thiaw", inProgress: "Samba Kébé", paid: "Coumba Lô" } as const;
+const FAILURE_REASONS = ["Solde insuffisant", "Délai de confirmation dépassé", "Paiement refusé par l'opérateur"];
+const CANCEL_REASONS: CancelReason[] = ["EXPIRED", "CLIENT", "PLATFORM"];
+/** A trip never gets more than this many seeded bookings, whatever its size. */
+const MAX_BOOKINGS_PER_TRIP = 6;
+const STUCK_AGES_MINUTES = [3 * 60, 26 * 60];
+
+/** Unique, well-formed code: `prefix` + 8 base-36 characters (Knuth's multiplicative hash is a bijection modulo 2^32). */
+function hashCode(prefix: string, n: number): string {
+  return prefix + ((n * 2_654_435_761) % 2 ** 32).toString(36).toUpperCase().padStart(8, "0");
+}
+
+/**
+ * Sales of every trip, derived from its seat map: an `occupied` seat is a paid booking (completed
+ * transaction, ticket), a `booked` seat an unpaid one (no transaction, a pending one or a failed one,
+ * in rotation); one trip in five also gets a cancelled booking on a free seat. Then four anomalies are
+ * planted (two stuck payments, one amount mismatch, one missing ticket) and three scenario passengers named.
+ */
+function seedSales(store: Store, now: Date, iso: (offsetDays: number) => string): void {
+  let methodSeq = 1, bookingSeq = 1, txSeq = 1, ticketSeq = 1;
+  const nowMs = now.getTime();
+  const ago = (minutes: number) => new Date(nowMs - minutes * 60_000).toISOString();
+  const clients = CLIENTS.map((c) => store.users.find((u) => u.username === c.username)!);
+
+  store.companies.forEach((company, i) => {
+    if (company.status !== "active") return;
+    const methods: [string, PaymentMethodKind, string | null, boolean][] = [
+      ["Orange Money", "MOBILE_MONEY", "ORANGE", true],
+      ["Wave", "MOBILE_MONEY", "WAVE", i % 4 !== 1],
+      ["Espèces au guichet", "CASH", null, true],
+    ];
+    if (i % 5 === 2) methods.push(["Carte bancaire", "CARD", "VISA", true]);
+    for (const [name, kind, provider, active] of methods) {
+      store.paymentMethods.push({ id: uid(31, methodSeq++), companyId: company.id, name, kind, provider, active });
+    }
+  });
+
+  store.trips.forEach((trip, ti) => {
+    const map = store.seatMaps.find((m) => m.tripId === trip.id);
+    if (!map) return;
+    const methods = store.paymentMethods.filter((m) => m.companyId === trip.companyId);
+    const mobile = methods.filter((m) => m.kind === "MOBILE_MONEY");
+    const cash = methods.find((m) => m.kind === "CASH")!;
+    const departure = Date.parse(trip.departure);
+
+    const create = (
+      seat: string, channel: BookingChannel, status: BookingStatus, paymentStatus: BookingPaymentStatus,
+      createdAt: string, n: number,
+    ): Booking => {
+      const client = clients[n % clients.length]!;
+      const booking: Booking = {
+        id: uid(32, bookingSeq), companyId: trip.companyId, tripId: trip.id,
+        userId: channel === "online" ? client.id : null,
+        passengerName: channel === "online" ? client.displayName : PEOPLE[n % PEOPLE.length]!,
+        bookingCode: hashCode("BK-", bookingSeq), seatNumber: seat, status, paymentStatus, channel,
+        amount: trip.price, currency: trip.currency, ticketIssued: false,
+        createdAt, cancelledAt: null, cancelReason: null,
+      };
+      bookingSeq++;
+      store.bookings.push(booking);
+      return booking;
+    };
+    const transact = (
+      b: Booking, methodId: string, status: TransactionStatus,
+      createdAt: string, completedAt: string | null, failureReason: string | null,
+    ) => {
+      store.transactions.push({
+        id: uid(33, txSeq), companyId: b.companyId, bookingId: b.id, paymentMethodId: methodId,
+        reference: hashCode("TX-", txSeq), amount: b.amount, currency: b.currency, status, failureReason,
+        createdAt, completedAt,
+      });
+      txSeq++;
+    };
+    const issue = (b: Booking, status: TicketStatus, issuedAt: string, scans: string[]) => {
+      b.ticketIssued = true;
+      store.tickets.push({
+        id: uid(34, ticketSeq), companyId: b.companyId, bookingId: b.id, tripId: b.tripId,
+        ticketCode: hashCode("TK-", ticketSeq), seatNumber: b.seatNumber, status, issuedAt, scans,
+      });
+      ticketSeq++;
+    };
+
+    const claimed = map.seats
+      .filter((x) => x.state === "booked" || x.state === "occupied")
+      .slice(0, MAX_BOOKINGS_PER_TRIP);
+    let paidCount = 0;
+    claimed.forEach((seat, j) => {
+      const n = ti * 10 + j;
+      const channel: BookingChannel = (ti + j) % 3 === 0 ? "counter" : "online";
+      const method = channel === "online" ? mobile[n % mobile.length]! : cash;
+      if (seat.state === "occupied") {
+        const created = new Date(departure - (2 + (n % 4)) * 86_400_000).toISOString();
+        const paidAt = new Date(Date.parse(created) + 3 * 60_000).toISOString();
+        const b = create(seat.code, channel, "confirmed", "paid", created, n);
+        transact(b, method.id, "COMPLETED", created, paidAt, null);
+        if (trip.status === "departed") issue(b, "USED", paidAt, [new Date(departure - 40 * 60_000).toISOString()]);
+        else if (paidCount++ % 2 === 0) issue(b, "CHECKED_IN", paidAt, [ago(20)]);
+        else issue(b, "ISSUED", paidAt, []);
+        return;
+      }
+      const minutes = 2 + (n % 8);
+      const created = ago(minutes + 1);
+      const kind = j % 3;
+      if (kind === 0) {
+        create(seat.code, channel, "confirmed", "pending", created, n);
+      } else if (kind === 1) {
+        const b = create(seat.code, channel, "confirmed", "pending", created, n);
+        transact(b, method.id, "PENDING", ago(minutes), null, null);
+      } else {
+        const b = create(seat.code, channel, "confirmed", "failed", created, n);
+        transact(b, method.id, "FAILED", ago(minutes), ago(minutes - 1), FAILURE_REASONS[n % FAILURE_REASONS.length]!);
+      }
+    });
+
+    if (ti % 5 === 0) {
+      const free = map.seats.find((x) => x.state === "free");
+      if (free) {
+        const n = ti * 10 + 9;
+        const reason = CANCEL_REASONS[(ti / 5) % CANCEL_REASONS.length]!;
+        const createdMs = Math.min(departure - 3 * 86_400_000, nowMs - 3 * 3_600_000);
+        const b = create(free.code, reason === "PLATFORM" ? "counter" : "online", "cancelled", "pending", new Date(createdMs).toISOString(), n);
+        b.cancelReason = reason;
+        b.cancelledAt = new Date(createdMs + (reason === "EXPIRED" ? 30 : 120) * 60_000).toISOString();
+      }
+    }
+  });
+
+  // Anomalies: the first two pending payments are stuck, the second completed one has the wrong amount,
+  // the third completed one has lost its ticket.
+  const bookingOf = (id: string) => store.bookings.find((b) => b.id === id)!;
+  const pendingTx = store.transactions.filter((t) => t.status === "PENDING");
+  STUCK_AGES_MINUTES.forEach((minutes, k) => {
+    const t = pendingTx[k]!;
+    t.createdAt = ago(minutes);
+    bookingOf(t.bookingId).createdAt = ago(minutes + 1);
+  });
+  const completed = store.transactions.filter((t) => t.status === "COMPLETED");
+  completed[1]!.amount -= 500;
+  const orphan = bookingOf(completed[2]!.bookingId);
+  orphan.ticketIssued = false;
+  store.tickets = store.tickets.filter((t) => t.bookingId !== orphan.id);
+
+  // Scenario passengers (counter bookings): one cancellable, one with a payment in progress, one paid.
+  const txsOf = (id: string) => store.transactions.filter((t) => t.bookingId === id);
+  const counter = store.bookings.filter((b) => b.channel === "counter" && b.status === "confirmed");
+  counter.find((b) => b.paymentStatus === "pending" && txsOf(b.id).length === 0)!.passengerName = SCENARIO_NAMES.cancellable;
+  counter.find((b) =>
+    b.paymentStatus === "pending"
+    && txsOf(b.id).some((t) => t.status === "PENDING" && Date.parse(t.createdAt) > nowMs - 30 * 60_000),
+  )!.passengerName = SCENARIO_NAMES.inProgress;
+  counter.find((b) =>
+    b.paymentStatus === "paid" && b.ticketIssued && txsOf(b.id).every((t) => t.amount === b.amount),
+  )!.passengerName = SCENARIO_NAMES.paid;
 }
