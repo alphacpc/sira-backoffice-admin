@@ -6,10 +6,11 @@ describe("nav", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1 to lot 5 pages as implemented", () => {
+  it("marks only lot 1 to lot 6 pages as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
     expect(done).toEqual([
-      "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/compagnies", "/compagnies/kyc",
+      "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/clients/avis", "/clients/comptes",
+      "/clients/fidelite", "/colis", "/compagnies", "/compagnies/kyc",
       "/facturation/abonnements", "/facturation/factures", "/facturation/impayes", "/facturation/paiements",
       "/flotte/bus", "/flotte/flottes", "/flotte/fournisseurs", "/flotte/gares", "/flotte/lignes",
       "/flotte/maintenance", "/flotte/plans-de-sieges", "/flotte/trajets",
@@ -101,5 +102,20 @@ describe("lot 5 breadcrumbs", () => {
     expect(labelForSegment("reservations")).toBe("Réservations");
     expect(labelForSegment("en-ligne")).toBe("Libre-service en ligne");
     expect(labelForSegment("moyens-de-paiement")).toBe("Moyens de paiement");
+  });
+});
+
+describe("lot 6 breadcrumbs", () => {
+  it("links the parent list of parcel, customer and review details, nothing else under clients", () => {
+    expect(isLinkablePath("/colis/abc")).toBe(true);
+    expect(isLinkablePath("/clients/comptes/abc")).toBe(true);
+    expect(isLinkablePath("/clients/avis/abc")).toBe(true);
+    expect(isLinkablePath("/clients/fidelite")).toBe(true);
+    expect(isLinkablePath("/clients")).toBe(false);
+  });
+  it("labels the client segments with their accents", () => {
+    expect(labelForSegment("fidelite")).toBe("Fidélité");
+    expect(labelForSegment("comptes")).toBe("Comptes");
+    expect(labelForSegment("avis")).toBe("Avis");
   });
 });

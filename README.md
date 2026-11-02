@@ -38,7 +38,11 @@ Connexion de démonstration : `admin@sira.app` / `sira-demo`, puis le code `1234
 
 Huit écrans : réservations (filtres canal, paiement, statut ; détail avec chronologie et billets), paiements voyageurs (avec les incohérences détectées : paiement bloqué, montant différent, billet manquant), billets (détail avec scans), moyens de paiement et tableau de bord du libre-service en ligne (indicateurs et réservations proches de l'expiration). Une seule action : « Annuler la réservation » (motif obligatoire).
 
-## Limites connues (lots 1 à 5)
+## Lot 6 : colis et clients
+
+Sept écrans : colis (filtres de statut, détail avec itinéraire et historique), comptes clients (détail avec fidélité, parrainage et avis), programmes de fidélité et avis clients (filtres de statut, détail). Deux actions : « Déclarer le colis perdu » (motif obligatoire, colis en transit ou au hub uniquement) et « Ignorer l'avis » (motif obligatoire, avis en attente ou examiné). Le téléphone d'un destinataire est masqué ; sa révélation est une Server Action journalisée (sans la valeur).
+
+## Limites connues (lots 1 à 6)
 
 - Authentification et TOTP simulés (le rôle administrateur plateforme et le TOTP réels sont des prérequis backend).
 - État en mémoire : il est réinitialisé à chaque redémarrage du serveur.
@@ -52,7 +56,8 @@ Huit écrans : réservations (filtres canal, paiement, statut ; détail avec chr
 - L'équipage est un registre du backoffice sans compte, sans e-mail ni téléphone (côté plateforme, les affectations pointent des employés de `hr-service`) ; il n'existe pas de fiche employé vers laquelle le lier.
 - Les états des sièges sont figés par la graine (pas de réservation en direct) ; aucune alerte d'échéance automatique, pas de GPS ni de suivi en temps réel.
 - Ventes : pas de remboursement ni de reprise d'un paiement bloqué (le backend n'en a pas : une transaction `PENDING` reste bloquée jusqu'à intervention en base) ; une réservation payée n'est pas annulable ; l'expiration des réservations en ligne est affichée mais jamais exécutée ; moyens de paiement, billets et scans en lecture seule ; le passager n'a pas de fiche (nom seulement, avec un lien vers le compte pour une réservation en ligne) ; pas de versement aux compagnies ; les incohérences sont calculées à la lecture avec l'horloge du serveur.
-- Les sections autres que Vue 360, Compagnies, Offre, Facturation, Utilisateurs et accès, Flotte, Ventes affichent « Bientôt disponible ».
+- Colis et clients : pas de création ni de modification de colis (le backoffice ne remplace pas le guichet) ; une perte déclarée n'est pas annulable et ne déclenche aucun remboursement ; documents de colis non affichés ; adresse du destinataire absente ; paliers de fidélité affichés tels quels, jamais recalculés ; pas de dépense de points ; un avis ignoré n'est pas restaurable et la plateforme ne répond pas aux avis ; les points sont dérivés des réservations en ligne payées de la graine.
+- Les sections autres que Vue 360, Compagnies, Offre, Facturation, Utilisateurs et accès, Flotte, Ventes, Colis et clients affichent « Bientôt disponible ».
 - Navigation latérale masquée sous 768 px (outil de bureau).
 
 > **Démonstration seulement : identifiants et TOTP simulés, ne jamais déployer ce lot tel quel.**

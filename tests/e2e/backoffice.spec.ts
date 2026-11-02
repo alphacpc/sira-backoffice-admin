@@ -135,7 +135,7 @@ test("the command palette opens with the keyboard and navigates to a company", a
 
 test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await login(page);
-  await page.goto("/colis");
+  await page.goto("/communication/notifications");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
 });
 
@@ -708,6 +708,139 @@ test("the online dashboard shows the indicators and the bookings about to expire
   expect(await page.getByTestId("expiring-row").count()).toBeGreaterThan(0);
 });
 
+test("parcels can be filtered by status and opened with their itinerary and history", async ({ page }) => {
+  await login(page);
+  await page.goto("/colis");
+  await expect(page.getByRole("heading", { name: "Colis" })).toBeVisible();
+  await page.getByRole("link", { name: "Livrés", exact: true }).click();
+  await expect(page).toHaveURL(/statut=DELIVERED/);
+  await page.getByPlaceholder("Rechercher un colis…").fill("Yacine Ndoye");
+  await page.getByRole("row", { name: /Yacine Ndoye/ }).click();
+  await expect(page).toHaveURL(/\/colis\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("parcel-status")).toHaveText("Livré");
+  await page.getByRole("tab", { name: "Itinéraire" }).click();
+  await expect(page.getByRole("link", { name: /→/ }).first()).toBeVisible();
+  await page.getByRole("tab", { name: "Historique" }).click();
+  await expect(page.getByText("Création du colis")).toBeVisible();
+});
+
+test("an in-transit parcel is declared lost with a mandatory reason", async ({ page }) => {
+  await login(page);
+  await page.goto("/colis");
+  await page.getByPlaceholder("Rechercher un colis…").fill("Dior Kébé");
+  await page.getByRole("row", { name: /Dior Kébé/ }).click();
+  await expect(page.getByTestId("parcel-status")).toHaveText("En transit");
+  await page.getByRole("button", { name: "Déclarer le colis perdu" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Confirmer la perte" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Introuvable lors du contrôle au hub");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("parcel-status")).toHaveText("Perdu");
+  await expect(page.getByRole("button", { name: "Déclarer le colis perdu" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Historique" }).click();
+  await expect(page.getByText("Introuvable lors du contrôle au hub")).toBeVisible();
+});
+
+test("a pending parcel cannot be declared lost", async ({ page }) => {
+  await login(page);
+  await page.goto("/colis");
+  await page.getByPlaceholder("Rechercher un colis…").fill("Gorgui Sall");
+  await page.getByRole("row", { name: /Gorgui Sall/ }).click();
+  await expect(page.getByTestId("lost-blocked")).toContainText("Un colis en attente ne peut pas être déclaré perdu");
+  await page.getByRole("button", { name: "Déclarer le colis perdu" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Tentative de test");
+  await dialog.getByRole("button", { name: "Confirmer la perte" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Un colis en attente ne peut pas être déclaré perdu");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByTestId("parcel-status")).toHaveText("En attente");
+});
+
+test("a delivered parcel offers no way to declare it lost", async ({ page }) => {
+  await login(page);
+  await page.goto("/colis?statut=DELIVERED");
+  await page.getByPlaceholder("Rechercher un colis…").fill("Yacine Ndoye");
+  await page.getByRole("row", { name: /Yacine Ndoye/ }).click();
+  await expect(page.getByTestId("parcel-status")).toHaveText("Livré");
+  await expect(page.getByRole("button", { name: "Déclarer le colis perdu" })).toHaveCount(0);
+});
+
+test("a recipient phone is masked until it is revealed on demand", async ({ page }) => {
+  await login(page);
+  await page.goto("/colis?statut=DELIVERED");
+  await page.getByPlaceholder("Rechercher un colis…").fill("Yacine Ndoye");
+  await page.getByRole("row", { name: /Yacine Ndoye/ }).click();
+  await expect(page.getByTestId("masked-phone")).toHaveText(/^\+221•+\d{2}$/);
+  await page.getByRole("button", { name: "Révéler la donnée" }).click();
+  await expect(page.getByTestId("masked-phone")).toHaveText(/^\+2217713\d{5}$/);
+  await page.getByRole("button", { name: "Masquer la donnée" }).click();
+  await expect(page.getByTestId("masked-phone")).toHaveText(/^\+221•+\d{2}$/);
+});
+
+test("customer accounts list the four clients and open their loyalty, sponsorship and reviews", async ({ page }) => {
+  await login(page);
+  await page.goto("/clients/comptes");
+  await expect(page.getByRole("heading", { name: "Comptes clients" })).toBeVisible();
+  await expect(page.getByText("4 résultat(s)")).toBeVisible();
+  await page.getByRole("row", { name: /Aïssatou Sarr/ }).click();
+  await expect(page).toHaveURL(/\/clients\/comptes\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("customer-kind")).toHaveText("Particulier");
+  await page.getByRole("tab", { name: "Fidélité" }).click();
+  await expect(page.getByTestId("loyalty-total")).toHaveText(/^\d[\d\s  ]* pts$/);
+  await page.getByRole("tab", { name: "Parrainage" }).click();
+  await expect(page.getByTestId("sponsorship-row")).toHaveCount(2);
+  await page.getByRole("tab", { name: "Avis" }).click();
+  await expect(page.getByRole("link", { name: /\S/ }).first()).toBeVisible();
+
+  await page.goto("/clients/comptes");
+  await page.getByRole("row", { name: /Ndèye Diouf/ }).click();
+  await page.getByRole("tab", { name: "Parrainage" }).click();
+  await expect(page.getByTestId("sponsored-by")).toContainText("Aïssatou Sarr");
+
+  await page.goto("/clients/comptes");
+  await page.getByRole("row", { name: /Lamine Camara/ }).click();
+  await expect(page.getByTestId("customer-kind")).toHaveText("Entreprise");
+});
+
+test("loyalty programs are listed with one inactive program", async ({ page }) => {
+  await login(page);
+  await page.goto("/clients/fidelite");
+  await expect(page.getByRole("heading", { name: "Fidélité" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Inactif/ }).first()).toBeVisible();
+  await expect(page.getByRole("row", { name: /Fidélité .*Actif/ }).first()).toBeVisible();
+});
+
+test("a pending review is ignored with a mandatory reason", async ({ page }) => {
+  await login(page);
+  await page.goto("/clients/avis?statut=PENDING");
+  await page.getByPlaceholder("Rechercher un avis…").fill("Climatisation en panne");
+  await page.getByRole("row", { name: /Climatisation en panne pendant le trajet/ }).click();
+  await expect(page.getByTestId("feedback-status")).toHaveText("En attente");
+  await page.getByRole("button", { name: "Ignorer l'avis" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Ignorer cet avis" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Avis hors sujet signalé par la compagnie");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("feedback-status")).toHaveText("Ignoré");
+  await expect(page.getByRole("button", { name: "Ignorer l'avis" })).toHaveCount(0);
+  await expect(page.getByTestId("ignore-blocked")).toContainText("Cet avis est déjà traité");
+});
+
+test("a resolved review shows the company's response and cannot be ignored", async ({ page }) => {
+  await login(page);
+  await page.goto("/clients/avis?statut=RESOLVED");
+  await page.getByPlaceholder("Rechercher un avis…").fill("Service impeccable");
+  await page.getByRole("row", { name: /Service impeccable au guichet/ }).click();
+  await expect(page.getByTestId("feedback-status")).toHaveText("Résolu");
+  await expect(page.getByText("Merci pour votre retour, nous en avons tenu compte.")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Ignorer l'avis" })).toHaveCount(0);
+  await expect(page.getByTestId("ignore-blocked")).toContainText("Cet avis est déjà traité");
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
@@ -733,10 +866,13 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   const bookingPath = await detailPath("/ventes/reservations", "Coumba", "Rechercher une réservation…", /Coumba Lô/);
   const transactionPath = await detailPath("/ventes/paiements", "Samba", "Rechercher un paiement…", /Samba Kébé/);
   const ticketPath = await detailPath("/ventes/billets", "Coumba", "Rechercher un billet…", /Coumba Lô/);
+  const parcelPath = await detailPath("/colis", "Yacine", "Rechercher un colis…", /Yacine Ndoye/);
+  const customerPath = await detailPath("/clients/comptes", "Aïssatou", "Rechercher un client…", /Aïssatou Sarr/);
+  const feedbackPath = await detailPath("/clients/avis", "Service impeccable", "Rechercher un avis…", /Service impeccable au guichet/);
 
   const CONTACT_EMAIL = /contact@[a-z0-9-]+\.sn/;
   const ANY_SN_EMAIL = /[a-z0-9._-]+@[a-z0-9-]+\.sn/;
-  const PHONES = [/\+2217712\d{5}/, /\+2217865\d{5}/];
+  const PHONES = [/\+2217712\d{5}/, /\+2217865\d{5}/, /\+2217713\d{5}/];
   // Seed session addresses start with 41.82 or 196.207 and never end in 0: only a.b.c.0 may appear.
   const FULL_IP = /\b(?:41\.82|196\.207)\.\d{1,3}\.[1-9]\d{0,2}\b/;
   const paths = [
@@ -756,6 +892,9 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     "/ventes/reservations", "/ventes/reservations?canal=online", "/ventes/reservations?statut=cancelled", bookingPath,
     `${bookingPath}?onglet=chronologie`, "/ventes/paiements", "/ventes/paiements?anomalie=oui", transactionPath,
     "/ventes/billets", ticketPath, "/ventes/moyens-de-paiement", "/ventes/en-ligne",
+    "/colis", "/colis?statut=LOST", parcelPath, `${parcelPath}?onglet=itineraire`, `${parcelPath}?onglet=historique`,
+    "/clients/comptes", customerPath, `${customerPath}?onglet=fidelite`, `${customerPath}?onglet=parrainage`,
+    "/clients/fidelite", "/clients/avis", "/clients/avis?statut=PENDING", feedbackPath,
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
