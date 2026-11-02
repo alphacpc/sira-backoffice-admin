@@ -135,7 +135,7 @@ test("the command palette opens with the keyboard and navigates to a company", a
 
 test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await login(page);
-  await page.goto("/conformite/journal-audit");
+  await page.goto("/supervision/services");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
 });
 
@@ -973,6 +973,178 @@ test("a schedule that was already sent cannot be cancelled", async ({ page }) =>
   await expect(page.getByRole("row", { name: /Bilan de rentrée.*Envoyée/ })).toBeVisible();
 });
 
+test("the audit trail is read-only, filterable and shows a before and after table", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/journal-audit");
+  await expect(page.getByRole("heading", { name: "Journal d'audit" })).toBeVisible();
+  await expect(page.getByTestId("audit-readonly")).toContainText("lecture seule");
+  await page.getByRole("link", { name: "Modification", exact: true }).click();
+  await expect(page).toHaveURL(/action=UPDATE/);
+  await page.getByPlaceholder("Rechercher dans le journal…").fill("Company");
+  await page.getByRole("row", { name: /Modification.*Company/ }).first().click();
+  await expect(page).toHaveURL(/\/conformite\/journal-audit\/[0-9a-f-]+$/);
+  await expect(page.getByRole("columnheader", { name: "Avant" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Après" })).toBeVisible();
+  expect(await page.getByTestId("audit-change").count()).toBeGreaterThan(0);
+  await expect(page.locator('[data-testid="audit-change"][data-changed="true"]').first()).toBeVisible();
+});
+
+test("login lines of the audit trail carry a truncated address only", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/journal-audit?action=LOGIN");
+  await expect(page.getByRole("row", { name: /Connexion/ }).first()).toContainText(/\d+\.\d+\.\d+\.0|—/);
+  await page.goto("/conformite/journal-audit?action=LOGIN_FAILED");
+  await expect(page.getByRole("row", { name: /Échec de connexion/ }).first()).toBeVisible();
+});
+
+test("the data access log is read-only and filterable by type and category", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/acces-donnees");
+  await expect(page.getByRole("heading", { name: "Accès aux données" })).toBeVisible();
+  await page.getByRole("link", { name: "Exports", exact: true }).click();
+  await expect(page).toHaveURL(/type=EXPORT/);
+  await expect(page.getByRole("row", { name: /Export/ }).first()).toBeVisible();
+  await page.goto("/conformite/acces-donnees?categorie=CONSENT");
+  await expect(page.getByText("3 résultat(s)")).toBeVisible();
+});
+
+test("data-subject requests show the legal deadline indicators and the overdue request", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/demandes-rgpd");
+  await expect(page.getByRole("heading", { name: "Demandes RGPD" })).toBeVisible();
+  for (const id of ["dsr-open", "dsr-overdue", "dsr-soon", "dsr-closed"]) await expect(page.getByTestId(id)).toBeVisible();
+  await expect(page.getByTestId("dsr-overdue")).toContainText("1");
+  await page.getByRole("link", { name: "En retard", exact: true }).click();
+  await expect(page).toHaveURL(/retard=oui/);
+  await expect(page.getByRole("row", { name: /Pape Mbaye.*Rectification.*En retard de \d+ j/ })).toBeVisible();
+});
+
+test("a received request is taken in charge", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/demandes-rgpd");
+  await page.getByPlaceholder("Rechercher une demande…").fill("Ndèye Diouf");
+  await page.getByRole("row", { name: /Ndèye Diouf.*Accès/ }).click();
+  await expect(page.getByTestId("dsr-status")).toHaveText("Reçue");
+  await page.getByRole("button", { name: "Prendre en charge" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Confirmer la prise en charge" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("dsr-status")).toHaveText("En cours");
+  await expect(page.getByRole("button", { name: "Prendre en charge" })).toHaveCount(0);
+});
+
+test("an in-progress request is closed with resolution notes and leaves a trace in the journals", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/demandes-rgpd");
+  await page.getByPlaceholder("Rechercher une demande…").fill("Lamine Camara");
+  await page.getByRole("row", { name: /Lamine Camara.*Effacement/ }).click();
+  await expect(page.getByTestId("dsr-status")).toHaveText("En cours");
+  await page.getByRole("button", { name: "Clôturer la demande" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Confirmer la clôture" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Compte et données effacés, journaux d'audit conservés.");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("dsr-status")).toHaveText("Clôturée");
+  await expect(page.getByTestId("dsr-resolution")).toContainText("Compte et données effacés");
+  await expect(page.getByTestId("dsr-closed-note")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Clôturer la demande" })).toHaveCount(0);
+
+  await page.goto("/conformite/journal-audit?action=UPDATE");
+  await page.getByPlaceholder("Rechercher dans le journal…").fill("DataSubjectRequest");
+  await expect(page.getByRole("row", { name: /DataSubjectRequest/ }).first()).toBeVisible();
+  await page.goto("/conformite/acces-donnees?type=MODIFY");
+  await page.getByPlaceholder("Rechercher un accès…").fill("Lamine Camara");
+  await expect(page.getByRole("row", { name: /Lamine Camara.*Modification/ }).first()).toBeVisible();
+});
+
+test("an in-progress request is rejected with resolution notes", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/demandes-rgpd");
+  await page.getByPlaceholder("Rechercher une demande…").fill("Aïssatou Sarr");
+  await page.getByRole("row", { name: /Aïssatou Sarr.*Opposition/ }).click();
+  await expect(page.getByTestId("dsr-status")).toHaveText("En cours");
+  await page.getByRole("button", { name: "Rejeter la demande" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Confirmer le rejet" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Opposition sans fondement légal.");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("dsr-status")).toHaveText("Rejetée");
+});
+
+test("a received request cannot be closed before it is taken in charge", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/demandes-rgpd");
+  await page.getByPlaceholder("Rechercher une demande…").fill("Pape Mbaye");
+  await page.getByRole("row", { name: /Pape Mbaye.*Rectification/ }).click();
+  await page.getByRole("button", { name: "Clôturer la demande" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Tentative de test");
+  await dialog.getByRole("button", { name: "Confirmer la clôture" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Une demande reçue doit d'abord être prise en charge");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByTestId("dsr-status")).toHaveText("Reçue");
+});
+
+test("a closed request offers no action", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/demandes-rgpd?statut=COMPLETED");
+  await page.getByPlaceholder("Rechercher une demande…").fill("Aïssatou Sarr");
+  await page.getByRole("row", { name: /Aïssatou Sarr.*Portabilité/ }).click();
+  await expect(page.getByTestId("dsr-status")).toHaveText("Clôturée");
+  await expect(page.getByTestId("dsr-closed-note")).toBeVisible();
+  for (const name of ["Prendre en charge", "Clôturer la demande", "Rejeter la demande"]) {
+    await expect(page.getByRole("button", { name })).toHaveCount(0);
+  }
+  await expect(page.getByTestId("dsr-countdown")).toHaveText("—");
+});
+
+test("consulting the consents of a user needs an access reason and is logged", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/consentements");
+  await expect(page.getByRole("heading", { name: "Consentements" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Cookies et analyses.*Plateforme/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Sans compagnie \(ancien\)/ })).toBeVisible();
+  await expect(page.getByTestId("consent-entry")).toHaveCount(0);
+  await page.getByLabel("Utilisateur").selectOption({ label: "Aïssatou Sarr (client)" });
+  await page.getByLabel("Motif d'accès").selectOption({ label: "Enquête" });
+  await page.getByRole("button", { name: "Consulter" }).click();
+  await expect(page.getByTestId("consent-entry").first()).toBeVisible();
+  expect(await page.getByTestId("consent-entry").count()).toBeGreaterThan(2);
+  await expect(page.locator('[data-testid="consent-entry"][data-current="true"]').first()).toBeVisible();
+  await expect(page.locator('[data-testid="consent-entry"][data-current="false"]').first()).toBeVisible();
+
+  await page.goto("/conformite/acces-donnees?categorie=CONSENT");
+  await expect(page.getByRole("row", { name: /Aïssatou Sarr.*Enquête/ }).first()).toBeVisible();
+  await expect(page.getByText("4 résultat(s)")).toBeVisible();
+});
+
+test("a company's retention can be shortened within the allowed range", async ({ page }) => {
+  await login(page);
+  await page.goto("/conformite/retention");
+  await expect(page.getByRole("heading", { name: "Rétention des données" })).toBeVisible();
+  await page.getByPlaceholder("Rechercher une compagnie…").fill("Casamance");
+  const row = page.getByRole("row", { name: /Casamance Trans/ });
+  await expect(row).toContainText("730 j (défaut)");
+  await expect(row.getByTestId("retention-pending")).toHaveText("0");
+
+  await row.getByRole("button", { name: "Modifier la durée de Casamance Trans" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Nouvelle durée (jours)").fill("50");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Demande de la compagnie");
+  await dialog.getByRole("button", { name: "Enregistrer la durée" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("La durée doit être un nombre entier de jours compris entre 90 et 3650");
+
+  await dialog.getByLabel("Nouvelle durée (jours)").fill("90");
+  await dialog.getByRole("button", { name: "Enregistrer la durée" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toContainText("90 j");
+  await expect(row).not.toContainText("(défaut)");
+  await expect(row.getByTestId("retention-pending")).not.toHaveText("0");
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
@@ -1003,6 +1175,8 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   const feedbackPath = await detailPath("/clients/avis", "Service impeccable", "Rechercher un avis…", /Service impeccable au guichet/);
   const notificationPath = await detailPath("/communication/notifications", "Réservation confirmée", "Rechercher une notification…", /Réservation confirmée/);
   const campaignPath = await detailPath("/communication/campagnes", "Bilan de rentrée", "Rechercher une campagne…", /Bilan de rentrée/);
+  const auditPath = await detailPath("/conformite/journal-audit", "LOGIN", "Rechercher dans le journal…", /Connexion/);
+  const requestPath = await detailPath("/conformite/demandes-rgpd", "Aïssatou", "Rechercher une demande…", /Aïssatou Sarr.*Portabilité/);
 
   const CONTACT_EMAIL = /contact@[a-z0-9-]+\.sn/;
   const ANY_SN_EMAIL = /[a-z0-9._-]+@[a-z0-9-]+\.sn/;
@@ -1032,6 +1206,10 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     "/communication/notifications", "/communication/notifications?canal=SMS", "/communication/notifications?statut=FAILED", notificationPath,
     "/communication/campagnes", "/communication/campagnes?statut=CANCELLED", campaignPath, `${campaignPath}?onglet=programmations`,
     "/communication/segments", "/communication/messages", "/communication/programmations",
+    "/conformite/journal-audit", "/conformite/journal-audit?action=LOGIN_FAILED", auditPath,
+    "/conformite/acces-donnees", "/conformite/acces-donnees?categorie=CONSENT",
+    "/conformite/demandes-rgpd", "/conformite/demandes-rgpd?retard=oui", requestPath,
+    "/conformite/consentements", "/conformite/retention",
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
@@ -1077,4 +1255,34 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   await expect(page.getByTestId("crew-DRIVER")).toHaveText("Babacar Seck");
   await page.goto(tripPath);
   await expect(page.getByRole("list", { name: "Plan de sièges" }).locator("[data-seat]")).toHaveCount(29);
+  // The compliance pages are really rendered in the production build, and hold back seeded sensitive strings.
+  await page.goto("/conformite/journal-audit");
+  await expect(page.getByRole("heading", { name: "Journal d'audit" })).toBeVisible();
+  await expect(page.getByTestId("audit-readonly")).toBeVisible();
+  await expect(page.getByRole("cell", { name: /^\d+\.\d+\.\d+\.0$/ }).first()).toBeVisible();
+  await page.goto(auditPath);
+  await expect(page.getByRole("columnheader", { name: "Avant" }).or(page.getByText("Cette action n'enregistre aucun état."))).toBeVisible();
+  await page.goto("/conformite/acces-donnees");
+  await expect(page.getByRole("heading", { name: "Accès aux données" })).toBeVisible();
+  expect(await page.getByRole("row").count()).toBeGreaterThan(1);
+  await page.goto("/conformite/demandes-rgpd");
+  await expect(page.getByRole("heading", { name: "Demandes RGPD" })).toBeVisible();
+  await expect(page.getByTestId("dsr-overdue")).toBeVisible();
+  await page.goto(requestPath);
+  await expect(page.getByTestId("dsr-status")).toBeVisible();
+  await page.goto("/conformite/consentements");
+  await expect(page.getByRole("heading", { name: "Consentements" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Cookies et analyses.*Plateforme/ })).toBeVisible();
+  await page.goto("/conformite/retention");
+  await expect(page.getByRole("heading", { name: "Rétention des données" })).toBeVisible();
+  expect(await page.getByRole("row").count()).toBeGreaterThan(1);
+  // The default seeded address of a line without session must never be sent whole, in the list or the detail.
+  for (const path of ["/conformite/journal-audit", "/conformite/journal-audit?action=LOGIN", auditPath]) {
+    const raw = await (await page.request.get(path)).text();
+    expect(raw, `raw ${path} seeded address`).not.toContain("196.207.12.40");
+  }
+  // The consent history of a user is only returned after a consultation with an access reason.
+  const consentRaw = await (await page.request.get("/conformite/consentements")).text();
+  for (const fragment of ["consent-entry", "v1.0", "v1.1"]) expect(consentRaw, `consents ${fragment}`).not.toContain(fragment);
+  await expect(page.getByTestId("consent-entry")).toHaveCount(0);
 });

@@ -6,12 +6,13 @@ describe("nav", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1 to lot 7 pages as implemented", () => {
+  it("marks only lot 1 to lot 8 pages as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
     expect(done).toEqual([
       "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/clients/avis", "/clients/comptes",
       "/clients/fidelite", "/colis", "/communication/campagnes", "/communication/messages", "/communication/notifications",
       "/communication/programmations", "/communication/segments", "/compagnies", "/compagnies/kyc",
+      "/conformite/acces-donnees", "/conformite/consentements", "/conformite/demandes-rgpd", "/conformite/journal-audit", "/conformite/retention",
       "/facturation/abonnements", "/facturation/factures", "/facturation/impayes", "/facturation/paiements",
       "/flotte/bus", "/flotte/flottes", "/flotte/fournisseurs", "/flotte/gares", "/flotte/lignes",
       "/flotte/maintenance", "/flotte/plans-de-sieges", "/flotte/trajets",
@@ -131,5 +132,21 @@ describe("lot 7 breadcrumbs", () => {
   it("labels the communication segments", () => {
     expect(labelForSegment("communication")).toBe("Communication");
     expect(labelForSegment("programmations")).toBe("Programmations");
+  });
+});
+
+describe("lot 8 breadcrumbs", () => {
+  it("links the parent list of audit line and request details, nothing else under compliance", () => {
+    expect(isLinkablePath("/conformite/journal-audit/abc")).toBe(true);
+    expect(isLinkablePath("/conformite/demandes-rgpd/abc")).toBe(true);
+    expect(isLinkablePath("/conformite/retention")).toBe(true);
+    expect(isLinkablePath("/conformite")).toBe(false);
+  });
+  it("labels the compliance segments with their accents", () => {
+    expect(labelForSegment("journal-audit")).toBe("Journal d'audit");
+    expect(labelForSegment("acces-donnees")).toBe("Accès aux données");
+    expect(labelForSegment("demandes-rgpd")).toBe("Demandes RGPD");
+    expect(labelForSegment("consentements")).toBe("Consentements");
+    expect(labelForSegment("retention")).toBe("Rétention");
   });
 });

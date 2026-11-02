@@ -59,11 +59,11 @@ export const NAV: NavSection[] = [
     { label: "Programmations", href: "/communication/programmations", implemented: true },
   ] },
   { label: "Conformité et audit", items: [
-    todo("Journal d'audit", "/conformite/journal-audit"),
-    todo("Accès aux données", "/conformite/acces-donnees"),
-    todo("Demandes RGPD", "/conformite/demandes-rgpd"),
-    todo("Consentements", "/conformite/consentements"),
-    todo("Rétention", "/conformite/retention"),
+    { label: "Journal d'audit", href: "/conformite/journal-audit", implemented: true },
+    { label: "Accès aux données", href: "/conformite/acces-donnees", implemented: true },
+    { label: "Demandes RGPD", href: "/conformite/demandes-rgpd", implemented: true },
+    { label: "Consentements", href: "/conformite/consentements", implemented: true },
+    { label: "Rétention", href: "/conformite/retention", implemented: true },
   ] },
   { label: "Supervision", items: [
     todo("Services", "/supervision/services"),
@@ -94,6 +94,8 @@ const SEGMENT_LABELS: Record<string, string> = {
   recherche: "Recherche", roles: "Rôles", bus: "Bus", flottes: "Flottes", gares: "Gares", lignes: "Lignes",
   trajets: "Trajets", "plans-de-sieges": "Plans de sièges", maintenance: "Maintenance", fournisseurs: "Fournisseurs",
   reservations: "Réservations", fidelite: "Fidélité", "en-ligne": "Libre-service en ligne",
+  "journal-audit": "Journal d'audit", "acces-donnees": "Accès aux données", "demandes-rgpd": "Demandes RGPD",
+  consentements: "Consentements", retention: "Rétention",
 };
 
 export function labelForSegment(segment: string): string {
@@ -108,6 +110,7 @@ const ROUTE_PREFIXES = [
   "/ventes/reservations", "/ventes/paiements", "/ventes/billets",
   "/colis", "/clients/comptes", "/clients/avis",
   "/communication/notifications", "/communication/campagnes",
+  "/conformite/journal-audit", "/conformite/demandes-rgpd",
 ];
 
 /** True when a breadcrumb path leads to a real screen (a nav item or a company route), so it may be a link. */
