@@ -1,7 +1,7 @@
 import { formatMoney } from "@/lib/format";
 import type { Tone } from "@/components/data/status-badge";
 import type {
-  AnomalyKind, BookingChannel, BookingPaymentStatus, BookingStatus, CancelReason, PaymentMethodKind, TicketStatus,
+  AdminStatus, AnomalyKind, BookingChannel, BookingPaymentStatus, BookingStatus, CancelReason, PaymentMethodKind, TicketStatus,
   TransactionStatus,
   BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, ImpactScope, Incident, IncidentStatus, Invoice, KycDocumentStatus,
   MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
@@ -416,3 +416,10 @@ export const incidentStatusBadge = (s: IncidentStatus): Badge =>
 
 export const impactScopeLabel = (s: ImpactScope): string =>
   ({ SINGLE_COMPANY: "Une compagnie", MULTI_COMPANY: "Plusieurs compagnies", PLATFORM_WIDE: "Toute la plateforme" })[s];
+
+export const adminStatusBadge = (s: AdminStatus): Badge =>
+  pick({
+    active: { label: "Actif", tone: "success" },
+    suspended: { label: "Suspendu", tone: "danger" },
+    invited: { label: "Invité", tone: "info" },
+  }, s);

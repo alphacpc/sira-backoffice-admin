@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { impactScopeLabel, incidentStatusBadge } from "@/lib/labels";
+import { adminStatusBadge, impactScopeLabel, incidentStatusBadge } from "@/lib/labels";
 import {
   billingCycleLabel, changeKindLabel, featureKindLabel, kycTypeStatusBadge, paymentStatusBadge,
   planStatusBadge, urgencyBadge,
@@ -333,5 +333,13 @@ describe("monitoring labels", () => {
     expect(impactScopeLabel("SINGLE_COMPANY")).toBe("Une compagnie");
     expect(impactScopeLabel("MULTI_COMPANY")).toBe("Plusieurs compagnies");
     expect(impactScopeLabel("PLATFORM_WIDE")).toBe("Toute la plateforme");
+  });
+});
+
+describe("admin status badge", () => {
+  it("labels the three administrator statuses", () => {
+    expect(adminStatusBadge("active")).toEqual({ label: "Actif", tone: "success" });
+    expect(adminStatusBadge("suspended")).toEqual({ label: "Suspendu", tone: "danger" });
+    expect(adminStatusBadge("invited")).toEqual({ label: "Invité", tone: "info" });
   });
 });
