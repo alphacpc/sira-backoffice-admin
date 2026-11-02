@@ -1,3 +1,4 @@
+import { addActivity } from "@/lib/repos/activity";
 import { getStore } from "@/lib/repos/store";
 import type {
   AppNotification, CampaignObjective, CampaignStatus, MarketingCampaign, MarketingMessage, MarketingMessageStatus,
@@ -193,6 +194,13 @@ export const notificationsRepo = {
       recipientUserId: n.sentTo, entity: entityLink(n),
     };
   },
+
+  /** Journals the reveal of a notification's content; the content itself is never written to the log. */
+  logReveal(id: string, actor = "admin@sira.app", now: Date = new Date()): void {
+    const n = getStore().notifications.find((x) => x.id === id);
+    if (!n) throw new Error("Notification introuvable");
+    addActivity(n.companyId, actor, `Donnée personnelle révélée : contenu de la notification ${n.notificationCode}`, now);
+  },
 };
 
 export const campaignsRepo = {
@@ -225,6 +233,29 @@ export const campaignsRepo = {
       cancelBlockedReason: campaignCancelBlockReason(campaign),
     };
   },
+
+  /**
+   * Cancels a campaign and, with it, every schedule still pending. Guards, in this order: campaign exists, reason,
+   * not already cancelled, neither running nor completed.
+   */
+  cancel(campaignId: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): MarketingCampaign {
+    const s = getStore();
+    const campaign = s.marketingCampaigns.find((c) => c.id === campaignId);
+    if (!campaign) throw new Error("Campagne introuvable");
+    const motif = reason.trim();
+    if (!motif) throw new Error("Un motif est obligatoire");
+    const blocked = campaignCancelBlockReason(campaign);
+    if (blocked) throw new Error(blocked);
+    campaign.status = "CANCELLED";
+    campaign.updatedAt = now.toISOString();
+    const pending = s.marketingSchedules.filter((x) => x.campaignId === campaign.id && x.status === "PENDING");
+    for (const schedule of pending) schedule.status = "CANCELLED";
+    addActivity(
+      campaign.companyId, actor,
+      `Campagne « ${campaign.name} » annulée (${pending.length} programmation(s) annulée(s)). Motif : ${motif}`, now,
+    );
+    return campaign;
+  },
 };
 
 export const segmentsRepo = {
@@ -251,5 +282,19 @@ export const schedulesRepo = {
       .filter((x) => (!filter.companyId || x.companyId === filter.companyId) && (!filter.status || x.status === filter.status))
       .sort(newest((x) => x.scheduledAt))
       .map(scheduleRow);
+  },
+
+  /** Cancels a schedule. Guards, in this order: schedule exists, reason, still pending. */
+  cancel(scheduleId: string, reason: string, actor = "admin@sira.app", now: Date = new Date()): MarketingSchedule {
+    const s = getStore();
+    const schedule = s.marketingSchedules.find((x) => x.id === scheduleId);
+    if (!schedule) throw new Error("Programmation introuvable");
+    const motif = reason.trim();
+    if (!motif) throw new Error("Un motif est obligatoire");
+    if (schedule.status !== "PENDING") throw new Error("Cette programmation n'est plus en attente");
+    schedule.status = "CANCELLED";
+    const campaignName = s.marketingCampaigns.find((c) => c.id === schedule.campaignId)?.name ?? "—";
+    addActivity(schedule.companyId, actor, `Programmation de la campagne « ${campaignName} » annulée. Motif : ${motif}`, now);
+    return schedule;
   },
 };
