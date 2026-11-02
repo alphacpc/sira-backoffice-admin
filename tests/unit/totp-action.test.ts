@@ -13,7 +13,7 @@ vi.mock("next/navigation", () => ({ redirect: vi.fn() }));
 import { login, verifyTotp } from "@/app/(auth)/actions";
 import { getSecret } from "@/lib/auth/constants";
 import { verifyToken } from "@/lib/auth/token";
-import { DEMO_ID, DEMO_PASSWORD, DEMO_TOTP, PRE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
+import { DEMO_ID, DEMO_PASSWORD, DEMO_TOTP, MAX_TOTP_ATTEMPTS, PRE_COOKIE, SESSION_COOKIE } from "@/lib/auth/constants";
 
 beforeEach(async () => {
   store.clear();
@@ -28,7 +28,24 @@ describe("verifyTotp attempt limit", () => {
     expect(await verifyTotp("000000")).toEqual({
       ok: false, error: "Trop de tentatives, reconnecte-toi",
     });
-    expect(store.has(PRE_COOKIE)).toBe(false);
+    expect(store.has(PRE_COOKIE)).toBe(true);
+    const locked = (await verifyToken(store.get(PRE_COOKIE)!, getSecret()))!;
+    expect(locked.attempts).toBe(MAX_TOTP_ATTEMPTS);
+  });
+  it("refuses even the correct code once locked, and sets no session", async () => {
+    for (let i = 0; i < 5; i++) await verifyTotp("000000");
+    expect(await verifyTotp(DEMO_TOTP)).toEqual({
+      ok: false, error: "Trop de tentatives, reconnecte-toi",
+    });
+    expect(store.has(SESSION_COOKIE)).toBe(false);
+  });
+  it("a fresh login after lockout resets the attempts", async () => {
+    for (let i = 0; i < 5; i++) await verifyTotp("000000");
+    await login({ identifiant: DEMO_ID, motDePasse: DEMO_PASSWORD });
+    const fresh = (await verifyToken(store.get(PRE_COOKIE)!, getSecret()))!;
+    expect(fresh.attempts).toBeUndefined();
+    expect(await verifyTotp(DEMO_TOTP)).toEqual({ ok: true });
+    expect(store.has(SESSION_COOKIE)).toBe(true);
   });
   it("still succeeds with the right code before the limit", async () => {
     await verifyTotp("000000");

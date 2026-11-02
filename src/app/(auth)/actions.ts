@@ -24,6 +24,7 @@ function cookieOptions(maxAge: number) {
   };
 }
 
+const LOCKED_ERROR = "Trop de tentatives, reconnecte-toi";
 const now = () => Math.floor(Date.now() / 1000);
 
 export async function login(input: { identifiant: string; motDePasse: string }): Promise<Result> {
@@ -44,16 +45,15 @@ export async function verifyTotp(code: string): Promise<Result> {
   const pre = jar.get(PRE_COOKIE)?.value;
   const payload = pre ? await verifyToken(pre, getSecret()) : null;
   if (!payload || payload.stage !== "pre") return { ok: false, error: "Session de connexion expirée" };
+  if ((payload.attempts ?? 0) >= MAX_TOTP_ATTEMPTS) return { ok: false, error: LOCKED_ERROR };
   if (!totpSchema.safeParse(code).success || code !== DEMO_TOTP) {
     const attempts = (payload.attempts ?? 0) + 1;
-    if (attempts >= MAX_TOTP_ATTEMPTS) {
-      jar.delete(PRE_COOKIE);
-      return { ok: false, error: "Trop de tentatives, reconnecte-toi" };
-    }
+    // The cookie is kept (re-signed) even when locked: deleting it re-renders the verification page,
+    // which redirects and races with the client showing the message; it also lets a client replay an older cookie.
     const remaining = Math.max(1, payload.exp - now());
     const bumped = await signToken({ ...payload, attempts }, getSecret());
     jar.set(PRE_COOKIE, bumped, cookieOptions(remaining));
-    return { ok: false, error: "Code incorrect" };
+    return { ok: false, error: attempts >= MAX_TOTP_ATTEMPTS ? LOCKED_ERROR : "Code incorrect" };
   }
   const token = await signToken(
     { sub: payload.sub, stage: "full", exp: now() + SESSION_TTL_S }, getSecret(),
