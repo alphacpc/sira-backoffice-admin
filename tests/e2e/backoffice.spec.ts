@@ -135,7 +135,7 @@ test("the command palette opens with the keyboard and navigates to a company", a
 
 test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await login(page);
-  await page.goto("/parametres/profil");
+  await page.goto("/recherche");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
 });
 
@@ -1292,6 +1292,193 @@ test("product usage shows the derived events and the daily chart", async ({ page
   await expect(page.getByRole("row", { name: /parcel_created.*Colis/ })).toBeVisible();
 });
 
+test("the profile shows the account, the TOTP state and the current session", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/profil");
+  await expect(page.getByRole("heading", { name: "Mon profil" })).toBeVisible();
+  await expect(page.getByTestId("profile-identifier")).toHaveText("admin@sira.app");
+  await expect(page.getByTestId("profile-totp")).toContainText("Activé depuis le");
+  await expect(page.getByTestId("profile-codes")).toHaveText("8");
+  const current = page.getByRole("row", { name: /Session courante/ });
+  await expect(current).toBeVisible();
+  await expect(current.getByRole("button", { name: /Révoquer/ })).toHaveCount(0);
+  await expect(page.getByRole("table")).not.toContainText(/\b(?:41\.82|196\.207)\.\d{1,3}\.[1-9]\d{0,2}\b/);
+});
+
+test("the profile name can be changed", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/profil");
+  await page.getByRole("button", { name: "Modifier mon nom" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Nom affiché").fill("n".repeat(101));
+  await dialog.getByRole("button", { name: "Enregistrer le nom" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Le nom est trop long (100 caractères maximum)");
+  await dialog.getByLabel("Nom affiché").fill("Administrateur Sira E2E");
+  await dialog.getByRole("button", { name: "Enregistrer le nom" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("profile-name")).toHaveText("Administrateur Sira E2E");
+  await page.getByRole("button", { name: "Modifier mon nom" }).click();
+  await page.getByRole("dialog").getByLabel("Nom affiché").fill("Administrateur Sira");
+  await page.getByRole("dialog").getByRole("button", { name: "Enregistrer le nom" }).click();
+  await expect(page.getByTestId("profile-name")).toHaveText("Administrateur Sira");
+});
+
+test("recovery codes are shown once after regenerating them", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/profil");
+  await page.getByRole("button", { name: "Régénérer mes codes de récupération" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Régénérer les codes" }).click();
+  await expect(page.getByRole("dialog", { name: "Nouveaux codes de récupération" })).toBeVisible();
+  await expect(page.getByTestId("recovery-code")).toHaveCount(8);
+  await expect(page.getByTestId("recovery-code").first()).toHaveText(/^[0-9A-F]{4}-[0-9A-F]{4}$/);
+  await page.getByRole("button", { name: "J'ai noté mes codes" }).click();
+  await expect(page.getByTestId("recovery-code")).toHaveCount(0);
+  await page.reload();
+  await expect(page.getByTestId("recovery-code")).toHaveCount(0);
+  await expect(page.getByTestId("profile-codes")).toHaveText("8");
+});
+
+test("own sessions can be revoked one by one or all at once", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/profil");
+  const android = page.getByRole("row", { name: /Application Android/ });
+  await android.getByRole("button", { name: /Révoquer la session/ }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Révoquer la session" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(android).toContainText("Révoquée");
+  await expect(android).toContainText("Révoquée par le titulaire");
+
+  await page.getByRole("button", { name: "Révoquer toutes les autres sessions" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Révoquer les sessions" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /Firefox · Ubuntu/ })).toContainText("Révoquée");
+  await expect(page.getByRole("button", { name: "Révoquer toutes les autres sessions" })).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /Session courante/ })).toContainText("Active");
+});
+
+test("the team lists the administrators and filters by status", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/equipe-admin");
+  await expect(page.getByRole("heading", { name: "Équipe admin" })).toBeVisible();
+  for (const id of ["admin@sira.app", "moustapha.ndiaye@sira.app", "ibrahima.sow@sira.app", "fatou.diallo@sira.app", "seynabou.kane@sira.app", "awa.fall@sira.app"]) {
+    await expect(page.getByRole("row", { name: new RegExp(id.replace(/\./g, "\\.")) })).toBeVisible();
+  }
+  const self = page.getByRole("row", { name: /admin@sira\.app/ }).first();
+  await expect(self.getByRole("button")).toHaveCount(0);
+  const awa = page.getByRole("row", { name: /awa\.fall@sira\.app/ });
+  await expect(awa).toContainText("Invité");
+  await expect(awa).toContainText("Non enrôlé");
+  await page.getByRole("link", { name: "Invités", exact: true }).click();
+  await expect(page).toHaveURL(/statut=invited/);
+  await expect(page.getByRole("row", { name: /awa\.fall@sira\.app/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /fatou\.diallo@sira\.app/ })).toHaveCount(0);
+  await page.getByRole("link", { name: "Suspendus", exact: true }).click();
+  await expect(page).toHaveURL(/statut=suspended/);
+});
+
+test("inviting an administrator rejects a bad identifier then adds the invitation", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/equipe-admin");
+  await page.getByRole("button", { name: "Inviter un administrateur" }).click();
+  const dialog = page.getByRole("dialog");
+  const send = dialog.getByRole("button", { name: "Envoyer l'invitation" });
+  await expect(send).toBeDisabled();
+  await dialog.getByLabel("Identifiant de connexion").fill("mal formé");
+  await dialog.getByLabel("Nom affiché").fill("Invité E2E");
+  await send.click();
+  await expect(dialog.getByRole("alert")).toHaveText("L'identifiant doit avoir la forme prenom.nom@sira.app");
+  await dialog.getByLabel("Identifiant de connexion").fill("e2e.invite@sira.app");
+  await send.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  const row = page.getByRole("row", { name: /e2e\.invite@sira\.app/ });
+  await expect(row).toContainText("Invité");
+  await expect(row).toContainText("Non enrôlé");
+});
+
+test("suspending an administrator needs a reason", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/equipe-admin");
+  const row = page.getByRole("row", { name: /ibrahima\.sow@sira\.app/ });
+  await expect(row).toContainText("Actif");
+  await row.getByRole("button", { name: /Suspendre/ }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Suspendre le compte" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Départ de l'équipe");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toContainText("Suspendu");
+  await expect(row.getByTestId("admin-sessions")).toHaveText("0");
+  await expect(row.getByRole("button", { name: /Réactiver/ })).toBeVisible();
+});
+
+test("a suspended administrator can be reactivated", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/equipe-admin");
+  const row = page.getByRole("row", { name: /seynabou\.kane@sira\.app/ });
+  await expect(row).toContainText("Suspendu");
+  await row.getByRole("button", { name: /Réactiver/ }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Retour de congé");
+  await dialog.getByRole("button", { name: "Réactiver le compte" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toContainText("Actif");
+});
+
+test("resetting the TOTP of an administrator signs them out", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/equipe-admin");
+  const row = page.getByRole("row", { name: /moustapha\.ndiaye@sira\.app/ });
+  await expect(row.getByTestId("admin-sessions")).toHaveText("1");
+  await row.getByRole("button", { name: /Réinitialiser le TOTP/ }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Téléphone perdu");
+  await dialog.getByRole("button", { name: "Réinitialiser le TOTP" }).click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row).toContainText("Non enrôlé");
+  await expect(row.getByTestId("admin-sessions")).toHaveText("0");
+  await expect(row.getByRole("button", { name: /Réinitialiser le TOTP/ })).toHaveCount(0);
+});
+
+test("revoking the sessions of an administrator needs a reason", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/equipe-admin");
+  const row = page.getByRole("row", { name: /fatou\.diallo@sira\.app/ });
+  await expect(row.getByTestId("admin-sessions")).toHaveText("2");
+  await row.getByRole("button", { name: /Révoquer les sessions/ }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Révoquer les sessions" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Poste partagé");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(row.getByTestId("admin-sessions")).toHaveText("0");
+  await expect(row).toContainText("Actif");
+});
+
+test("the journal shows the indicators and filters by actor, period and data reveals", async ({ page }) => {
+  await login(page);
+  await page.goto("/parametres/journal-backoffice");
+  await expect(page.getByRole("heading", { name: "Journal du backoffice" })).toBeVisible();
+  for (const id of ["journal-entries", "journal-actors", "journal-reveals"]) await expect(page.getByTestId(id)).toBeVisible();
+
+  const ibrahima = "ibrahima.sow%40sira.app";
+  await page.goto(`/parametres/journal-backoffice?acteur=${ibrahima}&jours=90`);
+  await expect(page.getByRole("row", { name: /Type de document KYC désactivé/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Incident déclaré \(Haute\) sur booking-service/ })).toBeVisible();
+  await page.getByRole("link", { name: "30 jours", exact: true }).click();
+  await expect(page).toHaveURL(/jours=30/);
+  await expect(page).toHaveURL(/acteur=ibrahima/);
+  await expect(page.getByRole("row", { name: /Type de document KYC désactivé/ })).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /Incident déclaré \(Haute\) sur booking-service/ })).toBeVisible();
+
+  await page.goto("/parametres/journal-backoffice?acteur=moustapha.ndiaye%40sira.app&revelations=1");
+  await expect(page.getByRole("row", { name: /Donnée personnelle révélée : téléphone de pape\.mbaye/ })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Compagnie suspendue pour impayé/ })).toHaveCount(0);
+  await page.getByRole("link", { name: "Toutes les actions", exact: true }).click();
+  await expect(page.getByRole("row", { name: /Compagnie suspendue pour impayé/ })).toBeVisible();
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
@@ -1361,6 +1548,8 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     "/supervision/services", "/supervision/services?service=notification-service", "/supervision/incidents",
     "/supervision/incidents?statut=RESOLVED", incidentPath, "/supervision/api", "/supervision/api?jours=30",
     "/supervision/usage", "/supervision/usage?jours=30",
+    "/parametres/profil", "/parametres/equipe-admin", "/parametres/equipe-admin?statut=suspended",
+    "/parametres/journal-backoffice", "/parametres/journal-backoffice?jours=30", "/parametres/journal-backoffice?revelations=1",
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
@@ -1461,4 +1650,50 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     await page.goto(path);
     expect(await page.content(), `dom ${path} reportedBy`).not.toContain("admin@sira.app");
   }
+  // The settings pages are really rendered in the production build (an error page cannot pass).
+  await page.goto("/parametres/profil");
+  await expect(page.getByRole("heading", { name: "Mon profil" })).toBeVisible();
+  await expect(page.getByTestId("profile-identifier")).toHaveText("admin@sira.app");
+  await expect(page.getByRole("row", { name: /Session courante/ })).toBeVisible();
+  await page.goto("/parametres/equipe-admin");
+  await expect(page.getByRole("heading", { name: "Équipe admin" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /awa\.fall@sira\.app/ })).toBeVisible();
+  await page.goto("/parametres/equipe-admin?statut=suspended");
+  await expect(page.getByRole("heading", { name: "Équipe admin" })).toBeVisible();
+  for (const path of ["/parametres/journal-backoffice", "/parametres/journal-backoffice?jours=30", "/parametres/journal-backoffice?revelations=1"]) {
+    await page.goto(path);
+    await expect(page.getByRole("heading", { name: "Journal du backoffice" })).toBeVisible();
+    await expect(page.getByTestId("journal-entries")).toBeVisible();
+  }
+  // Seeded full addresses of the backoffice sessions never leave the server (only a.b.c.0 is shown).
+  const BACKOFFICE_IPS = ["41.82.14.23", "196.207.31.8", "41.82.77.54", "196.207.5.19", "41.82.9.120", "196.207.44.67", "41.82.101.3", "196.207.88.201", "41.82.23.15"];
+  for (const path of ["/parametres/profil", "/parametres/equipe-admin", "/parametres/journal-backoffice"]) {
+    const raw = await (await page.request.get(path)).text();
+    await page.goto(path);
+    const rendered = await page.content();
+    for (const ip of BACKOFFICE_IPS) {
+      expect(raw, `raw ${path} ${ip}`).not.toContain(ip);
+      expect(rendered, `dom ${path} ${ip}`).not.toContain(ip);
+    }
+  }
+  await page.goto("/parametres/profil");
+  await expect(page.getByRole("cell", { name: /^(41\.82|196\.207)\.\d{1,3}\.0$/ }).first()).toBeVisible();
+  // Recovery codes: after a regeneration and a dismissal, no code value remains in the page or its payload.
+  await page.getByRole("button", { name: "Régénérer mes codes de récupération" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Régénérer les codes" }).click();
+  await expect(page.getByTestId("recovery-code")).toHaveCount(8);
+  const codes = await page.getByTestId("recovery-code").allTextContents();
+  expect(codes).toHaveLength(8);
+  await page.getByRole("button", { name: "J'ai noté mes codes" }).click();
+  for (const when of ["dismissed", "reloaded"]) {
+    if (when === "reloaded") await page.reload();
+    const rendered = await page.content();
+    const text = await page.locator("body").innerText();
+    for (const code of codes) {
+      expect(rendered, `dom ${when} ${code}`).not.toContain(code.trim());
+      expect(text, `text ${when} ${code}`).not.toContain(code.trim());
+    }
+  }
+  const rawAfter = await (await page.request.get("/parametres/profil")).text();
+  for (const code of codes) expect(rawAfter, `raw ${code}`).not.toContain(code.trim());
 });

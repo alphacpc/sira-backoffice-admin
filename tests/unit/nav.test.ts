@@ -6,7 +6,7 @@ describe("nav", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1 to lot 9 pages as implemented", () => {
+  it("marks only lot 1 to lot 10 pages as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
     expect(done).toEqual([
       "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/clients/avis", "/clients/comptes",
@@ -17,6 +17,7 @@ describe("nav", () => {
       "/flotte/bus", "/flotte/flottes", "/flotte/fournisseurs", "/flotte/gares", "/flotte/lignes",
       "/flotte/maintenance", "/flotte/plans-de-sieges", "/flotte/trajets",
       "/offre/fonctionnalites", "/offre/paliers-partenaires", "/offre/plans", "/offre/types-documents-kyc",
+      "/parametres/equipe-admin", "/parametres/journal-backoffice", "/parametres/profil",
       "/supervision/api", "/supervision/incidents", "/supervision/services", "/supervision/usage",
       "/utilisateurs",
       "/ventes/billets", "/ventes/en-ligne", "/ventes/moyens-de-paiement", "/ventes/paiements", "/ventes/reservations",
@@ -164,5 +165,19 @@ describe("lot 9 breadcrumbs", () => {
     expect(labelForSegment("api")).toBe("Trafic API");
     expect(labelForSegment("usage")).toBe("Usage");
     expect(labelForSegment("incidents")).toBe("Incidents");
+  });
+});
+
+describe("lot 10 breadcrumbs", () => {
+  it("labels the settings segments and links the three pages", () => {
+    expect(labelForSegment("parametres")).toBe("Paramètres");
+    expect(labelForSegment("profil")).toBe("Mon profil");
+    expect(labelForSegment("equipe-admin")).toBe("Équipe admin");
+    expect(labelForSegment("journal-backoffice")).toBe("Journal du backoffice");
+    expect(isLinkablePath("/parametres/profil")).toBe(true);
+    expect(isLinkablePath("/parametres")).toBe(false);
+  });
+  it("keeps the global search as the only unimplemented page", () => {
+    expect(allNavItems().filter((i) => !i.implemented).map((i) => i.href)).toEqual(["/recherche"]);
   });
 });

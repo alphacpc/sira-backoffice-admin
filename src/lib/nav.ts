@@ -72,9 +72,9 @@ export const NAV: NavSection[] = [
     { label: "Usage", href: "/supervision/usage", implemented: true },
   ] },
   { label: "Paramètres", items: [
-    todo("Mon profil", "/parametres/profil"),
-    todo("Équipe admin", "/parametres/equipe-admin"),
-    todo("Journal du backoffice", "/parametres/journal-backoffice"),
+    { label: "Mon profil", href: "/parametres/profil", implemented: true },
+    { label: "Équipe admin", href: "/parametres/equipe-admin", implemented: true },
+    { label: "Journal du backoffice", href: "/parametres/journal-backoffice", implemented: true },
   ] },
 ];
 
@@ -96,6 +96,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   reservations: "Réservations", fidelite: "Fidélité", "en-ligne": "Libre-service en ligne",
   "journal-audit": "Journal d'audit", "acces-donnees": "Accès aux données", "demandes-rgpd": "Demandes RGPD",
   consentements: "Consentements", retention: "Rétention", api: "Trafic API",
+  profil: "Mon profil", "equipe-admin": "Équipe admin", "journal-backoffice": "Journal du backoffice",
 };
 
 export function labelForSegment(segment: string): string {
