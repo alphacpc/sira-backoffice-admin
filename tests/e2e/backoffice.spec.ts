@@ -494,6 +494,56 @@ test("an unknown bus id shows a not-found page", async ({ page }) => {
   await expect(page.getByText("Bus introuvable")).toBeVisible();
 });
 
+test("a trip shows its timetable, its bus crew and a visual seat map with its legend", async ({ page }) => {
+  // Read-only.
+  await login(page);
+  await page.goto("/flotte/trajets?statut=boarding");
+  await expect(page.getByRole("navigation", { name: "Filtrer par statut" }).getByRole("link", { name: "En embarquement" }))
+    .toHaveAttribute("aria-current", "page");
+  await expect(page.getByText("6 résultat(s)")).toBeVisible();
+  await page.getByPlaceholder("Rechercher un trajet…").fill("DK-1022");
+  await page.getByRole("row", { name: /DK-1022-AB/ }).click();
+
+  await expect(page.getByRole("heading", { name: "Trajet Saint-Louis → Ziguinchor" })).toBeVisible();
+  await expect(page.getByTestId("trip-status")).toHaveText("Embarquement");
+  await expect(page.getByTestId("trip-available")).toHaveText("9 / 29");
+  await expect(page.getByTestId("crew-DRIVER")).toHaveText("Babacar Seck");
+  await expect(page.getByTestId("crew-CONTROLLER")).toHaveText("Non affecté");
+
+  const map = page.getByRole("list", { name: "Plan de sièges" });
+  await expect(map.locator("[data-seat]")).toHaveCount(29);
+  await expect(map.locator('[data-state="free"]')).toHaveCount(9);
+  await expect(map.getByRole("listitem", { name: "Siège 1A, bloqué" })).toHaveAttribute("data-state", "blocked");
+  await expect(map.getByRole("listitem", { name: "Siège 1B, réservé" })).toHaveAttribute("data-state", "booked");
+  await expect(map.getByRole("listitem", { name: "Siège 1C, libre" })).toHaveAttribute("data-state", "free");
+  await expect(map.getByRole("listitem", { name: "Siège 1D, occupé" })).toHaveAttribute("data-state", "occupied");
+
+  const legend = page.getByRole("list", { name: "Légende du plan de sièges" });
+  for (const label of ["Libre", "Réservé", "Occupé", "Bloqué"]) await expect(legend).toContainText(label);
+  await expect(page.getByTestId("seat-count-free")).toHaveText("(9)");
+  await expect(page.getByTestId("seat-count-booked")).toHaveText("(10)");
+  await expect(page.getByTestId("seat-count-occupied")).toHaveText("(9)");
+  await expect(page.getByTestId("seat-count-blocked")).toHaveText("(1)");
+});
+
+test("the seat maps list counts the seats and opens the trip", async ({ page }) => {
+  // Read-only.
+  await login(page);
+  await page.goto("/flotte/plans-de-sieges");
+  await expect(page.getByText("56 résultat(s)")).toBeVisible();
+  await page.getByPlaceholder("Rechercher un plan de sièges…").fill("DK-1052");
+  const row = page.getByRole("row", { name: /DK-1052-AB/ });
+  await expect(row).toHaveCount(1);
+  await expect(row.getByRole("cell", { name: "55", exact: true })).toBeVisible();
+  await row.click();
+  await expect(page.getByRole("heading", { name: "Trajet Touba → Mbour" })).toBeVisible();
+  await expect(page.getByTestId("trip-status")).toHaveText("Parti");
+  await expect(page.getByTestId("trip-available")).toHaveText("11 / 55");
+
+  await page.goto("/flotte/trajets/00000000-0000-4000-8000-00000000dead");
+  await expect(page.getByText("Trajet introuvable")).toBeVisible();
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
