@@ -135,7 +135,7 @@ test("the command palette opens with the keyboard and navigates to a company", a
 
 test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await login(page);
-  await page.goto("/communication/notifications");
+  await page.goto("/conformite/journal-audit");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
 });
 
@@ -841,6 +841,138 @@ test("a resolved review shows the company's response and cannot be ignored", asy
   await expect(page.getByTestId("ignore-blocked")).toContainText("Cet avis est déjà traité");
 });
 
+test("notifications can be filtered by channel and status and show the delivery indicators", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/notifications");
+  await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
+  for (const id of ["notif-sent", "notif-failed", "notif-pending"]) await expect(page.getByTestId(id)).toBeVisible();
+  await page.getByRole("link", { name: "E-mail", exact: true }).click();
+  await expect(page).toHaveURL(/canal=EMAIL/);
+  await page.getByRole("link", { name: "Échouées", exact: true }).click();
+  await expect(page).toHaveURL(/canal=EMAIL/);
+  await expect(page).toHaveURL(/statut=FAILED/);
+  expect(await page.getByRole("row").count()).toBeGreaterThan(1);
+  await expect(page.getByRole("row", { name: /Échouée/ }).first()).toBeVisible();
+});
+
+test("the content of a notification is hidden until it is revealed on demand", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/notifications?canal=EMAIL&statut=SENT");
+  await page.getByRole("row").nth(1).click();
+  await expect(page).toHaveURL(/\/communication\/notifications\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("notification-status")).toHaveText("Envoyée");
+  await expect(page.getByTestId("notification-content")).toHaveCount(0);
+  await page.getByRole("button", { name: "Afficher le contenu" }).click();
+  await expect(page.getByTestId("notification-content")).toContainText(/Réservation BK-[0-9A-Z]{8} confirmée/);
+  await page.getByRole("button", { name: "Masquer le contenu" }).click();
+  await expect(page.getByTestId("notification-content")).toHaveCount(0);
+});
+
+test("campaigns are listed and opened with their segments, messages and schedules", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/campagnes");
+  await expect(page.getByRole("heading", { name: "Campagnes" })).toBeVisible();
+  await page.getByPlaceholder("Rechercher une campagne…").fill("fin d'année");
+  await page.getByRole("row", { name: /Offre de fin d'année/ }).click();
+  await expect(page).toHaveURL(/\/communication\/campagnes\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("campaign-status")).toHaveText("Programmée");
+  await page.getByRole("tab", { name: "Segments" }).click();
+  await expect(page.getByText("Tous les clients").first()).toBeVisible();
+  await page.getByRole("tab", { name: "Messages" }).click();
+  await expect(page.getByText("Voyagez en fin d'année avec 15 % de réduction.")).toBeVisible();
+  await page.getByRole("tab", { name: "Programmations" }).click();
+  await expect(page.getByText("En attente", { exact: true })).toBeVisible();
+});
+
+test("cancelling a scheduled campaign also cancels its pending schedule", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/campagnes");
+  await page.getByPlaceholder("Rechercher une campagne…").fill("Tabaski");
+  await page.getByRole("row", { name: /Offre de la Tabaski/ }).click();
+  await expect(page.getByTestId("campaign-status")).toHaveText("Programmée");
+  await page.getByRole("button", { name: "Annuler la campagne" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Confirmer l'annulation" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Offre retirée à la demande de la compagnie");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByTestId("campaign-status")).toHaveText("Annulée");
+  await expect(page.getByRole("button", { name: "Annuler la campagne" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Programmations" }).click();
+  await expect(page.getByRole("tabpanel").getByText("Envoyée", { exact: true })).toHaveCount(1);
+  await expect(page.getByRole("tabpanel").getByText("Annulée", { exact: true })).toHaveCount(1);
+  await expect(page.getByRole("tabpanel").getByText("En attente", { exact: true })).toHaveCount(0);
+});
+
+test("a completed campaign cannot be cancelled", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/campagnes");
+  await page.getByPlaceholder("Rechercher une campagne…").fill("Bilan de rentrée");
+  await page.getByRole("row", { name: /Bilan de rentrée/ }).click();
+  await expect(page.getByTestId("campaign-status")).toHaveText("Terminée");
+  await expect(page.getByTestId("cancel-blocked")).toContainText("Une campagne en cours ou terminée ne peut pas être annulée");
+  await page.getByRole("button", { name: "Annuler la campagne" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Tentative de test");
+  await dialog.getByRole("button", { name: "Confirmer l'annulation" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Une campagne en cours ou terminée ne peut pas être annulée");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByTestId("campaign-status")).toHaveText("Terminée");
+});
+
+test("segments show their readable targeting and the eligible accounts", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/segments");
+  await expect(page.getByRole("heading", { name: "Segments" })).toBeVisible();
+  await expect(page.getByRole("row", { name: /Palier : VIP/ }).first()).toBeVisible();
+  await expect(page.getByRole("row", { name: /Tous les clients/ }).first()).toBeVisible();
+  await expect(page.getByRole("row", { name: /Palier inconnu « gold » \(aucun client\)/ }).first()).toBeVisible();
+  await expect(page.getByRole("row", { name: /lastBookingDays : 90 \(non évalué\)/ }).first()).toBeVisible();
+  await expect(page.getByRole("row", { name: /Réutilisable/ }).first()).toBeVisible();
+});
+
+test("messages are listed with their status", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/messages");
+  await expect(page.getByRole("heading", { name: "Messages" })).toBeVisible();
+  await page.getByRole("link", { name: "Brouillons", exact: true }).click();
+  await expect(page).toHaveURL(/statut=DRAFT/);
+  await expect(page.getByRole("row", { name: /E-mail.*Brouillon/ }).first()).toBeVisible();
+});
+
+test("a pending schedule is cancelled with a mandatory reason", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/programmations?statut=PENDING");
+  await page.getByPlaceholder("Rechercher une programmation…").fill("fin d'année");
+  const row = page.getByRole("row", { name: /Offre de fin d'année/ });
+  await row.getByRole("button", { name: /Annuler la programmation/ }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Confirmer l'annulation" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Date d'envoi incorrecte");
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /Offre de fin d'année/ })).toHaveCount(0);
+  await page.goto("/communication/programmations?statut=CANCELLED");
+  await page.getByPlaceholder("Rechercher une programmation…").fill("fin d'année");
+  await expect(page.getByRole("row", { name: /Offre de fin d'année.*Annulée/ })).toBeVisible();
+});
+
+test("a schedule that was already sent cannot be cancelled", async ({ page }) => {
+  await login(page);
+  await page.goto("/communication/programmations?statut=SENT");
+  await page.getByPlaceholder("Rechercher une programmation…").fill("Bilan de rentrée");
+  const row = page.getByRole("row", { name: /Bilan de rentrée/ });
+  await row.getByRole("button", { name: /Annuler la programmation/ }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Tentative de test");
+  await dialog.getByRole("button", { name: "Confirmer l'annulation" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Cette programmation n'est plus en attente");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByRole("row", { name: /Bilan de rentrée.*Envoyée/ })).toBeVisible();
+});
+
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
@@ -869,6 +1001,8 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   const parcelPath = await detailPath("/colis", "Yacine", "Rechercher un colis…", /Yacine Ndoye/);
   const customerPath = await detailPath("/clients/comptes", "Aïssatou", "Rechercher un client…", /Aïssatou Sarr/);
   const feedbackPath = await detailPath("/clients/avis", "Service impeccable", "Rechercher un avis…", /Service impeccable au guichet/);
+  const notificationPath = await detailPath("/communication/notifications", "Réservation confirmée", "Rechercher une notification…", /Réservation confirmée/);
+  const campaignPath = await detailPath("/communication/campagnes", "Bilan de rentrée", "Rechercher une campagne…", /Bilan de rentrée/);
 
   const CONTACT_EMAIL = /contact@[a-z0-9-]+\.sn/;
   const ANY_SN_EMAIL = /[a-z0-9._-]+@[a-z0-9-]+\.sn/;
@@ -895,6 +1029,9 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     "/colis", "/colis?statut=LOST", parcelPath, `${parcelPath}?onglet=itineraire`, `${parcelPath}?onglet=historique`,
     "/clients/comptes", customerPath, `${customerPath}?onglet=fidelite`, `${customerPath}?onglet=parrainage`,
     "/clients/fidelite", "/clients/avis", "/clients/avis?statut=PENDING", feedbackPath,
+    "/communication/notifications", "/communication/notifications?canal=SMS", "/communication/notifications?statut=FAILED", notificationPath,
+    "/communication/campagnes", "/communication/campagnes?statut=CANCELLED", campaignPath, `${campaignPath}?onglet=programmations`,
+    "/communication/segments", "/communication/messages", "/communication/programmations",
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();

@@ -52,11 +52,11 @@ export const NAV: NavSection[] = [
     { label: "Avis", href: "/clients/avis", implemented: true },
   ] },
   { label: "Communication", items: [
-    todo("Notifications", "/communication/notifications"),
-    todo("Campagnes", "/communication/campagnes"),
-    todo("Segments", "/communication/segments"),
-    todo("Messages", "/communication/messages"),
-    todo("Programmations", "/communication/programmations"),
+    { label: "Notifications", href: "/communication/notifications", implemented: true },
+    { label: "Campagnes", href: "/communication/campagnes", implemented: true },
+    { label: "Segments", href: "/communication/segments", implemented: true },
+    { label: "Messages", href: "/communication/messages", implemented: true },
+    { label: "Programmations", href: "/communication/programmations", implemented: true },
   ] },
   { label: "Conformité et audit", items: [
     todo("Journal d'audit", "/conformite/journal-audit"),
@@ -107,6 +107,7 @@ const ROUTE_PREFIXES = [
   "/flotte/bus", "/flotte/lignes", "/flotte/trajets",
   "/ventes/reservations", "/ventes/paiements", "/ventes/billets",
   "/colis", "/clients/comptes", "/clients/avis",
+  "/communication/notifications", "/communication/campagnes",
 ];
 
 /** True when a breadcrumb path leads to a real screen (a nav item or a company route), so it may be a link. */

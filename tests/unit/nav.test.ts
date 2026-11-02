@@ -6,11 +6,12 @@ describe("nav", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1 to lot 6 pages as implemented", () => {
+  it("marks only lot 1 to lot 7 pages as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
     expect(done).toEqual([
       "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/clients/avis", "/clients/comptes",
-      "/clients/fidelite", "/colis", "/compagnies", "/compagnies/kyc",
+      "/clients/fidelite", "/colis", "/communication/campagnes", "/communication/messages", "/communication/notifications",
+      "/communication/programmations", "/communication/segments", "/compagnies", "/compagnies/kyc",
       "/facturation/abonnements", "/facturation/factures", "/facturation/impayes", "/facturation/paiements",
       "/flotte/bus", "/flotte/flottes", "/flotte/fournisseurs", "/flotte/gares", "/flotte/lignes",
       "/flotte/maintenance", "/flotte/plans-de-sieges", "/flotte/trajets",
@@ -117,5 +118,18 @@ describe("lot 6 breadcrumbs", () => {
     expect(labelForSegment("fidelite")).toBe("Fidélité");
     expect(labelForSegment("comptes")).toBe("Comptes");
     expect(labelForSegment("avis")).toBe("Avis");
+  });
+});
+
+describe("lot 7 breadcrumbs", () => {
+  it("links the parent list of notification and campaign details, nothing else under communication", () => {
+    expect(isLinkablePath("/communication/notifications/abc")).toBe(true);
+    expect(isLinkablePath("/communication/campagnes/abc")).toBe(true);
+    expect(isLinkablePath("/communication/segments")).toBe(true);
+    expect(isLinkablePath("/communication")).toBe(false);
+  });
+  it("labels the communication segments", () => {
+    expect(labelForSegment("communication")).toBe("Communication");
+    expect(labelForSegment("programmations")).toBe("Programmations");
   });
 });

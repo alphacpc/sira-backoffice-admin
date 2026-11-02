@@ -42,7 +42,11 @@ Huit écrans : réservations (filtres canal, paiement, statut ; détail avec chr
 
 Sept écrans : colis (filtres de statut, détail avec itinéraire et historique), comptes clients (détail avec fidélité, parrainage et avis), programmes de fidélité et avis clients (filtres de statut, détail). Deux actions : « Déclarer le colis perdu » (motif obligatoire, colis en transit ou au hub uniquement) et « Ignorer l'avis » (motif obligatoire, avis en attente ou examiné). Le téléphone d'un destinataire est masqué ; sa révélation est une Server Action journalisée (sans la valeur).
 
-## Limites connues (lots 1 à 6)
+## Lot 7 : communication
+
+Sept écrans : notifications (filtres de canal et de statut, indicateurs de livraison, détail), campagnes (détail avec segments, messages et programmations), segments (ciblage lisible et comptes éligibles), messages et programmations. Deux actions : « Annuler la campagne » (motif obligatoire, annule en cascade ses programmations en attente) et « Annuler la programmation » (motif obligatoire, programmation en attente uniquement). Le contenu d'une notification n'est jamais dans la page : il n'est renvoyé que par une Server Action de révélation, journalisée sans la valeur.
+
+## Limites connues (lots 1 à 7)
 
 - Authentification et TOTP simulés (le rôle administrateur plateforme et le TOTP réels sont des prérequis backend).
 - État en mémoire : il est réinitialisé à chaque redémarrage du serveur.
@@ -57,7 +61,8 @@ Sept écrans : colis (filtres de statut, détail avec itinéraire et historique)
 - Les états des sièges sont figés par la graine (pas de réservation en direct) ; aucune alerte d'échéance automatique, pas de GPS ni de suivi en temps réel.
 - Ventes : pas de remboursement ni de reprise d'un paiement bloqué (le backend n'en a pas : une transaction `PENDING` reste bloquée jusqu'à intervention en base) ; une réservation payée n'est pas annulable ; l'expiration des réservations en ligne est affichée mais jamais exécutée ; moyens de paiement, billets et scans en lecture seule ; le passager n'a pas de fiche (nom seulement, avec un lien vers le compte pour une réservation en ligne) ; pas de versement aux compagnies ; les incohérences sont calculées à la lecture avec l'horloge du serveur.
 - Colis et clients : pas de création ni de modification de colis (le backoffice ne remplace pas le guichet) ; une perte déclarée n'est pas annulable et ne déclenche aucun remboursement ; documents de colis non affichés ; adresse du destinataire absente ; paliers de fidélité affichés tels quels, jamais recalculés ; pas de dépense de points ; un avis ignoré n'est pas restaurable et la plateforme ne répond pas aux avis ; les points sont dérivés des réservations en ligne payées de la graine.
-- Les sections autres que Vue 360, Compagnies, Offre, Facturation, Utilisateurs et accès, Flotte, Ventes, Colis et clients affichent « Bientôt disponible ».
+- Communication : pas de création ni d'édition de campagnes, segments, messages ou programmations ; une annulation n'est pas réversible ; aucune relance d'une notification échouée (le backend n'en a pas) ; seul le canal « dans l'application » est réellement envoyé côté backend ; l'expiration d'une réservation n'envoie aucune notification ; le ciblage n'évalue que le palier de fidélité ; la taille estimée d'un segment est saisie par la compagnie et peut différer des éligibles réels ; une campagne « terminée » n'est produite par aucun chemin du backend actuel (valeur semée pour couvrir le statut).
+- Les sections autres que Vue 360, Compagnies, Offre, Facturation, Utilisateurs et accès, Flotte, Ventes, Colis et clients, Communication affichent « Bientôt disponible ».
 - Navigation latérale masquée sous 768 px (outil de bureau).
 
 > **Démonstration seulement : identifiants et TOTP simulés, ne jamais déployer ce lot tel quel.**
