@@ -341,6 +341,32 @@ test("the roles page counts accounts and the matrix shows the MANAGER grants", a
   await expect(page.getByRole("rowheader", { name: /EMPLOYEE_CONFIDENTIAL_ACCESS/ })).toBeVisible();
 });
 
+test("a session is revoked from the platform sessions list with a mandatory reason", async ({ page }) => {
+  // Owns lamine.camara's sessions: no other test mutates them.
+  await login(page);
+  await page.goto("/acces/sessions?role=USER");
+  await page.getByPlaceholder("Rechercher une session…").fill("lamine.camara");
+  await expect(page.getByRole("row", { name: /lamine\.camara/ })).toHaveCount(3);
+  await expect(page.getByRole("cell", { name: /^\d{1,3}\.\d{1,3}\.\d{1,3}\.0$/ }).first()).toBeVisible();
+
+  await page.getByRole("button", { name: "Révoquer la session lamine.camara · Safari · iPhone" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Révoquer la session" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Téléphone signalé perdu");
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+  await expect(page.getByRole("row", { name: /lamine\.camara/ })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Révoquer la session lamine.camara · Safari · iPhone" })).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Lamine Camara" }).first().click();
+  await expect(page.getByRole("heading", { name: "Lamine Camara" })).toBeVisible();
+  await page.getByRole("tab", { name: "Sessions" }).click();
+  await expect(page.getByTestId("active-session-count")).toHaveText("2 session(s) active(s)");
+  await expect(page.getByRole("tabpanel").getByRole("cell", { name: "Téléphone signalé perdu" })).toBeVisible();
+});
+
 test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
