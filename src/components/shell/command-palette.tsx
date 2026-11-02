@@ -13,7 +13,7 @@ import { queryProblem } from "@/lib/search-query";
 
 const ITEM = "cursor-pointer rounded-lg px-3 py-2 text-sm text-foreground data-[selected=true]:bg-accent-soft";
 
-export function CommandPalette({ companies }: { companies: { id: string; name: string }[] }) {
+export function CommandPalette({ companies, variant = "button", collapsed = false }: { companies: { id: string; name: string }[]; variant?: "button" | "sidebar"; collapsed?: boolean }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [hits, setHits] = useState<SearchHit[]>([]);
@@ -73,11 +73,37 @@ export function CommandPalette({ companies }: { companies: { id: string; name: s
 
   return (
     <>
-      <Button variant="secondary" size="sm" onClick={() => setOpen(true)} aria-label="Ouvrir la recherche">
-        <MagnifyingGlass size={14} />
-        <span className="hidden sm:inline">Rechercher</span>
-        <kbd className="hidden rounded bg-muted px-1.5 text-[10px] sm:inline">⌘K</kbd>
-      </Button>
+      {variant === "sidebar" && !collapsed ? (
+        <form action="/recherche" method="get" role="search" className="relative">
+          <label>
+            <span className="sr-only">Rechercher dans le backoffice</span>
+            <MagnifyingGlass size={16} aria-hidden className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sidebar-muted" />
+            <input
+              name="q" autoComplete="off" placeholder="Rechercher…"
+              className="h-10 w-full rounded-xl bg-sidebar-hover pl-9 pr-12 text-sm text-sidebar-foreground outline-none transition-colors placeholder:text-sidebar-muted focus:bg-sidebar-active focus:ring-2 focus:ring-accent/50"
+            />
+          </label>
+          <button
+            type="button" onClick={() => setOpen(true)} aria-label="Ouvrir la palette de commandes" title="Palette de commandes (⌘K)"
+            className="absolute right-2 top-1/2 -translate-y-1/2 rounded bg-sidebar px-1.5 py-0.5 text-[10px] text-sidebar-muted hover:text-sidebar-foreground"
+          >
+            ⌘K
+          </button>
+        </form>
+      ) : variant === "sidebar" ? (
+        <button
+          type="button" onClick={() => setOpen(true)} aria-label="Ouvrir la recherche" title="Rechercher (⌘K)"
+          className="flex h-10 w-full items-center justify-center rounded-xl bg-sidebar-hover text-sidebar-muted transition-colors hover:bg-sidebar-active hover:text-sidebar-foreground"
+        >
+          <MagnifyingGlass size={16} aria-hidden />
+        </button>
+      ) : (
+        <Button variant="secondary" size="sm" onClick={() => setOpen(true)} aria-label="Ouvrir la recherche">
+          <MagnifyingGlass size={14} />
+          <span className="hidden sm:inline">Rechercher</span>
+          <kbd className="hidden rounded bg-muted px-1.5 text-[10px] sm:inline">⌘K</kbd>
+        </Button>
+      )}
       <Command.Dialog
         open={open} onOpenChange={changeOpen} label="Palette de commandes" shouldFilter={false}
         className="fixed left-1/2 top-24 z-50 w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 overflow-hidden rounded-card border border-border bg-card shadow-card"

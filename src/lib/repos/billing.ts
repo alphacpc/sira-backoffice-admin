@@ -366,3 +366,39 @@ export const paymentsRepo = {
     return paymentsRepo.list(filter).map(paymentRow);
   },
 };
+
+export const REMINDER_CHANNELS = ["EMAIL", "SMS"] as const;
+export type ReminderChannel = (typeof REMINDER_CHANNELS)[number];
+export const REMINDER_ACTION = "Relance de paiement envoyée";
+
+/** Records a reminder sent to the company owner (the message itself is not stored, nor any contact). */
+export function remindOwner(
+  subscriptionId: string, channel: ReminderChannel, message: string, actor = "admin@sira.app", now: Date = new Date(),
+): void {
+  const s = getStore();
+  const sub = s.subscriptions.find((x) => x.id === subscriptionId);
+  if (!sub) throw new Error("Abonnement introuvable");
+  if (sub.status === "canceled" || sub.status === "expired") throw new Error("Cet abonnement n'est plus actif");
+  if (!REMINDER_CHANNELS.includes(channel)) throw new Error("Canal invalide");
+  const text = message.trim();
+  if (!text) throw new Error("Le message est obligatoire");
+  if (text.length > 500) throw new Error("Le message est trop long (500 caractères maximum)");
+  const owner = s.employees.find((e) => e.companyId === sub.companyId && e.role === "MANAGER");
+  if (!owner) throw new Error("Propriétaire introuvable");
+  addActivity(sub.companyId, actor, `${REMINDER_ACTION} à ${owner.name} (${channel === "EMAIL" ? "e-mail" : "SMS"})`, now);
+}
+
+export const INVOICE_RESENT_ACTION = "Facture renvoyée";
+
+/** Records an invoice sent again to the company owner (no message text, no contact data stored). */
+export function resendInvoice(
+  invoiceId: string, channel: ReminderChannel, actor = "admin@sira.app", now: Date = new Date(),
+): void {
+  const s = getStore();
+  const invoice = s.invoices.find((i) => i.id === invoiceId);
+  if (!invoice) throw new Error("Facture introuvable");
+  if (!REMINDER_CHANNELS.includes(channel)) throw new Error("Canal invalide");
+  const owner = s.employees.find((e) => e.companyId === invoice.companyId && e.role === "MANAGER");
+  if (!owner) throw new Error("Propriétaire introuvable");
+  addActivity(invoice.companyId, actor, `${INVOICE_RESENT_ACTION} ${invoice.number} à ${owner.name} (${channel === "EMAIL" ? "e-mail" : "SMS"})`, now);
+}

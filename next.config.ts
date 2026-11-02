@@ -8,9 +8,12 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data:",
+  // Fond de carte vectoriel OpenFreeMap (sans clé) : seule origine externe autorisée.
+  "img-src 'self' data: blob: https://tiles.openfreemap.org",
+  "worker-src 'self' blob:",
+  "child-src 'self' blob:",
   "font-src 'self'",
-  `connect-src 'self'${dev ? " ws: wss:" : ""}`,
+  `connect-src 'self' https://tiles.openfreemap.org${dev ? " ws: wss:" : ""}`,
   "frame-ancestors 'none'",
   "base-uri 'self'",
   "form-action 'self'",
@@ -19,6 +22,8 @@ const csp = [
 const nextConfig: NextConfig = {
   distDir: process.env.NEXT_DIST_DIR || ".next",
   poweredByHeader: false,
+  // Les icônes sont importées depuis le point d'entrée « ssr » : sans cette option chaque page compile toute la bibliothèque.
+  experimental: { optimizePackageImports: ["@phosphor-icons/react", "@phosphor-icons/react/dist/ssr", "recharts"] },
   async headers() {
     return [
       {

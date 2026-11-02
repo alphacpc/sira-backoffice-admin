@@ -1,5 +1,6 @@
 "use client";
 
+import { ArrowsClockwise } from "@phosphor-icons/react/dist/ssr";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { retrySubscriptionPayment } from "@/app/(admin)/facturation/actions";
@@ -7,16 +8,16 @@ import { ConfirmDialog } from "@/components/data/confirm-dialog";
 import { Button } from "@/components/ui/button";
 
 /** `label` is the company name shown in the button and the dialog; no other data is needed. */
-export interface RetryPaymentButtonProps { subscriptionId: string; label: string }
+export interface RetryPaymentButtonProps { subscriptionId: string; label: string; className?: string }
 
-export function RetryPaymentButton({ subscriptionId, label }: RetryPaymentButtonProps) {
+export function RetryPaymentButton({ subscriptionId, label, className }: RetryPaymentButtonProps) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
 
   return (
     <>
-      <Button size="sm" onClick={() => setOpen(true)} aria-label={`Relancer le paiement de ${label}`}>
-        Relancer le paiement
+      <Button size="sm" className={className} onClick={() => setOpen(true)} aria-label={`Relancer le paiement de ${label}`}>
+        <ArrowsClockwise size={16} weight="bold" aria-hidden /> Relancer le paiement
       </Button>
       <ConfirmDialog
         open={open} onOpenChange={setOpen}

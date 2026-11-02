@@ -31,3 +31,17 @@ export function formatDateTime(iso: string): string {
 export function nextBillingLabel(status: string, date: string): string {
   return status === "canceled" || status === "expired" ? "—" : formatDate(date);
 }
+
+/** A number of days written out: "1 jour", "20 jours", "3 mois", "1 an 2 mois", "2 ans". */
+export function formatDuration(days: number): string {
+  const d = Math.max(0, Math.floor(days));
+  if (d < 30) return `${d} jour${d > 1 ? "s" : ""}`;
+  if (d < 365) {
+    const months = Math.floor(d / 30);
+    return `${months} mois`;
+  }
+  const years = Math.floor(d / 365);
+  const months = Math.floor((d % 365) / 30);
+  const y = `${years} an${years > 1 ? "s" : ""}`;
+  return months > 0 ? `${y} ${months} mois` : y;
+}

@@ -10,7 +10,7 @@ import type {
   Customer, Feedback, FeedbackStatus, FeedbackType, LoyaltyAccount, LoyaltyProgram, LoyaltyTransaction, MembershipType,
   Parcel, ParcelHistoryEntry, ParcelLeg, ParcelStatus, ParcelType, Sponsorship, SponsorshipRewardType, SponsorshipStatus,
   AppNotification, CampaignObjective, CampaignStatus, MarketingCampaign, MarketingMessage, MarketingMessageStatus, MarketingSchedule, MarketingSegment, NotificationChannel, NotificationStatus, ScheduleStatus,
-  AdminStatus, BackofficeAdmin, BackofficeSession,
+  AdminStatus, BackofficeAdmin, BackofficeSession, KycOverride,
   ApiUsageRow, ImpactScope, IncidentSeverity, IncidentStatus, ServiceHealthCheck, ServiceStatus, SystemIncident,
   CancelReason, TripStatus, UsageMetric, UserSession, UserStatus, Vendor, VendorKind,
 } from "@/lib/types";
@@ -76,6 +76,8 @@ export interface Store {
   marketingSegments: MarketingSegment[];
   marketingMessages: MarketingMessage[];
   marketingSchedules: MarketingSchedule[];
+  /** Manual moves on the KYC board, by company id. */
+  kycOverrides: Record<string, KycOverride>;
 
 }
 
@@ -276,6 +278,7 @@ export function buildSeed(now: Date = new Date()): Store {
     parcels: [], parcelLegs: [], parcelHistory: [], customers: [], loyaltyPrograms: [],
     loyaltyAccounts: [], loyaltyTransactions: [], sponsorships: [], feedbacks: [],
     notifications: [], marketingCampaigns: [], marketingSegments: [], marketingMessages: [], marketingSchedules: [],
+    kycOverrides: {},
   };
   let docSeq = 1, subSeq = 1, invSeq = 1, empSeq = 1, actSeq = 1;
   let attSeq = 1, histSeq = 1, userSeq = 1, sessionSeq = 1;

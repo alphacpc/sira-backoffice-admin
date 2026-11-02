@@ -5,7 +5,10 @@ import {
   errorMessage, requireReason, requireString, run, SESSION_EXPIRED, type ActionResult,
 } from "@/lib/actions/run";
 import { requireSession } from "@/lib/auth/session";
-import { companiesRepo } from "@/lib/repos/companies";
+import {
+  companiesRepo, KYC_MIN_AGES, KYC_SORTS, KYC_STAGES, type KycBoard, type KycBoardQuery,
+} from "@/lib/repos/companies";
+import type { KycStage } from "@/lib/types";
 import { getStore } from "@/lib/repos/store";
 
 function refresh(companyId: string | null) {
@@ -30,6 +33,40 @@ export async function rejectDocument(docId: string, reason: string): Promise<Act
     const doc = companiesRepo.reviewDocument(docId, "rejected", motif, actor);
     refresh(doc.companyId);
   });
+}
+
+export async function moveKycStage(companyId: string, stage: string, note?: string): Promise<ActionResult> {
+  return run((actor) => {
+    requireString(companyId, "Compagnie");
+    if (!KYC_STAGES.includes(stage as KycStage)) throw new Error("Étape invalide");
+    const motif = note?.trim() ? requireReason(note) : undefined;
+    companiesRepo.moveKycStage(companyId, stage as KycStage, motif, actor);
+    refresh(companyId);
+  });
+}
+
+export type KycBoardResult = { ok: true; board: KycBoard } | { ok: false; error: string };
+
+/** Reads one view of the board (filters, sort, page of each column). Read only, but behind the session. */
+export async function fetchKycBoard(query: KycBoardQuery): Promise<KycBoardResult> {
+  try {
+    await requireSession();
+  } catch {
+    return { ok: false, error: SESSION_EXPIRED };
+  }
+  const pages: KycBoardQuery["pages"] = {};
+  for (const stage of KYC_STAGES) {
+    const n = Number(query?.pages?.[stage]);
+    if (Number.isFinite(n) && n >= 1) pages[stage] = Math.floor(n);
+  }
+  const clean: KycBoardQuery = {
+    q: typeof query?.q === "string" ? query.q.slice(0, 80) : undefined,
+    minAge: (KYC_MIN_AGES as readonly number[]).includes(Number(query?.minAge)) ? Number(query.minAge) : 0,
+    tier: query?.tier === "STANDARD" || query?.tier === "SILVER" || query?.tier === "GOLD" ? query.tier : undefined,
+    sort: (KYC_SORTS as readonly string[]).includes(String(query?.sort)) ? query.sort : "oldest",
+    pages,
+  };
+  return { ok: true, board: companiesRepo.kycBoard(clean) };
 }
 
 export async function forceActivateCompany(companyId: string, reason: string): Promise<ActionResult> {

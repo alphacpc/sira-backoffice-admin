@@ -1,86 +1,46 @@
 export interface NavItem { label: string; href: string; implemented: boolean }
 export type NavIcon =
-  | "overview" | "companies" | "billing" | "access" | "fleet" | "sales"
+  | "billing" | "access" | "fleet" | "sales"
   | "parcels" | "communication" | "compliance" | "monitoring" | "settings";
 export interface NavSection { label: string; icon: NavIcon; items: NavItem[] }
 
 export const NAV: NavSection[] = [
-  { label: "Vue 360", icon: "overview", items: [
-    { label: "Vue d'ensemble", href: "/", implemented: true },
-    { label: "Recherche globale", href: "/recherche", implemented: true },
-  ] },
-  { label: "Compagnies", icon: "companies", items: [
-    { label: "Toutes les compagnies", href: "/compagnies", implemented: true },
-    { label: "File de revue KYC", href: "/compagnies/kyc", implemented: true },
-  ] },
-  { label: "Offre et facturation", icon: "billing", items: [
-    { label: "Plans", href: "/offre/plans", implemented: true },
-    { label: "Fonctionnalités", href: "/offre/fonctionnalites", implemented: true },
-    { label: "Paliers partenaires", href: "/offre/paliers-partenaires", implemented: true },
-    { label: "Types de documents KYC", href: "/offre/types-documents-kyc", implemented: true },
-    { label: "Abonnements", href: "/facturation/abonnements", implemented: true },
-    { label: "Paiements", href: "/facturation/paiements", implemented: true },
-    { label: "Factures", href: "/facturation/factures", implemented: true },
-    { label: "Impayés", href: "/facturation/impayes", implemented: true },
-  ] },
-  { label: "Utilisateurs et accès", icon: "access", items: [
-    { label: "Utilisateurs", href: "/utilisateurs", implemented: true },
-    { label: "Rôles", href: "/acces/roles", implemented: true },
-    { label: "Permissions", href: "/acces/permissions", implemented: true },
-    { label: "Sessions", href: "/acces/sessions", implemented: true },
-  ] },
-  { label: "Flotte", icon: "fleet", items: [
-    { label: "Bus", href: "/flotte/bus", implemented: true },
-    { label: "Flottes", href: "/flotte/flottes", implemented: true },
-    { label: "Gares", href: "/flotte/gares", implemented: true },
-    { label: "Lignes", href: "/flotte/lignes", implemented: true },
-    { label: "Trajets", href: "/flotte/trajets", implemented: true },
-    { label: "Plans de sièges", href: "/flotte/plans-de-sieges", implemented: true },
-    { label: "Maintenance", href: "/flotte/maintenance", implemented: true },
-    { label: "Fournisseurs", href: "/flotte/fournisseurs", implemented: true },
-  ] },
-  { label: "Ventes et paiements", icon: "sales", items: [
-    { label: "Réservations", href: "/ventes/reservations", implemented: true },
-    { label: "Paiements voyageurs", href: "/ventes/paiements", implemented: true },
-    { label: "Billets", href: "/ventes/billets", implemented: true },
-    { label: "Moyens de paiement", href: "/ventes/moyens-de-paiement", implemented: true },
-    { label: "Libre-service en ligne", href: "/ventes/en-ligne", implemented: true },
-  ] },
-  { label: "Colis et clients", icon: "parcels", items: [
-    { label: "Colis", href: "/colis", implemented: true },
-    { label: "Comptes clients", href: "/clients/comptes", implemented: true },
-    { label: "Fidélité", href: "/clients/fidelite", implemented: true },
-    { label: "Avis", href: "/clients/avis", implemented: true },
-  ] },
-  { label: "Communication", icon: "communication", items: [
-    { label: "Notifications", href: "/communication/notifications", implemented: true },
-    { label: "Campagnes", href: "/communication/campagnes", implemented: true },
-    { label: "Segments", href: "/communication/segments", implemented: true },
-    { label: "Messages", href: "/communication/messages", implemented: true },
-    { label: "Programmations", href: "/communication/programmations", implemented: true },
-  ] },
-  { label: "Conformité et audit", icon: "compliance", items: [
-    { label: "Journal d'audit", href: "/conformite/journal-audit", implemented: true },
-    { label: "Accès aux données", href: "/conformite/acces-donnees", implemented: true },
-    { label: "Demandes RGPD", href: "/conformite/demandes-rgpd", implemented: true },
-    { label: "Consentements", href: "/conformite/consentements", implemented: true },
-    { label: "Rétention", href: "/conformite/retention", implemented: true },
-  ] },
-  { label: "Supervision", icon: "monitoring", items: [
-    { label: "Services", href: "/supervision/services", implemented: true },
-    { label: "Incidents", href: "/supervision/incidents", implemented: true },
-    { label: "Trafic API", href: "/supervision/api", implemented: true },
-    { label: "Usage", href: "/supervision/usage", implemented: true },
-  ] },
-  { label: "Paramètres", icon: "settings", items: [
-    { label: "Mon profil", href: "/parametres/profil", implemented: true },
-    { label: "Équipe admin", href: "/parametres/equipe-admin", implemented: true },
-    { label: "Journal du backoffice", href: "/parametres/journal-backoffice", implemented: true },
-  ] },
+];
+
+/** Standalone entry above the sections of the sidebar. */
+export const HOME_ITEM: NavItem = { label: "Tableau de bord", href: "/", implemented: true };
+/** Pages reached from the dashboard rather than from a menu entry. */
+const HIDDEN_ITEMS: NavItem[] = [
+  { label: "Recherche globale", href: "/recherche", implemented: true },
+  { label: "File de revue KYC", href: "/compagnies/kyc", implemented: true },
+];
+export const COMPANIES_ITEM: NavItem = { label: "Compagnies", href: "/compagnies", implemented: true };
+/** Standalone entries (no submenu) shown above the sections. */
+export const BILLING_ITEM: NavItem = { label: "Offre et facturation", href: "/offre-facturation", implemented: true };
+export const ACCESS_ITEM: NavItem = { label: "Utilisateurs et accès", href: "/utilisateurs-acces", implemented: true };
+export const FLEET_ITEM: NavItem = { label: "Flotte", href: "/flotte", implemented: true };
+export const SALES_ITEM: NavItem = { label: "Ventes et paiements", href: "/ventes", implemented: true };
+export const CARE_ITEM: NavItem = { label: "Colis et clients", href: "/colis-clients", implemented: true };
+export const COMM_ITEM: NavItem = { label: "Communication", href: "/communication", implemented: true };
+export const COMPLIANCE_ITEM: NavItem = { label: "Conformité et audit", href: "/conformite", implemented: true };
+export const MONITORING_ITEM: NavItem = { label: "Supervision", href: "/supervision", implemented: true };
+export const SETTINGS_ITEM: NavItem = { label: "Paramètres", href: "/parametres", implemented: true };
+export const TOP_ITEMS: { item: NavItem; icon: "home" | "companies" | "billing" | "access" | "fleet" | "sales" | "care" | "comm" | "compliance" | "monitoring" | "settings" }[] = [
+  { item: HOME_ITEM, icon: "home" },
+  { item: COMPANIES_ITEM, icon: "companies" },
+  { item: BILLING_ITEM, icon: "billing" },
+  { item: ACCESS_ITEM, icon: "access" },
+  { item: FLEET_ITEM, icon: "fleet" },
+  { item: SALES_ITEM, icon: "sales" },
+  { item: CARE_ITEM, icon: "care" },
+  { item: COMM_ITEM, icon: "comm" },
+  { item: COMPLIANCE_ITEM, icon: "compliance" },
+  { item: MONITORING_ITEM, icon: "monitoring" },
+  { item: SETTINGS_ITEM, icon: "settings" },
 ];
 
 export function allNavItems(): NavItem[] {
-  return NAV.flatMap((s) => s.items);
+  return [HOME_ITEM, COMPANIES_ITEM, BILLING_ITEM, ACCESS_ITEM, FLEET_ITEM, SALES_ITEM, CARE_ITEM, COMM_ITEM, COMPLIANCE_ITEM, MONITORING_ITEM, SETTINGS_ITEM, ...HIDDEN_ITEMS, ...NAV.flatMap((s) => s.items)];
 }
 
 export function isKnownPath(path: string): boolean {
@@ -88,10 +48,12 @@ export function isKnownPath(path: string): boolean {
 }
 
 const SEGMENT_LABELS: Record<string, string> = {
-  compagnies: "Compagnies", kyc: "File de revue KYC", offre: "Offre",
+  compagnies: "Compagnies", kyc: "File de revue KYC", "offre-facturation": "Offre et facturation", "utilisateurs-acces": "Utilisateurs et accès", "colis-clients": "Colis et clients", communication: "Communication", notifications: "Notifications", campagnes: "Campagnes", messages: "Messages", segments: "Segments", programmations: "Programmations", comptes: "Clients", avis: "Avis", "moyens-de-paiement": "Moyens de paiement", billets: "Billets",
+  plans: "Plans", fonctionnalites: "Fonctionnalités", paliers: "Paliers", documents: "Documents KYC",
+  abonnements: "Abonnements", paiements: "Paiements", factures: "Factures", impayes: "Impayés", offre: "Offre",
   facturation: "Facturation", flotte: "Flotte", ventes: "Ventes", clients: "Clients",
-  communication: "Communication", conformite: "Conformité", supervision: "Supervision",
-  parametres: "Paramètres", acces: "Accès", utilisateurs: "Utilisateurs", colis: "Colis",
+  conformite: "Conformité et audit", supervision: "Supervision",
+  parametres: "Paramètres", securite: "Sécurité", preferences: "Préférences", acces: "Accès", utilisateurs: "Utilisateurs", colis: "Colis",
   recherche: "Recherche", roles: "Rôles", bus: "Bus", flottes: "Flottes", gares: "Gares", lignes: "Lignes",
   trajets: "Trajets", "plans-de-sieges": "Plans de sièges", maintenance: "Maintenance", fournisseurs: "Fournisseurs",
   reservations: "Réservations", fidelite: "Fidélité", "en-ligne": "Libre-service en ligne",
@@ -107,6 +69,7 @@ export function labelForSegment(segment: string): string {
 }
 
 const ROUTE_PREFIXES = [
+  "/offre-facturation", "/utilisateurs-acces", "/ventes", "/colis-clients", "/communication", "/conformite", "/supervision", "/parametres",
   "/compagnies", "/offre/plans", "/facturation/abonnements", "/facturation/factures", "/utilisateurs",
   "/flotte/bus", "/flotte/lignes", "/flotte/trajets",
   "/ventes/reservations", "/ventes/paiements", "/ventes/billets",

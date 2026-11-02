@@ -1,17 +1,6 @@
-import { PageHeader } from "@/components/data/page-header";
-import { plansRepo } from "@/lib/repos/billing";
-import { PlansTable } from "./plans-table";
+import { redirect } from "next/navigation";
 
-export const dynamic = "force-dynamic";
-
-export default function PlansPage() {
-  return (
-    <>
-      <PageHeader
-        title="Plans"
-        description="Les offres d'abonnement vendues par Sira aux compagnies (lecture seule)."
-      />
-      <PlansTable plans={plansRepo.listRows()} />
-    </>
-  );
+/** The list now lives in a tab of the « Offre et facturation » page. */
+export default function Page() {
+  redirect("/offre-facturation");
 }

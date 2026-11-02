@@ -9,6 +9,7 @@ import { usersRepo } from "@/lib/repos/access";
 function refreshUser(userId: string) {
   revalidatePath("/utilisateurs");
   revalidatePath(`/utilisateurs/${userId}`);
+  revalidatePath("/utilisateurs-acces");
   revalidatePath("/acces/roles");
   revalidatePath("/acces/sessions");
 }

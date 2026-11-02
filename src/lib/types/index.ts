@@ -583,3 +583,7 @@ export interface BackofficeSession {
   /** The session of the signed-in administrator (the real cookie carries no session id). */
   current: boolean;
 }
+
+/** Stage of a company in the KYC review board. `approved` is never stored: it means the company is active. */
+export type KycStage = "submitted" | "needs_info" | "in_review" | "approved" | "rejected";
+export interface KycOverride { stage: Exclude<KycStage, "approved">; note: string | null; at: string }

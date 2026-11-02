@@ -10,6 +10,7 @@ export async function setKycTypeActive(code: string, active: boolean, reason: st
     if (typeof active !== "boolean") throw new Error("État invalide");
     const motif = requireReason(reason);
     kycTypesRepo.setActive(code, active, motif, actor);
+    revalidatePath("/offre-facturation");
     revalidatePath("/offre/types-documents-kyc");
     revalidatePath("/compagnies");
     revalidatePath("/compagnies/kyc");
