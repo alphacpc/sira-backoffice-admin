@@ -1046,6 +1046,28 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
     for (const re of PHONES) expect(rendered, `dom ${path}`).not.toMatch(re);
     expect(rendered, `dom ${path}`).not.toMatch(FULL_IP);
   }
+  // Notification message content is personal data: none of it may reach the list or detail payload before a reveal.
+  const CONTENT_FRAGMENTS = ["confirmée, siège", "Paiement reçu pour la réservation", "La compagnie a répondu à votre avis"];
+  for (const path of ["/communication/notifications", "/communication/notifications?canal=SMS", notificationPath]) {
+    const raw = await (await page.request.get(path)).text();
+    await page.goto(path);
+    const rendered = await page.content();
+    const text = await page.locator("body").innerText();
+    for (const fragment of CONTENT_FRAGMENTS) {
+      expect(raw, `raw ${path} ${fragment}`).not.toContain(fragment);
+      expect(rendered, `dom ${path} ${fragment}`).not.toContain(fragment);
+      expect(text, `text ${path} ${fragment}`).not.toContain(fragment);
+    }
+  }
+  // The communication pages are really rendered in the production build.
+  await page.goto("/communication/notifications");
+  await expect(page.getByRole("heading", { name: "Notifications" })).toBeVisible();
+  expect(await page.getByRole("row").count()).toBeGreaterThan(1);
+  await page.goto(notificationPath);
+  await expect(page.getByRole("button", { name: "Afficher le contenu" })).toBeVisible();
+  await expect(page.getByTestId("notification-content")).toHaveCount(0);
+  await page.goto(campaignPath);
+  await expect(page.getByTestId("campaign-status")).toBeVisible();
   // The pages are really rendered (the negative checks above would pass on an empty page).
   await page.goto("/acces/sessions");
   await expect(page.getByRole("cell", { name: /^(41\.82|196\.207)\.\d{1,3}\.0$/ }).first()).toBeVisible();
