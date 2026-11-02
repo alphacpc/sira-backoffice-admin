@@ -271,3 +271,54 @@ describe("data-subject request labels", () => {
     expect(dsrStatusBadge("REJECTED")).toEqual({ label: "Rejetée", tone: "neutral" });
   });
 });
+
+import {
+  accessReasonLabel, accessTypeLabel, auditActionLabel, auditActorTypeLabel, consentSourceLabel, consentStatusBadge,
+  consentTypeLabel, dataCategoryLabel,
+} from "@/lib/labels";
+
+describe("compliance labels", () => {
+  it("labels audit actions and actor types", () => {
+    expect(auditActionLabel("CREATE")).toBe("Création");
+    expect(auditActionLabel("UPDATE")).toBe("Modification");
+    expect(auditActionLabel("DELETE")).toBe("Suppression");
+    expect(auditActionLabel("LOGIN")).toBe("Connexion");
+    expect(auditActionLabel("LOGIN_FAILED")).toBe("Échec de connexion");
+    expect(auditActionLabel("EXPORT")).toBe("Export");
+    expect(auditActionLabel("PERMISSION_CHANGE")).toBe("Changement de permission");
+    expect(auditActorTypeLabel("USER")).toBe("Utilisateur");
+    expect(auditActorTypeLabel("EMPLOYEE")).toBe("Employé");
+    expect(auditActorTypeLabel("SYSTEM")).toBe("Système");
+    expect(auditActorTypeLabel("API_KEY")).toBe("Clé d'API");
+  });
+
+  it("labels data accesses", () => {
+    expect(accessTypeLabel("VIEW")).toBe("Consultation");
+    expect(accessTypeLabel("EXPORT")).toBe("Export");
+    expect(accessTypeLabel("MODIFY")).toBe("Modification");
+    expect(accessTypeLabel("DELETE")).toBe("Suppression");
+    expect(dataCategoryLabel("IDENTITY")).toBe("Identité");
+    expect(dataCategoryLabel("FINANCIAL")).toBe("Finances");
+    expect(dataCategoryLabel("LOCATION")).toBe("Localisation");
+    expect(dataCategoryLabel("HEALTH")).toBe("Santé");
+    expect(dataCategoryLabel("CONTACT")).toBe("Contact");
+    expect(dataCategoryLabel("CONSENT")).toBe("Consentement");
+    expect(accessReasonLabel("SUPPORT_REQUEST")).toBe("Demande d'assistance");
+    expect(accessReasonLabel("LEGAL_OBLIGATION")).toBe("Obligation légale");
+    expect(accessReasonLabel("SERVICE_DELIVERY")).toBe("Prestation du service");
+    expect(accessReasonLabel("INVESTIGATION")).toBe("Enquête");
+  });
+
+  it("labels consents", () => {
+    expect(consentTypeLabel("MARKETING_EMAIL")).toBe("Marketing par e-mail");
+    expect(consentTypeLabel("MARKETING_SMS")).toBe("Marketing par SMS");
+    expect(consentTypeLabel("DATA_SHARING_PARTNERS")).toBe("Partage avec des partenaires");
+    expect(consentTypeLabel("COOKIES_ANALYTICS")).toBe("Cookies et analyses");
+    expect(consentTypeLabel("GEOLOCATION")).toBe("Géolocalisation");
+    expect(consentStatusBadge("GRANTED")).toEqual({ label: "Accordé", tone: "success" });
+    expect(consentStatusBadge("WITHDRAWN")).toEqual({ label: "Retiré", tone: "neutral" });
+    expect(consentSourceLabel("SIGNUP")).toBe("Inscription");
+    expect(consentSourceLabel("SETTINGS_PAGE")).toBe("Page de réglages");
+    expect(consentSourceLabel("BOOKING_FLOW")).toBe("Parcours de réservation");
+  });
+});

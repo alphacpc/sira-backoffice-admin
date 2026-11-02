@@ -5,6 +5,7 @@ import type {
   TransactionStatus,
   BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, Incident, Invoice, KycDocumentStatus,
   MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
+  AccessReason, AccessType, AuditAction, AuditActorType, ConsentSource, ConsentStatus, ConsentType, DataCategory,
   DsrStatus, DsrType, FeedbackStatus, FeedbackType, MembershipType, SponsorshipRewardType, SponsorshipStatus,
   CampaignObjective, CampaignStatus, MarketingMessageStatus, NotificationChannel, NotificationStatus, ScheduleStatus,
   ParcelPaymentStatus, ParcelStatus, ParcelType, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, TripStatus, UserStatus, VendorKind,
@@ -364,3 +365,43 @@ export const dsrStatusBadge = (s: DsrStatus): Badge =>
     COMPLETED: { label: "Clôturée", tone: "success" },
     REJECTED: { label: "Rejetée", tone: "neutral" },
   }, s);
+
+export const auditActionLabel = (a: AuditAction): string =>
+  ({
+    CREATE: "Création", UPDATE: "Modification", DELETE: "Suppression", LOGIN: "Connexion",
+    LOGIN_FAILED: "Échec de connexion", EXPORT: "Export", PERMISSION_CHANGE: "Changement de permission",
+  })[a];
+
+export const auditActorTypeLabel = (t: AuditActorType): string =>
+  ({ USER: "Utilisateur", EMPLOYEE: "Employé", SYSTEM: "Système", API_KEY: "Clé d'API" })[t];
+
+export const accessTypeLabel = (t: AccessType): string =>
+  ({ VIEW: "Consultation", EXPORT: "Export", MODIFY: "Modification", DELETE: "Suppression" })[t];
+
+export const dataCategoryLabel = (c: DataCategory): string =>
+  ({
+    IDENTITY: "Identité", FINANCIAL: "Finances", LOCATION: "Localisation", HEALTH: "Santé",
+    CONTACT: "Contact", CONSENT: "Consentement",
+  })[c];
+
+export const accessReasonLabel = (r: AccessReason): string =>
+  ({
+    SUPPORT_REQUEST: "Demande d'assistance", LEGAL_OBLIGATION: "Obligation légale",
+    SERVICE_DELIVERY: "Prestation du service", INVESTIGATION: "Enquête",
+  })[r];
+
+export const consentTypeLabel = (t: ConsentType): string =>
+  ({
+    MARKETING_EMAIL: "Marketing par e-mail", MARKETING_SMS: "Marketing par SMS",
+    DATA_SHARING_PARTNERS: "Partage avec des partenaires", COOKIES_ANALYTICS: "Cookies et analyses",
+    GEOLOCATION: "Géolocalisation",
+  })[t];
+
+export const consentStatusBadge = (s: ConsentStatus): Badge =>
+  pick({
+    GRANTED: { label: "Accordé", tone: "success" },
+    WITHDRAWN: { label: "Retiré", tone: "neutral" },
+  }, s);
+
+export const consentSourceLabel = (s: ConsentSource): string =>
+  ({ SIGNUP: "Inscription", SETTINGS_PAGE: "Page de réglages", BOOKING_FLOW: "Parcours de réservation" })[s];
