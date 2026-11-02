@@ -135,7 +135,7 @@ test("the command palette opens with the keyboard and navigates to a company", a
 
 test("unimplemented sections show a coming-soon page", async ({ page }) => {
   await login(page);
-  await page.goto("/flotte/bus");
+  await page.goto("/ventes/reservations");
   await expect(page.getByText("Bientôt disponible")).toBeVisible();
 });
 
@@ -381,6 +381,117 @@ test("the company team links each employee to their platform account", async ({ 
   await page.getByRole("tab", { name: "Équipe" }).click();
   await expect(page.getByRole("tabpanel").getByText("Pas encore de compte")).toBeVisible();
   await expect(page.getByRole("tabpanel").getByRole("link")).toHaveCount(0);
+});
+
+async function openBus(page: Page, plate: string) {
+  await page.goto("/flotte/bus");
+  await page.getByPlaceholder("Rechercher un bus…").fill(plate);
+  await page.getByRole("row", { name: new RegExp(plate) }).click();
+  await expect(page.getByRole("heading", { name: plate })).toBeVisible();
+}
+
+test("buses are filtered by company, the other filters are kept", async ({ page }) => {
+  // Read-only.
+  await login(page);
+  await page.goto("/flotte/bus");
+  await expect(page.getByText("42 résultat(s)")).toBeVisible();
+  await page.getByRole("navigation", { name: "Filtrer par compagnie" }).getByRole("link", { name: "Casamance Trans" }).click();
+  await expect(page).toHaveURL(/compagnie=/);
+  await expect(page.getByText("3 résultat(s)")).toBeVisible();
+  for (const plate of ["DK-1050-AB", "DK-1051-AB", "DK-1052-AB"]) {
+    await expect(page.getByRole("row", { name: new RegExp(plate) })).toBeVisible();
+  }
+  await page.getByRole("navigation", { name: "Filtrer par statut" }).getByRole("link", { name: "En maintenance" }).click();
+  await expect(page).toHaveURL(/compagnie=.*statut=maintenance|statut=maintenance.*compagnie=/);
+  await expect(page.getByText("Aucun bus.")).toBeVisible();
+});
+
+test("the missing-driver filter lists one bus per company without a driver", async ({ page }) => {
+  // Read-only.
+  await login(page);
+  await page.goto("/flotte/bus");
+  await page.getByRole("navigation", { name: "Filtrer par conducteur" }).getByRole("link", { name: "Sans conducteur affecté" }).click();
+  await expect(page).toHaveURL(/conducteur=sans/);
+  await expect(page.getByText("12 résultat(s)")).toBeVisible();
+  await expect(page.getByRole("cell", { name: "Aucun conducteur" })).toHaveCount(12);
+});
+
+test("a bus shows its characteristics, crew, expiries and maintenance", async ({ page }) => {
+  // Read-only: DK-1050-AB is also the trips-to-come refusal test's bus, which changes nothing.
+  await login(page);
+  await openBus(page, "DK-1050-AB");
+  await expect(page.getByText("BUS-0601 · Mercedes-Benz Tourismo · Casamance Trans")).toBeVisible();
+  await expect(page.getByTestId("bus-status")).toHaveText("En service");
+  const panel = page.getByRole("tabpanel");
+  await expect(panel.getByText("Autocar")).toBeVisible();
+  await expect(panel.getByText("Diesel")).toBeVisible();
+  await expect(panel.getByTestId("expiry-insurance")).toContainText("Expirée depuis 12 j");
+  await expect(panel.getByRole("link", { name: "Ziguinchor → Dakar" })).toBeVisible();
+
+  await page.getByRole("tab", { name: "Équipage" }).click();
+  await expect(page.getByTestId("crew-DRIVER")).toHaveText("Saliou Sané");
+  await expect(page.getByTestId("crew-DRIVER_ASSISTANT")).toHaveText("Alioune Lo");
+  await expect(page.getByTestId("crew-CONTROLLER")).toHaveText("Mamadou Diagne");
+
+  await page.getByRole("tab", { name: "Maintenance" }).click();
+  await expect(page.getByRole("tabpanel").getByRole("cell", { name: "MNT-1015" })).toBeVisible();
+});
+
+test("a bus without maintenance in progress or trips to come is taken out of service with a mandatory reason", async ({ page }) => {
+  // Owns DK-1051-AB (Casamance Trans): no other test mutates this bus.
+  await login(page);
+  await openBus(page, "DK-1051-AB");
+  await expect(page.getByTestId("bus-status")).toHaveText("En service");
+
+  await page.getByRole("button", { name: "Mettre hors service" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Mettre hors service" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Moteur hors d'usage");
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  await expect(page.getByTestId("bus-status")).toHaveText("Hors service");
+  await expect(page.getByRole("button", { name: "Mettre hors service" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Équipage" }).click();
+  await expect(page.getByTestId("crew-DRIVER")).toHaveText("Serigne Mbaye");
+
+  await openCompany(page, "casamance", /Casamance Trans/);
+  await page.getByRole("tab", { name: "Activité" }).click();
+  await expect(page.getByText("Bus DK-1051-AB mis hors service. Motif : Moteur hors d'usage")).toBeVisible();
+});
+
+test("a bus with a maintenance in progress cannot be taken out of service", async ({ page }) => {
+  // Read-only: the refusal changes nothing on DK-1040-AB.
+  await login(page);
+  await openBus(page, "DK-1040-AB");
+  await page.getByRole("button", { name: "Mettre hors service" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Vérification de la protection");
+  await dialog.getByRole("button", { name: "Mettre hors service" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Une maintenance est en cours sur ce bus");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByTestId("bus-status")).toHaveText("Maintenance");
+});
+
+test("a bus with trips to come cannot be taken out of service", async ({ page }) => {
+  // Read-only: the refusal changes nothing on DK-1050-AB.
+  await login(page);
+  await openBus(page, "DK-1050-AB");
+  await page.getByRole("button", { name: "Mettre hors service" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Motif (obligatoire)").fill("Vérification de la protection");
+  await dialog.getByRole("button", { name: "Mettre hors service" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Ce bus a des trajets à venir");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+  await expect(page.getByTestId("bus-status")).toHaveText("En service");
+});
+
+test("an unknown bus id shows a not-found page", async ({ page }) => {
+  await login(page);
+  await page.goto("/flotte/bus/00000000-0000-4000-8000-00000000dead");
+  await expect(page.getByText("Bus introuvable")).toBeVisible();
 });
 
 test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {

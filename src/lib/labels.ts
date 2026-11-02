@@ -1,7 +1,8 @@
 import type { Tone } from "@/components/data/status-badge";
 import type {
-  BusStatus, CompanyStatus, FeatureDef, Incident, Invoice, KycDocumentStatus, PaymentAttempt, PermissionDomain,
-  Plan, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, UserStatus,
+  BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, Incident, Invoice, KycDocumentStatus,
+  MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
+  ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, TripStatus, UserStatus, VendorKind,
 } from "@/lib/types";
 
 type Badge = { label: string; tone: Tone };
@@ -131,3 +132,61 @@ export const busStatusBadge = (s: BusStatus): Badge =>
     maintenance: { label: "Maintenance", tone: "warning" },
     retired: { label: "Hors service", tone: "neutral" },
   }, s);
+
+export const tripStatusBadge = (s: TripStatus): Badge =>
+  pick({
+    planned: { label: "Planifié", tone: "info" },
+    boarding: { label: "Embarquement", tone: "warning" },
+    departed: { label: "Parti", tone: "success" },
+    cancelled: { label: "Annulé", tone: "neutral" },
+  }, s);
+
+export const maintenanceStatusBadge = (s: MaintenanceStatus): Badge =>
+  pick({
+    PLANNED: { label: "Planifiée", tone: "info" },
+    IN_PROGRESS: { label: "En cours", tone: "warning" },
+    COMPLETED: { label: "Terminée", tone: "success" },
+    CANCELLED: { label: "Annulée", tone: "neutral" },
+  }, s);
+
+export const routeStatusBadge = (s: RouteStatus): Badge =>
+  pick({
+    active: { label: "Active", tone: "success" },
+    inactive: { label: "Inactive", tone: "neutral" },
+  }, s);
+
+/** Expiry of a bus document; `daysLeft` comes from `daysUntil` (fleet repository). */
+export function expiryBadge(state: "expired" | "soon" | "ok", daysLeft: number): Badge {
+  if (state === "expired") {
+    return { label: daysLeft === 0 ? "Expirée aujourd'hui" : `Expirée depuis ${-daysLeft} j`, tone: "danger" };
+  }
+  if (state === "soon") return { label: daysLeft === 0 ? "Expire aujourd'hui" : `Expire dans ${daysLeft} j`, tone: "warning" };
+  return { label: "À jour", tone: "success" };
+}
+
+const BUS_TYPE_LABELS: Record<BusType, string> = {
+  MINIBUS: "Minibus", COACH: "Autocar", STANDARD: "Bus standard", ARTICULATED: "Bus articulé",
+};
+export const busTypeLabel = (t: BusType): string => BUS_TYPE_LABELS[t];
+
+const FUEL_LABELS: Record<FuelType, string> = { DIESEL: "Diesel", PETROL: "Essence", ELECTRIC: "Électrique", HYBRID: "Hybride" };
+export const fuelTypeLabel = (t: FuelType): string => FUEL_LABELS[t];
+
+const VENDOR_KIND_LABELS: Record<VendorKind, string> = {
+  GARAGE: "Garage", INSURER: "Assureur", PARTS: "Pièces détachées", OTHER: "Autre",
+};
+export const vendorKindLabel = (k: VendorKind): string => VENDOR_KIND_LABELS[k];
+
+const CREW_ROLE_LABELS: Record<CrewRole, string> = {
+  DRIVER: "Conducteur principal", DRIVER_ASSISTANT: "Conducteur assistant", CONTROLLER: "Contrôleur",
+};
+export const crewRoleLabel = (r: CrewRole): string => CREW_ROLE_LABELS[r];
+
+const CATEGORY_LABELS: Record<MaintenanceCategory, string> = {
+  PREVENTIVE: "Préventive", CORRECTIVE: "Corrective", INSPECTION: "Contrôle",
+};
+export const maintenanceCategoryLabel = (c: MaintenanceCategory): string => CATEGORY_LABELS[c];
+
+const SEAT_STATE_LABELS: Record<SeatState, string> = { free: "libre", booked: "réservé", occupied: "occupé", blocked: "bloqué" };
+/** Lower-case state of a seat, as read in "Siège 3B, réservé". */
+export const seatStateLabel = (s: SeatState): string => SEAT_STATE_LABELS[s];

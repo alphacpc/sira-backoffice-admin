@@ -80,3 +80,41 @@ describe("bus status badge", () => {
     expect(busStatusBadge("retired")).toEqual({ label: "Hors service", tone: "neutral" });
   });
 });
+
+import {
+  busTypeLabel, crewRoleLabel, expiryBadge, fuelTypeLabel, maintenanceCategoryLabel, maintenanceStatusBadge,
+  routeStatusBadge, seatStateLabel, tripStatusBadge, vendorKindLabel,
+} from "@/lib/labels";
+describe("fleet labels", () => {
+  it("labels trip, maintenance and route statuses", () => {
+    expect(["planned", "boarding", "departed", "cancelled"].map((st) => tripStatusBadge(st as "planned").label))
+      .toEqual(["Planifié", "Embarquement", "Parti", "Annulé"]);
+    expect(["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((st) => maintenanceStatusBadge(st as "PLANNED")))
+      .toEqual([
+        { label: "Planifiée", tone: "info" }, { label: "En cours", tone: "warning" },
+        { label: "Terminée", tone: "success" }, { label: "Annulée", tone: "neutral" },
+      ]);
+    expect(routeStatusBadge("inactive")).toEqual({ label: "Inactive", tone: "neutral" });
+  });
+  it("labels an expiry by state and days", () => {
+    expect(expiryBadge("expired", -12)).toEqual({ label: "Expirée depuis 12 j", tone: "danger" });
+    expect(expiryBadge("expired", 0)).toEqual({ label: "Expirée aujourd'hui", tone: "danger" });
+    expect(expiryBadge("soon", 15)).toEqual({ label: "Expire dans 15 j", tone: "warning" });
+    expect(expiryBadge("soon", 0)).toEqual({ label: "Expire aujourd'hui", tone: "warning" });
+    expect(expiryBadge("ok", 200)).toEqual({ label: "À jour", tone: "success" });
+  });
+  it("labels bus types, fuels, vendor kinds, crew roles, categories and seat states in French", () => {
+    expect(["MINIBUS", "COACH", "STANDARD", "ARTICULATED"].map((t) => busTypeLabel(t as "COACH")))
+      .toEqual(["Minibus", "Autocar", "Bus standard", "Bus articulé"]);
+    expect(["DIESEL", "PETROL", "ELECTRIC", "HYBRID"].map((t) => fuelTypeLabel(t as "DIESEL")))
+      .toEqual(["Diesel", "Essence", "Électrique", "Hybride"]);
+    expect(["GARAGE", "INSURER", "PARTS", "OTHER"].map((k) => vendorKindLabel(k as "GARAGE")))
+      .toEqual(["Garage", "Assureur", "Pièces détachées", "Autre"]);
+    expect(["DRIVER", "DRIVER_ASSISTANT", "CONTROLLER"].map((r) => crewRoleLabel(r as "DRIVER")))
+      .toEqual(["Conducteur principal", "Conducteur assistant", "Contrôleur"]);
+    expect(["PREVENTIVE", "CORRECTIVE", "INSPECTION"].map((c) => maintenanceCategoryLabel(c as "PREVENTIVE")))
+      .toEqual(["Préventive", "Corrective", "Contrôle"]);
+    expect(["free", "booked", "occupied", "blocked"].map((st) => seatStateLabel(st as "free")))
+      .toEqual(["libre", "réservé", "occupé", "bloqué"]);
+  });
+});
