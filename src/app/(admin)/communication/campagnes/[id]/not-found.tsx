@@ -6,7 +6,7 @@ export default function CampaignNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Campagne introuvable</p>
-        <Link href="/communication/campagnes" className="mt-2 inline-block text-sm text-accent underline">Retour aux campagnes</Link>
+        <Link href="/communication/campagnes" className="mt-2 inline-block text-sm text-accent-text underline">Retour aux campagnes</Link>
       </CardContent>
     </Card>
   );

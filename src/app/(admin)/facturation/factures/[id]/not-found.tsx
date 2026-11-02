@@ -6,7 +6,7 @@ export default function InvoiceNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Facture introuvable</p>
-        <Link href="/facturation/factures" className="mt-2 inline-block text-sm text-accent underline">
+        <Link href="/facturation/factures" className="mt-2 inline-block text-sm text-accent-text underline">
           Retour aux factures
         </Link>
       </CardContent>

@@ -32,7 +32,7 @@ const columns: ColumnDef<PaymentRow, unknown>[] = [
   {
     id: "subscription", header: "Abonnement", enableSorting: false,
     cell: ({ row }) => (
-      <Link href={`/facturation/abonnements/${row.original.subscriptionId}`} className="text-accent hover:underline">
+      <Link href={`/facturation/abonnements/${row.original.subscriptionId}`} className="text-accent-text hover:underline">
         Voir l&apos;abonnement
       </Link>
     ),

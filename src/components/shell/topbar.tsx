@@ -1,4 +1,4 @@
-import { LogOut } from "lucide-react";
+import { SignOut } from "@phosphor-icons/react/dist/ssr";
 import { logout } from "@/app/(auth)/actions";
 import { Button } from "@/components/ui/button";
 import { Breadcrumb } from "./breadcrumb";
@@ -14,7 +14,7 @@ export function Topbar({ companies }: { companies: { id: string; name: string }[
         <ThemeToggle />
         <form action={logout}>
           <Button variant="ghost" size="sm" type="submit" aria-label="Se déconnecter">
-            <LogOut size={16} />
+            <SignOut size={16} />
           </Button>
         </form>
       </div>

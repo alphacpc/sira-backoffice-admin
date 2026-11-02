@@ -6,7 +6,7 @@ export default function AuditLineNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Ligne de journal introuvable</p>
-        <Link href="/conformite/journal-audit" className="mt-2 inline-block text-sm text-accent underline">Retour au journal d&apos;audit</Link>
+        <Link href="/conformite/journal-audit" className="mt-2 inline-block text-sm text-accent-text underline">Retour au journal d&apos;audit</Link>
       </CardContent>
     </Card>
   );

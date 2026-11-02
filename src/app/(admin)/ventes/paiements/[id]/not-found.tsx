@@ -6,7 +6,7 @@ export default function TransactionNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Paiement introuvable</p>
-        <Link href="/ventes/paiements" className="mt-2 inline-block text-sm text-accent underline">
+        <Link href="/ventes/paiements" className="mt-2 inline-block text-sm text-accent-text underline">
           Retour aux paiements
         </Link>
       </CardContent>

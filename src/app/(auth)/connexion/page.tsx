@@ -1,4 +1,5 @@
 import { Card, CardContent } from "@/components/ui/card";
+import { ThemedLogo } from "@/components/shell/logo";
 import { LoginForm } from "./login-form";
 
 export default function ConnexionPage() {
@@ -7,8 +8,8 @@ export default function ConnexionPage() {
       <Card className="w-full max-w-sm">
         <CardContent className="space-y-6 py-8">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-wide text-accent">Sira</p>
-            <h1 className="mt-1 text-xl font-semibold">Connexion au backoffice</h1>
+            <ThemedLogo height={36} />
+            <h1 className="mt-4 text-xl font-semibold">Connexion au backoffice</h1>
             <p className="mt-1 text-sm text-muted-foreground">Réservé à l&apos;équipe plateforme.</p>
           </div>
           <LoginForm />

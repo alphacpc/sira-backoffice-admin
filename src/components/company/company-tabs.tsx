@@ -72,7 +72,7 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
               <Row label="Statut">{(() => { const b = subscriptionStatusBadge(sub.status); return <StatusBadge tone={b.tone}>{b.label}</StatusBadge>; })()}</Row>
               <Row label="Prix">{formatMoney(sub.price, sub.currency)} / {sub.billingCycle === "MONTHLY" ? "mois" : "an"}</Row>
               <Row label="Prochaine échéance">{nextBillingLabel(sub.status, sub.nextBillingDate)}</Row>
-              <Row label="Détail"><Link href={`/facturation/abonnements/${sub.id}`} className="text-accent hover:underline">Voir l&apos;abonnement</Link></Row>
+              <Row label="Détail"><Link href={`/facturation/abonnements/${sub.id}`} className="text-accent-text hover:underline">Voir l&apos;abonnement</Link></Row>
             </dl></CardContent></Card>
           ) : <Empty>Aucun abonnement.</Empty>}
           {detail.invoices.length > 0 && (

@@ -1,7 +1,7 @@
 "use client";
 
 import { Command } from "cmdk";
-import { Search } from "lucide-react";
+import { MagnifyingGlass } from "@phosphor-icons/react/dist/ssr";
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { searchEverywhere } from "@/app/(admin)/recherche/actions";
@@ -74,7 +74,7 @@ export function CommandPalette({ companies }: { companies: { id: string; name: s
   return (
     <>
       <Button variant="secondary" size="sm" onClick={() => setOpen(true)} aria-label="Ouvrir la recherche">
-        <Search size={14} />
+        <MagnifyingGlass size={14} />
         <span className="hidden sm:inline">Rechercher</span>
         <kbd className="hidden rounded bg-muted px-1.5 text-[10px] sm:inline">⌘K</kbd>
       </Button>

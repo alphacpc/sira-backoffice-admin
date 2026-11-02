@@ -6,7 +6,7 @@ export default function UserNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Utilisateur introuvable</p>
-        <Link href="/utilisateurs" className="mt-2 inline-block text-sm text-accent underline">
+        <Link href="/utilisateurs" className="mt-2 inline-block text-sm text-accent-text underline">
           Retour à la liste
         </Link>
       </CardContent>

@@ -73,7 +73,7 @@ export default async function ServicesPage({
                     <td className="px-3 py-2">{r.lastChangeAt ? formatDateTime(r.lastChangeAt) : "—"}</td>
                     <td className="px-3 py-2 tabular-nums">
                       {r.openIncidents > 0
-                        ? <Link href={serviceFilterHref("/supervision/incidents", r.name)} className="text-accent hover:underline">{r.openIncidents}</Link>
+                        ? <Link href={serviceFilterHref("/supervision/incidents", r.name)} className="text-accent-text hover:underline">{r.openIncidents}</Link>
                         : 0}
                     </td>
                     <td className="px-3 py-2">{formatDateTime(r.checkedAt)}</td>

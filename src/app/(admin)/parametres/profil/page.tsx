@@ -65,7 +65,7 @@ export default async function ProfilePage() {
                 return (
                   <tr key={s.id} className="border-b border-border last:border-0">
                     <td className="px-3 py-2 font-medium">
-                      {s.deviceLabel}{s.current && <span className="ml-2 text-xs text-accent">Session courante</span>}
+                      {s.deviceLabel}{s.current && <span className="ml-2 text-xs text-accent-text">Session courante</span>}
                     </td>
                     <td className="px-3 py-2 font-mono text-xs">{s.ip}</td>
                     <td className="px-3 py-2">{formatDateTime(s.createdAt)}</td>

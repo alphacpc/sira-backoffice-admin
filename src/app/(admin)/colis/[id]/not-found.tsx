@@ -6,7 +6,7 @@ export default function ParcelNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Colis introuvable</p>
-        <Link href="/colis" className="mt-2 inline-block text-sm text-accent underline">Retour aux colis</Link>
+        <Link href="/colis" className="mt-2 inline-block text-sm text-accent-text underline">Retour aux colis</Link>
       </CardContent>
     </Card>
   );

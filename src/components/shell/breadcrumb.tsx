@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronRight } from "lucide-react";
+import { CaretRight } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { isLinkablePath, labelForSegment } from "@/lib/nav";
@@ -18,7 +18,7 @@ export function Breadcrumb() {
       <Link href="/" className="hover:text-foreground">Accueil</Link>
       {crumbs.map((c, i) => (
         <span key={c.href} className="flex items-center gap-1">
-          <ChevronRight size={12} />
+          <CaretRight size={12} />
           {i === crumbs.length - 1 ? (
             <span className="text-foreground">{c.label}</span>
           ) : isLinkablePath(c.href) ? (

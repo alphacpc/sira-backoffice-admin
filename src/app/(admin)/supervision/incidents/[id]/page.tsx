@@ -66,7 +66,7 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
             <DetailRow label="Déclaré par">{i.reportedBy}</DetailRow>
             <DetailRow label="Postmortem">
               {i.postmortemUrl
-                ? <a data-testid="incident-postmortem" href={i.postmortemUrl} target="_blank" rel="noreferrer noopener" className="text-accent hover:underline">Ouvrir le compte rendu</a>
+                ? <a data-testid="incident-postmortem" href={i.postmortemUrl} target="_blank" rel="noreferrer noopener" className="text-accent-text hover:underline">Ouvrir le compte rendu</a>
                 : <span data-testid="incident-postmortem">Aucun</span>}
             </DetailRow>
           </dl></CardContent>

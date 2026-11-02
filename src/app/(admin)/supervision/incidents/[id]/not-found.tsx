@@ -6,7 +6,7 @@ export default function IncidentNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Incident introuvable</p>
-        <Link href="/supervision/incidents" className="mt-2 inline-block text-sm text-accent underline">Retour aux incidents</Link>
+        <Link href="/supervision/incidents" className="mt-2 inline-block text-sm text-accent-text underline">Retour aux incidents</Link>
       </CardContent>
     </Card>
   );

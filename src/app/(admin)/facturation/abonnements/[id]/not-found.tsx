@@ -6,7 +6,7 @@ export default function SubscriptionNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Abonnement introuvable</p>
-        <Link href="/facturation/abonnements" className="mt-2 inline-block text-sm text-accent underline">
+        <Link href="/facturation/abonnements" className="mt-2 inline-block text-sm text-accent-text underline">
           Retour aux abonnements
         </Link>
       </CardContent>

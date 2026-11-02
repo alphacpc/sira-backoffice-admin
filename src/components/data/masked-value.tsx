@@ -1,6 +1,6 @@
 "use client";
 
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeSlash } from "@phosphor-icons/react/dist/ssr";
 import { useState } from "react";
 
 export function MaskedValue({
@@ -34,7 +34,7 @@ export function MaskedValue({
         aria-label={shown ? "Masquer la donnée" : "Révéler la donnée"}
         className="text-muted-foreground hover:text-foreground"
       >
-        {shown ? <EyeOff size={14} /> : <Eye size={14} />}
+        {shown ? <EyeSlash size={14} /> : <Eye size={14} />}
       </button>
       {failed && <span role="alert" className="text-xs text-danger">Impossible de révéler</span>}
     </span>

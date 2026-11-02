@@ -30,11 +30,11 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
           <dl>
             <DetailRow label="Numéro">{invoice.number}</DetailRow>
             <DetailRow label="Compagnie">
-              <Link href={`/compagnies/${invoice.companyId}`} className="text-accent hover:underline">{detail.companyName}</Link>
+              <Link href={`/compagnies/${invoice.companyId}`} className="text-accent-text hover:underline">{detail.companyName}</Link>
             </DetailRow>
             <DetailRow label="Abonnement">
               {subscription ? (
-                <Link href={`/facturation/abonnements/${subscription.id}`} className="text-accent hover:underline">
+                <Link href={`/facturation/abonnements/${subscription.id}`} className="text-accent-text hover:underline">
                   Voir l&apos;abonnement
                 </Link>
               ) : "—"}

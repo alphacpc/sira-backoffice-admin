@@ -4,7 +4,7 @@ import {
   flexRender, getCoreRowModel, getFilteredRowModel, getPaginationRowModel,
   getSortedRowModel, useReactTable, type ColumnDef, type SortingState, type VisibilityState,
 } from "@tanstack/react-table";
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight } from "lucide-react";
+import { ArrowDown, ArrowUp, CaretLeft, CaretRight } from "@phosphor-icons/react/dist/ssr";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -123,11 +123,11 @@ export function DataTable<T>({
         <span>{table.getFilteredRowModel().rows.length} résultat(s)</span>
         <div className="flex items-center gap-2">
           <Button variant="secondary" size="sm" onClick={() => table.previousPage()} disabled={!table.getCanPreviousPage()} aria-label="Page précédente">
-            <ChevronLeft size={14} />
+            <CaretLeft size={14} />
           </Button>
           <span>Page {table.getState().pagination.pageIndex + 1} / {Math.max(table.getPageCount(), 1)}</span>
           <Button variant="secondary" size="sm" onClick={() => table.nextPage()} disabled={!table.getCanNextPage()} aria-label="Page suivante">
-            <ChevronRight size={14} />
+            <CaretRight size={14} />
           </Button>
         </div>
       </div>

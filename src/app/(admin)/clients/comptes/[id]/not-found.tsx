@@ -6,7 +6,7 @@ export default function CustomerNotFound() {
     <Card>
       <CardContent className="py-12 text-center">
         <p className="text-lg font-medium">Client introuvable</p>
-        <Link href="/clients/comptes" className="mt-2 inline-block text-sm text-accent underline">Retour aux comptes clients</Link>
+        <Link href="/clients/comptes" className="mt-2 inline-block text-sm text-accent-text underline">Retour aux comptes clients</Link>
       </CardContent>
     </Card>
   );

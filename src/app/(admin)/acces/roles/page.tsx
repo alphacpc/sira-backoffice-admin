@@ -34,7 +34,7 @@ export default function RolesPage() {
                 <p className="text-sm text-muted-foreground">Aucune permission.</p>
               ) : (
                 <details>
-                  <summary className="cursor-pointer text-sm text-accent">Permissions du rôle « {r.name} »</summary>
+                  <summary className="cursor-pointer text-sm text-accent-text">Permissions du rôle « {r.name} »</summary>
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
                     {PERMISSION_DOMAINS.map((d) => {
                       const perms = r.permissions.filter((p) => p.domain === d);
