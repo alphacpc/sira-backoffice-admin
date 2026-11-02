@@ -1,3 +1,5 @@
+import { addActivity } from "@/lib/repos/activity";
+import { appendAudit } from "@/lib/repos/compliance";
 import { getStore } from "@/lib/repos/store";
 import type {
   ApiUsageRow, ImpactScope, IncidentSeverity, IncidentStatus, ServiceHealth, ServiceStatus, SystemIncident,
@@ -64,6 +66,29 @@ export function incidentTransitionBlock(incident: Pick<SystemIncident, "status">
   if (target === incident.status) return "L'incident est déjà dans cet état";
   if (STATUS_ORDER[target] < STATUS_ORDER[incident.status]) return "Un incident ne peut pas revenir en arrière";
   return null;
+}
+
+export interface IncidentInput {
+  title: string; serviceName: string; severity: IncidentSeverity; impactScope: ImpactScope;
+  affectedCompanyId: string | null; description: string;
+}
+
+const STATUS_TEXT: Record<IncidentStatus, string> = {
+  INVESTIGATING: "en investigation", IDENTIFIED: "identifié", MONITORING: "sous surveillance", RESOLVED: "résolu",
+};
+const SEVERITY_TEXT: Record<IncidentSeverity, string> = { LOW: "Faible", MEDIUM: "Moyenne", HIGH: "Haute", CRITICAL: "Critique" };
+
+let incidentSeq = 1;
+
+/** `SYS-` + 8 base-36 characters (Knuth's multiplicative hash), advanced until the code is unused. */
+function nextIncidentCode(): string {
+  const used = new Set(getStore().systemIncidents.map((i) => i.incidentCode));
+  let n = getStore().systemIncidents.length + 1;
+  for (;;) {
+    const code = "SYS-" + ((n * 2_654_435_761) % 2 ** 32).toString(36).toUpperCase().padStart(8, "0");
+    if (!used.has(code)) return code;
+    n++;
+  }
 }
 
 function checksOf(name: string) {
@@ -159,6 +184,89 @@ export const incidentsRepo = {
       incident, companyName: companyName(incident.affectedCompanyId),
       durationMinutes: Math.max(0, Math.round((end - Date.parse(incident.detectedAt)) / 60_000)),
     };
+  },
+
+  /**
+   * Declares an incident. Guards, in this order: title, service, severity, scope, company, description.
+   * The incident starts as `INVESTIGATING`, detected now.
+   */
+  declare(input: IncidentInput, actor = "admin@sira.app", now: Date = new Date()): SystemIncident {
+    const s = getStore();
+    const title = input.title.trim();
+    if (!title) throw new Error("Un titre est obligatoire");
+    if (title.length > 200) throw new Error("Le titre est trop long (200 caractères maximum)");
+    const serviceName = input.serviceName.trim();
+    if (!serviceName) throw new Error("Le service est obligatoire");
+    if (serviceName.length > 100) throw new Error("Le nom du service est trop long (100 caractères maximum)");
+    if (!(INCIDENT_SEVERITIES as readonly string[]).includes(input.severity)) throw new Error("Gravité invalide");
+    if (!(IMPACT_SCOPES as readonly string[]).includes(input.impactScope)) throw new Error("Portée invalide");
+    if (input.impactScope === "SINGLE_COMPANY") {
+      if (!input.affectedCompanyId) throw new Error("Une compagnie est obligatoire pour un incident limité à une compagnie");
+      if (!s.companies.some((c) => c.id === input.affectedCompanyId)) throw new Error("Compagnie introuvable");
+    } else if (input.affectedCompanyId) {
+      throw new Error("Une compagnie ne peut être indiquée que pour un incident limité à une compagnie");
+    }
+    const description = input.description.trim();
+    if (description.length > 10_000) throw new Error("La description est trop longue (10000 caractères maximum)");
+
+    const incident: SystemIncident = {
+      id: `incident-${now.getTime()}-${incidentSeq++}`, incidentCode: nextIncidentCode(), serviceName,
+      severity: input.severity, status: "INVESTIGATING", title, description: description || null,
+      impactScope: input.impactScope, affectedCompanyId: input.impactScope === "SINGLE_COMPANY" ? input.affectedCompanyId : null,
+      detectedAt: now.toISOString(), resolvedAt: null, reportedBy: actor, postmortemUrl: null,
+      createdAt: now.toISOString(), updatedAt: null,
+    };
+    s.systemIncidents.push(incident);
+    appendAudit({
+      companyId: incident.affectedCompanyId, action: "CREATE", entityType: "SystemIncident", entityId: incident.id,
+      beforeState: null, afterState: { status: incident.status, severity: incident.severity, impactScope: incident.impactScope },
+      sourceService: "monitoring-service",
+    }, actor, now);
+    addActivity(incident.affectedCompanyId, actor, `Incident ${incident.incidentCode} déclaré (${SEVERITY_TEXT[incident.severity]}) sur ${serviceName}`, now);
+    return incident;
+  },
+
+  /** Moves an incident forward. Guards, in this order: incident exists, valid status, not resolved, different, not backwards. */
+  advance(incidentId: string, target: IncidentStatus, actor = "admin@sira.app", now: Date = new Date()): SystemIncident {
+    const incident = getStore().systemIncidents.find((i) => i.id === incidentId);
+    if (!incident) throw new Error("Incident introuvable");
+    if (!(INCIDENT_STATUSES as readonly string[]).includes(target)) throw new Error("Statut invalide");
+    const blocked = incidentTransitionBlock(incident, target);
+    if (blocked) throw new Error(blocked);
+    const previous = incident.status;
+    incident.status = target;
+    incident.updatedAt = now.toISOString();
+    if (target === "RESOLVED") incident.resolvedAt = now.toISOString();
+    appendAudit({
+      companyId: incident.affectedCompanyId, action: "UPDATE", entityType: "SystemIncident", entityId: incident.id,
+      beforeState: { status: previous }, afterState: { status: target }, sourceService: "monitoring-service",
+    }, actor, now);
+    addActivity(incident.affectedCompanyId, actor, `Incident ${incident.incidentCode} : ${STATUS_TEXT[previous]} → ${STATUS_TEXT[target]}`, now);
+    return incident;
+  },
+
+  /**
+   * Records the postmortem address, at any status. Guards, in this order: incident exists, address present,
+   * at most 2048 characters, an http(s) link without space. The audit line is written on the first address only.
+   */
+  setPostmortem(incidentId: string, url: string, actor = "admin@sira.app", now: Date = new Date()): SystemIncident {
+    const incident = getStore().systemIncidents.find((i) => i.id === incidentId);
+    if (!incident) throw new Error("Incident introuvable");
+    const address = url.trim();
+    if (!address) throw new Error("L'adresse du postmortem est obligatoire");
+    if (address.length > 2048) throw new Error("L'adresse du postmortem est trop longue (2048 caractères maximum)");
+    if (!/^https?:\/\/\S+$/i.test(address)) throw new Error("L'adresse du postmortem doit commencer par http:// ou https://");
+    const first = incident.postmortemUrl === null;
+    incident.postmortemUrl = address;
+    incident.updatedAt = now.toISOString();
+    if (first) {
+      appendAudit({
+        companyId: incident.affectedCompanyId, action: "UPDATE", entityType: "SystemIncident", entityId: incident.id,
+        beforeState: { postmortem: "false" }, afterState: { postmortem: "true" }, sourceService: "monitoring-service",
+      }, actor, now);
+    }
+    addActivity(incident.affectedCompanyId, actor, `Postmortem de l'incident ${incident.incidentCode} ${first ? "ajouté" : "mis à jour"}`, now);
+    return incident;
   },
 };
 

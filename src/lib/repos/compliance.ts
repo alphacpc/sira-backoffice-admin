@@ -149,7 +149,7 @@ function currentConsents(): ConsentRecord[] {
 let appendSeq = 1;
 
 /** The only way a backoffice action adds to the audit trail; existing lines are never touched. */
-function appendAudit(
+export function appendAudit(
   row: Pick<AuditLog, "companyId" | "action" | "entityType" | "entityId" | "beforeState" | "afterState" | "sourceService">,
   actor: string, now: Date,
 ): void {
