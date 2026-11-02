@@ -254,3 +254,20 @@ describe("communication labels", () => {
     expect(scheduleStatusBadge("CANCELLED")).toEqual({ label: "Annulée", tone: "neutral" });
   });
 });
+
+import { dsrStatusBadge, dsrTypeLabel } from "@/lib/labels";
+
+describe("data-subject request labels", () => {
+  it("labels types and statuses", () => {
+    expect(dsrTypeLabel("ACCESS")).toBe("Accès");
+    expect(dsrTypeLabel("RECTIFICATION")).toBe("Rectification");
+    expect(dsrTypeLabel("ERASURE")).toBe("Effacement");
+    expect(dsrTypeLabel("PORTABILITY")).toBe("Portabilité");
+    expect(dsrTypeLabel("RESTRICTION")).toBe("Limitation");
+    expect(dsrTypeLabel("OBJECTION")).toBe("Opposition");
+    expect(dsrStatusBadge("RECEIVED")).toEqual({ label: "Reçue", tone: "warning" });
+    expect(dsrStatusBadge("IN_PROGRESS")).toEqual({ label: "En cours", tone: "info" });
+    expect(dsrStatusBadge("COMPLETED")).toEqual({ label: "Clôturée", tone: "success" });
+    expect(dsrStatusBadge("REJECTED")).toEqual({ label: "Rejetée", tone: "neutral" });
+  });
+});

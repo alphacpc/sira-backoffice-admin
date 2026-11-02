@@ -151,10 +151,6 @@ export interface Incident {
   status: "INVESTIGATING" | "IDENTIFIED" | "MONITORING" | "RESOLVED";
   detectedAt: string;
 }
-export interface DsrRequest {
-  id: string; type: "ACCESS" | "ERASURE" | "RECTIFICATION";
-  status: "RECEIVED" | "IN_PROGRESS"; dueDate: string; requesterRef: string;
-}
 
 export interface CompanyDetail {
   company: Company;
@@ -462,4 +458,59 @@ export type ScheduleStatus = "PENDING" | "SENT" | "FAILED" | "CANCELLED";
 export interface MarketingSchedule {
   id: string; companyId: string; campaignId: string; messageId: string; segmentId: string;
   scheduledAt: string; sentAt: string | null; status: ScheduleStatus; recipientsCount: number; createdAt: string;
+}
+
+export type DsrType = "ACCESS" | "RECTIFICATION" | "ERASURE" | "PORTABILITY" | "RESTRICTION" | "OBJECTION";
+export type DsrStatus = "RECEIVED" | "IN_PROGRESS" | "COMPLETED" | "REJECTED";
+
+/** Data-subject request (`audit-compliance-service`). Replaces the lot 1 `DsrRequest` stub. */
+export interface DataSubjectRequest {
+  id: string; requesterUserId: string;
+  /** `null` for a platform-level request. */
+  companyId: string | null;
+  requestType: DsrType; status: DsrStatus; reason: string;
+  /** Label of the backoffice identity that handled it (the dbml points to an Employee). */
+  handledBy: string | null;
+  /** Creation plus 30 days. */
+  dueDate: string; resolvedAt: string | null; resolutionNotes: string | null; createdAt: string;
+}
+
+export type ConsentType = "MARKETING_EMAIL" | "MARKETING_SMS" | "DATA_SHARING_PARTNERS" | "COOKIES_ANALYTICS" | "GEOLOCATION";
+export type ConsentStatus = "GRANTED" | "WITHDRAWN";
+export type ConsentSource = "SIGNUP" | "SETTINGS_PAGE" | "BOOKING_FLOW";
+
+/** Append-only consent history: one row per change, never rewritten. */
+export interface ConsentRecord {
+  id: string; userId: string; consentType: ConsentType;
+  /** Required for the two marketing types, forbidden otherwise (a legacy marketing row may lack it). */
+  companyId: string | null;
+  status: ConsentStatus; consentVersion: string; source: ConsentSource;
+  grantedAt: string | null; withdrawnAt: string | null; createdAt: string;
+}
+
+export type AuditActorType = "USER" | "EMPLOYEE" | "SYSTEM" | "API_KEY";
+export type AuditAction = "CREATE" | "UPDATE" | "DELETE" | "LOGIN" | "LOGIN_FAILED" | "EXPORT" | "PERMISSION_CHANGE";
+
+/** Append-only audit trail line. Origin fields are `null` once anonymised by the retention job. */
+export interface AuditLog {
+  id: string; companyId: string | null;
+  actorUserId: string | null;
+  /** Backoffice identity when the line was written by a backoffice action (not a platform account). */
+  actorLabel: string | null;
+  actorType: AuditActorType; action: AuditAction; entityType: string; entityId: string;
+  beforeState: Record<string, string> | null; afterState: Record<string, string> | null;
+  ipAddress: string | null; userAgent: string | null;
+  sourceService: string | null; occurredAt: string | null; createdAt: string;
+}
+
+export type DataSubjectType = "CUSTOMER" | "EMPLOYEE" | "USER";
+export type DataCategory = "IDENTITY" | "FINANCIAL" | "LOCATION" | "HEALTH" | "CONTACT" | "CONSENT";
+export type AccessReason = "SUPPORT_REQUEST" | "LEGAL_OBLIGATION" | "SERVICE_DELIVERY" | "INVESTIGATION";
+export type AccessType = "VIEW" | "EXPORT" | "MODIFY" | "DELETE";
+
+/** Append-only log of accesses to personal data. */
+export interface DataAccessLog {
+  id: string; accessedByUserId: string | null; accessedByLabel: string | null;
+  dataSubjectType: DataSubjectType; dataSubjectId: string; dataCategory: DataCategory;
+  accessReason: AccessReason; accessType: AccessType; ipAddress: string | null; createdAt: string;
 }

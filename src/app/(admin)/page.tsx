@@ -5,12 +5,11 @@ import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
-import { serviceStatusBadge, severityBadge } from "@/lib/labels";
+import { dsrTypeLabel, serviceStatusBadge, severityBadge } from "@/lib/labels";
 import { dashboardRepo } from "@/lib/repos/dashboard";
 
 export const dynamic = "force-dynamic";
 
-const DSR_LABEL = { ACCESS: "Accès", ERASURE: "Effacement", RECTIFICATION: "Rectification" } as const;
 
 export default function Vue360Page() {
   const o = dashboardRepo.overview();
@@ -89,7 +88,7 @@ export default function Vue360Page() {
           <CardContent className="space-y-2">
             {o.dsr.map((d) => (
               <div key={d.id} className="flex items-center justify-between text-sm">
-                <span>{DSR_LABEL[d.type]} <span className="text-xs text-muted-foreground">({d.requesterRef})</span></span>
+                <span>{dsrTypeLabel(d.requestType)} <span className="text-xs text-muted-foreground">({d.requesterName})</span></span>
                 <StatusBadge tone={d.daysLeft < 0 ? "danger" : d.daysLeft <= 5 ? "warning" : "neutral"}>
                   {d.daysLeft < 0 ? `En retard de ${-d.daysLeft} j` : `${d.daysLeft} j restants`}
                 </StatusBadge>

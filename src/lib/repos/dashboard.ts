@@ -1,5 +1,5 @@
 import { getStore } from "@/lib/repos/store";
-import type { ActivityEntry, DsrRequest, Incident, ServiceHealth, Subscription } from "@/lib/types";
+import type { ActivityEntry, DsrType, Incident, ServiceHealth, Subscription } from "@/lib/types";
 
 export interface Overview {
   kpis: {
@@ -9,7 +9,7 @@ export interface Overview {
   services: ServiceHealth[];
   incidents: Incident[];
   pastDue: (Subscription & { companyName: string })[];
-  dsr: (DsrRequest & { daysLeft: number })[];
+  dsr: { id: string; requestType: DsrType; requesterName: string; dueDate: string; daysLeft: number }[];
   activity: (ActivityEntry & { companyName: string | null })[];
 }
 
@@ -35,9 +35,11 @@ export const dashboardRepo = {
       services: s.services,
       incidents: s.incidents.filter((i) => i.status !== "RESOLVED"),
       pastDue,
-      dsr: s.dsr
+      dsr: s.dataSubjectRequests
+        .filter((d) => d.status === "RECEIVED" || d.status === "IN_PROGRESS")
         .map((d) => ({
-          ...d,
+          id: d.id, requestType: d.requestType, dueDate: d.dueDate,
+          requesterName: s.users.find((u) => u.id === d.requesterUserId)?.displayName ?? "—",
           daysLeft: Math.ceil((new Date(d.dueDate).getTime() - now.getTime()) / DAY),
         }))
         .sort((a, b) => a.daysLeft - b.daysLeft),

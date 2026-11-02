@@ -5,7 +5,7 @@ import type {
   TransactionStatus,
   BusStatus, BusType, CompanyStatus, CrewRole, FeatureDef, FuelType, Incident, Invoice, KycDocumentStatus,
   MaintenanceCategory, MaintenanceStatus, PaymentAttempt, PermissionDomain, Plan, RouteStatus, SeatState,
-  FeedbackStatus, FeedbackType, MembershipType, SponsorshipRewardType, SponsorshipStatus,
+  DsrStatus, DsrType, FeedbackStatus, FeedbackType, MembershipType, SponsorshipRewardType, SponsorshipStatus,
   CampaignObjective, CampaignStatus, MarketingMessageStatus, NotificationChannel, NotificationStatus, ScheduleStatus,
   ParcelPaymentStatus, ParcelStatus, ParcelType, ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, TripStatus, UserStatus, VendorKind,
 } from "@/lib/types";
@@ -349,4 +349,18 @@ export const scheduleStatusBadge = (s: ScheduleStatus): Badge =>
     SENT: { label: "Envoyée", tone: "success" },
     FAILED: { label: "Échouée", tone: "danger" },
     CANCELLED: { label: "Annulée", tone: "neutral" },
+  }, s);
+
+export const dsrTypeLabel = (t: DsrType): string =>
+  ({
+    ACCESS: "Accès", RECTIFICATION: "Rectification", ERASURE: "Effacement",
+    PORTABILITY: "Portabilité", RESTRICTION: "Limitation", OBJECTION: "Opposition",
+  })[t];
+
+export const dsrStatusBadge = (s: DsrStatus): Badge =>
+  pick({
+    RECEIVED: { label: "Reçue", tone: "warning" },
+    IN_PROGRESS: { label: "En cours", tone: "info" },
+    COMPLETED: { label: "Clôturée", tone: "success" },
+    REJECTED: { label: "Rejetée", tone: "neutral" },
   }, s);

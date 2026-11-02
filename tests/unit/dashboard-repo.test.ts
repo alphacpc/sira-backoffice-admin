@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import { dashboardRepo } from "@/lib/repos/dashboard";
-import { resetStore } from "@/lib/repos/store";
+import { getStore, resetStore } from "@/lib/repos/store";
 
 beforeEach(() => resetStore());
 
@@ -30,5 +30,17 @@ describe("dashboardRepo.overview", () => {
     expect(o.activity.length).toBeLessThanOrEqual(8);
     const at = o.activity.map((a) => a.at);
     expect([...at].sort().reverse()).toEqual(at);
+  });
+  it("lists only open data-subject requests with the requester's name", () => {
+    const s = getStore();
+    const o = dashboardRepo.overview(new Date());
+    const open = s.dataSubjectRequests.filter((d) => d.status === "RECEIVED" || d.status === "IN_PROGRESS");
+    expect(o.dsr).toHaveLength(open.length);
+    expect(o.dsr.length).toBeGreaterThan(0);
+    for (const d of o.dsr) {
+      const source = open.find((x) => x.id === d.id)!;
+      expect(d.requesterName).toBe(s.users.find((u) => u.id === source.requesterUserId)!.displayName);
+      expect(Object.keys(d).sort()).toEqual(["daysLeft", "dueDate", "id", "requestType", "requesterName"]);
+    }
   });
 });

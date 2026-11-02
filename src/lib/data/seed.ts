@@ -1,6 +1,7 @@
 import { KYC_TYPES } from "@/lib/types/kyc";
 import type {
-  ActivityEntry, Booking, BookingChannel, BookingPaymentStatus, BookingStatus, Bus, BusMaintenance, BusType, Company, CompanyStatus, CrewMember, CrewRole, DsrRequest,
+  ActivityEntry, Booking, BookingChannel, BookingPaymentStatus, BookingStatus, Bus, BusMaintenance, BusType, Company, CompanyStatus, CrewMember, CrewRole,
+  AccessReason, AccessType, AuditAction, AuditActorType, AuditLog, ConsentRecord, ConsentSource, ConsentStatus, ConsentType, DataAccessLog, DataCategory, DataSubjectRequest, DataSubjectType, DsrStatus, DsrType,
   Employee, FeatureDef, FeatureFlag, Fleet, FuelType, Incident, Invoice, KycDocument, KycDocumentType,
   MaintenanceCategory, MaintenanceStatus, PartnerTier, PaymentAttempt, PermissionDef, Plan, PlanLimits,
   PlatformUser, Referral, RetryOutcome, Role, RolePermission, Route, SeatMap, SeatState, ServiceHealth,
@@ -29,7 +30,10 @@ export interface Store {
   activity: ActivityEntry[];
   services: ServiceHealth[];
   incidents: Incident[];
-  dsr: DsrRequest[];
+  dataSubjectRequests: DataSubjectRequest[];
+  consentRecords: ConsentRecord[];
+  auditLogs: AuditLog[];
+  dataAccessLogs: DataAccessLog[];
   plans: Plan[];
   featureDefs: FeatureDef[];
   partnerTiers: PartnerTier[];
@@ -257,7 +261,7 @@ export function buildSeed(now: Date = new Date()): Store {
   const store: Store = {
     companies: [], documents: [], subscriptions: [], invoices: [], limits: {},
     features: {}, usage: {}, referrals: {}, employees: [], buses: [], trips: [],
-    activity: [], services: [], incidents: [], dsr: [],
+    activity: [], services: [], incidents: [], dataSubjectRequests: [], consentRecords: [], auditLogs: [], dataAccessLogs: [],
     plans: [], featureDefs: [], partnerTiers: [], kycTypes: [],
     subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
     users: [], roles: [], permissions: [], rolePermissions: [], sessions: [],
@@ -521,11 +525,7 @@ export function buildSeed(now: Date = new Date()): Store {
     { id: uid(10, 3), code: "SYS-J9K1L2M3", title: "Échec de connexion intermittent", serviceName: "identity-service", severity: "LOW", status: "RESOLVED", detectedAt: iso(-6) },
   ];
 
-  store.dsr = [
-    { id: uid(11, 1), type: "ERASURE", status: "IN_PROGRESS", dueDate: iso(3), requesterRef: "usr-4f1c" },
-    { id: uid(11, 2), type: "ACCESS", status: "RECEIVED", dueDate: iso(12), requesterRef: "usr-9a27" },
-    { id: uid(11, 3), type: "RECTIFICATION", status: "RECEIVED", dueDate: iso(-2), requesterRef: "usr-c3d0" },
-  ];
+  seedDataSubjectRequests(store, iso);
 
   return store;
 }
@@ -1218,4 +1218,40 @@ function seedNotifications(store: Store): void {
 
   // Keep the log chronological for readers of the raw store; consumers sort anyway.
   store.notifications.sort((a, b) => a.createdAt.localeCompare(b.createdAt) || a.id.localeCompare(b.id));
+}
+
+/**
+ * Ten data-subject requests: four statuses, six types, one open request past its deadline. The five scenario
+ * requests use unique (requester, type) pairs among the client accounts.
+ */
+function seedDataSubjectRequests(store: Store, iso: (offsetDays: number) => string): void {
+  let seq = 1;
+  const client = (displayName: string) => store.users.find((u) => u.displayName === displayName && u.roleCode === "USER" && u.companyId === null)!;
+  const staff = store.users.filter((u) => u.companyId !== null);
+
+  interface Def {
+    who: PlatformUser; type: DsrType; status: DsrStatus; createdDays: number; reason: string;
+    resolvedDays?: number; notes?: string;
+  }
+  const defs: Def[] = [
+    { who: client("Ndèye Diouf"), type: "ACCESS", status: "RECEIVED", createdDays: -10, reason: "Je souhaite obtenir une copie de mes données personnelles." },
+    { who: client("Lamine Camara"), type: "ERASURE", status: "IN_PROGRESS", createdDays: -27, reason: "Je demande la suppression de mon compte entreprise." },
+    { who: client("Aïssatou Sarr"), type: "OBJECTION", status: "IN_PROGRESS", createdDays: -20, reason: "Je m'oppose à l'usage de mes données à des fins commerciales." },
+    { who: client("Pape Mbaye"), type: "RECTIFICATION", status: "RECEIVED", createdDays: -32, reason: "Mon nom est mal orthographié sur mes billets." },
+    { who: client("Aïssatou Sarr"), type: "PORTABILITY", status: "COMPLETED", createdDays: -50, resolvedDays: -30, reason: "Je veux récupérer mes données dans un format lisible.", notes: "Export transmis au demandeur." },
+    { who: client("Pape Mbaye"), type: "RESTRICTION", status: "RECEIVED", createdDays: -5, reason: "Je demande la limitation du traitement de mes données le temps d'une vérification." },
+    { who: client("Ndèye Diouf"), type: "ERASURE", status: "COMPLETED", createdDays: -60, resolvedDays: -35, reason: "Je demande l'effacement de mon ancien compte.", notes: "Données effacées, journaux d'audit conservés." },
+    { who: client("Lamine Camara"), type: "ACCESS", status: "REJECTED", createdDays: -45, resolvedDays: -40, reason: "Je demande l'accès aux données d'un tiers.", notes: "Identité du demandeur non vérifiée." },
+    { who: staff[0]!, type: "ACCESS", status: "COMPLETED", createdDays: -40, resolvedDays: -25, reason: "Je demande l'accès à ma fiche employé.", notes: "Copie transmise par la compagnie." },
+    { who: staff[1]!, type: "PORTABILITY", status: "RECEIVED", createdDays: -8, reason: "Je souhaite transférer mes données vers un autre service." },
+  ];
+
+  for (const d of defs) {
+    store.dataSubjectRequests.push({
+      id: uid(61, seq++), requesterUserId: d.who.id, companyId: d.who.companyId, requestType: d.type, status: d.status,
+      reason: d.reason, handledBy: d.status === "RECEIVED" ? null : "admin",
+      dueDate: iso(d.createdDays + 30), resolvedAt: d.resolvedDays === undefined ? null : iso(d.resolvedDays),
+      resolutionNotes: d.notes ?? null, createdAt: iso(d.createdDays),
+    });
+  }
 }
