@@ -23,10 +23,10 @@ export const NAV: NavSection[] = [
     { label: "Impayés", href: "/facturation/impayes", implemented: true },
   ] },
   { label: "Utilisateurs et accès", items: [
-    todo("Utilisateurs", "/utilisateurs"),
-    todo("Rôles", "/acces/roles"),
-    todo("Permissions", "/acces/permissions"),
-    todo("Sessions", "/acces/sessions"),
+    { label: "Utilisateurs", href: "/utilisateurs", implemented: true },
+    { label: "Rôles", href: "/acces/roles", implemented: true },
+    { label: "Permissions", href: "/acces/permissions", implemented: true },
+    { label: "Sessions", href: "/acces/sessions", implemented: true },
   ] },
   { label: "Flotte", items: [
     todo("Bus", "/flotte/bus"),
@@ -91,7 +91,7 @@ const SEGMENT_LABELS: Record<string, string> = {
   facturation: "Facturation", flotte: "Flotte", ventes: "Ventes", clients: "Clients",
   communication: "Communication", conformite: "Conformité", supervision: "Supervision",
   parametres: "Paramètres", acces: "Accès", utilisateurs: "Utilisateurs", colis: "Colis",
-  recherche: "Recherche",
+  recherche: "Recherche", roles: "Rôles",
 };
 
 export function labelForSegment(segment: string): string {
@@ -100,7 +100,9 @@ export function labelForSegment(segment: string): string {
   return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
-const ROUTE_PREFIXES = ["/compagnies", "/offre/plans", "/facturation/abonnements", "/facturation/factures"];
+const ROUTE_PREFIXES = [
+  "/compagnies", "/offre/plans", "/facturation/abonnements", "/facturation/factures", "/utilisateurs",
+];
 
 /** True when a breadcrumb path leads to a real screen (a nav item or a company route), so it may be a link. */
 export function isLinkablePath(path: string): boolean {

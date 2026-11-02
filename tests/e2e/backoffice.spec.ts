@@ -367,7 +367,23 @@ test("a session is revoked from the platform sessions list with a mandatory reas
   await expect(page.getByRole("tabpanel").getByRole("cell", { name: "Téléphone signalé perdu" })).toBeVisible();
 });
 
-test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
+test("the company team links each employee to their platform account", async ({ page }) => {
+  // Read-only.
+  await login(page);
+  await openCompany(page, "matam", /Matam Express/);
+  await page.getByRole("tab", { name: "Équipe" }).click();
+  await page.getByRole("tabpanel").getByRole("link", { name: "Khady Faye" }).click();
+  await expect(page.getByRole("heading", { name: "Khady Faye" })).toBeVisible();
+  await expect(page.getByText("Identifiant : khady-faye.matam-express")).toBeVisible();
+  await expect(page.getByTestId("user-role")).toHaveText("Responsable de compagnie");
+
+  await openCompany(page, "tamba", /Tamba Rapide/);
+  await page.getByRole("tab", { name: "Équipe" }).click();
+  await expect(page.getByRole("tabpanel").getByText("Pas encore de compte")).toBeVisible();
+  await expect(page.getByRole("tabpanel").getByRole("link")).toHaveCount(0);
+});
+
+test("no contact e-mail, phone or full IP address reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 
   async function detailPath(listPath: string, search: string, placeholder: string, row: RegExp): Promise<string> {
@@ -382,26 +398,41 @@ test("no contact e-mail or phone reaches the browser in page payloads @prod", as
   const planPath = await detailPath("/offre/plans", "Enterprise", "Rechercher un plan…", /Enterprise/);
   const subscriptionPath = await detailPath("/facturation/abonnements", "matam", "Rechercher un abonnement…", /Matam Express/);
   const invoicePath = await detailPath("/facturation/factures", "matam", "Rechercher une facture…", /Matam Express/);
+  const employeeUserPath = await detailPath("/utilisateurs", "khady-faye.matam", "Rechercher un utilisateur…", /khady-faye\.matam-express/);
+  const adminUserPath = await detailPath("/utilisateurs", "moustapha", "Rechercher un utilisateur…", /moustapha\.ndiaye/);
+  const clientUserPath = await detailPath("/utilisateurs", "lamine", "Rechercher un utilisateur…", /lamine\.camara/);
 
   const CONTACT_EMAIL = /contact@[a-z0-9-]+\.sn/;
   const ANY_SN_EMAIL = /[a-z0-9._-]+@[a-z0-9-]+\.sn/;
   const PHONES = [/\+2217712\d{5}/, /\+2217865\d{5}/];
+  // Seed session addresses start with 41.82 or 196.207 and never end in 0: only a.b.c.0 may appear.
+  const FULL_IP = /\b(?:41\.82|196\.207)\.\d{1,3}\.[1-9]\d{0,2}\b/;
   const paths = [
-    "/compagnies", "/compagnies?statut=draft", "/compagnies/kyc", "/", companyPath,
+    "/compagnies", "/compagnies?statut=draft", "/compagnies/kyc", "/", companyPath, `${companyPath}?onglet=equipe`,
     "/offre/plans", planPath, "/offre/fonctionnalites", "/offre/paliers-partenaires", "/offre/types-documents-kyc",
     "/facturation/abonnements", "/facturation/abonnements?statut=past_due", subscriptionPath,
     "/facturation/paiements", "/facturation/paiements?statut=failed",
     "/facturation/factures", invoicePath, "/facturation/impayes",
+    "/utilisateurs", "/utilisateurs?role=ADMIN", "/utilisateurs?statut=suspended",
+    employeeUserPath, `${employeeUserPath}?onglet=sessions`, adminUserPath, `${clientUserPath}?onglet=sessions`,
+    "/acces/roles", "/acces/permissions", "/acces/sessions", "/acces/sessions?role=USER",
   ];
   for (const path of paths) {
     const raw = await (await page.request.get(path)).text();
     expect(raw, `raw ${path}`).not.toMatch(CONTACT_EMAIL);
     expect(raw, `raw ${path}`).not.toMatch(ANY_SN_EMAIL);
     for (const re of PHONES) expect(raw, `raw ${path}`).not.toMatch(re);
+    expect(raw, `raw ${path}`).not.toMatch(FULL_IP);
     await page.goto(path);
     const rendered = await page.content();
     expect(rendered, `dom ${path}`).not.toMatch(CONTACT_EMAIL);
     expect(rendered, `dom ${path}`).not.toMatch(ANY_SN_EMAIL);
     for (const re of PHONES) expect(rendered, `dom ${path}`).not.toMatch(re);
+    expect(rendered, `dom ${path}`).not.toMatch(FULL_IP);
   }
+  // The truncated form is really rendered (the negative checks above would pass on an empty page).
+  await page.goto("/acces/sessions");
+  await expect(page.getByRole("cell", { name: /^(41\.82|196\.207)\.\d{1,3}\.0$/ }).first()).toBeVisible();
+  await page.goto(employeeUserPath);
+  await expect(page.getByTestId("masked-email")).toHaveText("k•••@matam-express.sn");
 });

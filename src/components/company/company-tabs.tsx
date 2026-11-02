@@ -164,10 +164,17 @@ export function CompanyTabs({ detail, initialTab }: { detail: CompanyDetail; ini
         <Card><CardContent>
           {detail.employees.length === 0 ? <Empty>Aucun employé.</Empty> : (
           <table className="w-full text-left text-sm">
-            <thead className="text-xs text-muted-foreground"><tr><th className="py-1 font-medium">Nom</th><th className="py-1 font-medium">Rôle</th><th className="py-1 font-medium">E-mail</th></tr></thead>
+            <thead className="text-xs text-muted-foreground"><tr><th className="py-1 font-medium">Nom</th><th className="py-1 font-medium">Rôle</th><th className="py-1 font-medium">E-mail</th><th className="py-1 font-medium">Compte</th></tr></thead>
             <tbody>
               {detail.employees.map((e) => (
-                <tr key={e.id} className="border-t border-border"><td className="py-1.5 font-medium">{e.name}</td><td>{e.role}</td><td className="text-muted-foreground">{maskEmail(e.email)}</td></tr>
+                <tr key={e.id} className="border-t border-border">
+                  <td className="py-1.5 font-medium">
+                    {e.userId ? <Link href={`/utilisateurs/${e.userId}`} className="hover:underline">{e.name}</Link> : e.name}
+                  </td>
+                  <td>{e.role}</td>
+                  <td className="text-muted-foreground">{maskEmail(e.email)}</td>
+                  <td className="text-muted-foreground">{e.userId ? "Compte plateforme" : "Pas encore de compte"}</td>
+                </tr>
               ))}
             </tbody>
           </table>

@@ -6,12 +6,13 @@ describe("nav", () => {
     const hrefs = allNavItems().map((i) => i.href);
     expect(new Set(hrefs).size).toBe(hrefs.length);
   });
-  it("marks only lot 1 and lot 2 pages as implemented", () => {
+  it("marks only lot 1, lot 2 and lot 3 pages as implemented", () => {
     const done = allNavItems().filter((i) => i.implemented).map((i) => i.href).sort();
     expect(done).toEqual([
-      "/", "/compagnies", "/compagnies/kyc",
+      "/", "/acces/permissions", "/acces/roles", "/acces/sessions", "/compagnies", "/compagnies/kyc",
       "/facturation/abonnements", "/facturation/factures", "/facturation/impayes", "/facturation/paiements",
       "/offre/fonctionnalites", "/offre/paliers-partenaires", "/offre/plans", "/offre/types-documents-kyc",
+      "/utilisateurs",
     ]);
   });
   it("covers every sitemap section", () => {
@@ -52,5 +53,19 @@ describe("isLinkablePath for lot 2 detail pages", () => {
     expect(isLinkablePath("/facturation/factures/abc")).toBe(true);
     expect(isLinkablePath("/facturation/paiements/abc")).toBe(false);
     expect(isLinkablePath("/facturation")).toBe(false);
+  });
+});
+
+describe("lot 3 breadcrumbs", () => {
+  it("links the user list from an account page, not the bare access prefix", () => {
+    expect(isLinkablePath("/utilisateurs")).toBe(true);
+    expect(isLinkablePath("/utilisateurs/abc")).toBe(true);
+    expect(isLinkablePath("/acces/roles")).toBe(true);
+    expect(isLinkablePath("/acces")).toBe(false);
+  });
+  it("labels the access segments with their accents", () => {
+    expect(labelForSegment("acces")).toBe("Accès");
+    expect(labelForSegment("roles")).toBe("Rôles");
+    expect(labelForSegment("utilisateurs")).toBe("Utilisateurs");
   });
 });
