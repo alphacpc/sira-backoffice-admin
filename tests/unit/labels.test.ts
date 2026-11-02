@@ -54,3 +54,20 @@ describe("urgencyBadge", () => {
     expect(urgencyBadge("expiration", -3)).toEqual({ label: "Expiration dépassée de 3 j", tone: "danger" });
   });
 });
+
+import { permissionDomainLabel, sessionStateBadge, userStatusBadge } from "@/lib/labels";
+describe("access labels", () => {
+  it("labels account statuses and session states", () => {
+    expect(userStatusBadge("active")).toEqual({ label: "Actif", tone: "success" });
+    expect(userStatusBadge("suspended")).toEqual({ label: "Suspendu", tone: "warning" });
+    expect(["active", "revoked", "expired"].map((st) => sessionStateBadge(st as "active").label))
+      .toEqual(["Active", "Révoquée", "Expirée"]);
+  });
+  it("labels the eleven permission domains in French", () => {
+    expect(["companies", "fleet", "bookings", "parcels", "hr", "customers", "marketing", "notifications",
+      "compliance", "monitoring", "platform"].map((d) => permissionDomainLabel(d as "fleet"))).toEqual([
+      "Compagnies", "Flotte", "Réservations", "Colis", "Ressources humaines", "Clients", "Marketing",
+      "Notifications", "Conformité", "Supervision", "Plateforme",
+    ]);
+  });
+});

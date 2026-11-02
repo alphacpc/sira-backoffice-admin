@@ -245,6 +245,79 @@ test("an unpaid subscription is relaunched from the queue; a refused payment kee
   await expect(page.getByRole("tabpanel").getByRole("cell", { name: "Payé", exact: true })).toHaveCount(2);
 });
 
+async function openUser(page: Page, search: string, username: string, displayName: string) {
+  await page.goto("/utilisateurs");
+  await page.getByPlaceholder("Rechercher un utilisateur…").fill(search);
+  await page.getByRole("row", { name: new RegExp(username.replace(/\./g, "\\.")) }).click();
+  await expect(page.getByRole("heading", { name: displayName })).toBeVisible();
+}
+
+test("changing a role requires a reason and revokes every active session", async ({ page }) => {
+  // Owns ibrahima-sow.dakar-voyages: no other test mutates this account.
+  await login(page);
+  await openUser(page, "ibrahima-sow.dakar", "ibrahima-sow.dakar-voyages", "Ibrahima Sow");
+  await expect(page.getByTestId("user-role")).toHaveText("Agent de vente");
+  await page.getByRole("tab", { name: "Sessions" }).click();
+  await expect(page.getByTestId("active-session-count")).toHaveText("2 session(s) active(s)");
+
+  await page.getByRole("button", { name: "Changer le rôle" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "Changer le rôle" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Nouveau rôle").selectOption({ label: "Responsable de compagnie" });
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel("Motif (obligatoire)").fill("Promotion au poste de responsable");
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(page.getByRole("dialog")).toHaveCount(0);
+
+  await expect(page.getByTestId("user-role")).toHaveText("Responsable de compagnie");
+  await expect(page.getByTestId("active-session-count")).toHaveText("0 session(s) active(s)");
+  await expect(page.getByRole("tabpanel").getByRole("cell", { name: "Changement de rôle" })).toHaveCount(2);
+  await expect(page.getByRole("button", { name: "Révoquer toutes les sessions" })).toHaveCount(0);
+  await page.getByRole("tab", { name: "Activité" }).click();
+  await expect(page.getByText(/Agent de vente → Responsable de compagnie \(2 session\(s\) révoquée\(s\)\)/)).toBeVisible();
+});
+
+test("the last active administrator cannot be demoted", async ({ page }) => {
+  // Read-only: the refusal changes nothing on moustapha.ndiaye.
+  await login(page);
+  await page.goto("/utilisateurs?role=ADMIN");
+  await page.getByRole("row", { name: /moustapha\.ndiaye/ }).click();
+  await expect(page.getByRole("heading", { name: "Moustapha Ndiaye" })).toBeVisible();
+
+  await page.getByRole("button", { name: "Changer le rôle" }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("Nouveau rôle").selectOption({ label: "Responsable de compagnie" });
+  await dialog.getByLabel("Motif (obligatoire)").fill("Vérification de la protection");
+  await dialog.getByRole("button", { name: "Changer le rôle" }).click();
+  await expect(dialog.getByRole("alert")).toHaveText("Impossible de rétrograder le dernier administrateur actif");
+  await dialog.getByRole("button", { name: "Annuler", exact: true }).click();
+
+  await expect(page.getByTestId("user-role")).toHaveText("Administrateur");
+  await page.getByRole("tab", { name: "Sessions" }).click();
+  await expect(page.getByTestId("active-session-count")).toHaveText("1 session(s) active(s)");
+});
+
+test("an account's e-mail is masked, revealed on demand, and the reveal is journaled", async ({ page }) => {
+  // Owns khady-faye.matam-express: a reveal only adds an activity entry to this account.
+  await login(page);
+  await openUser(page, "khady-faye.matam", "khady-faye.matam-express", "Khady Faye");
+  await expect(page.getByTestId("masked-email")).toHaveText("k•••@matam-express.sn");
+  await page.getByRole("button", { name: "Révéler la donnée" }).first().click();
+  await expect(page.getByTestId("masked-email")).toHaveText("khady-faye@matam-express.sn");
+
+  await page.getByRole("tab", { name: "Activité" }).click();
+  await expect(page.getByText("Donnée personnelle révélée : e-mail de khady-faye.matam-express")).toBeVisible();
+  await expect(page.getByRole("tabpanel")).not.toContainText("khady-faye@matam-express.sn");
+});
+
+test("an unknown account id shows a not-found page", async ({ page }) => {
+  await login(page);
+  await page.goto("/utilisateurs/00000000-0000-4000-8000-00000000dead");
+  await expect(page.getByText("Utilisateur introuvable")).toBeVisible();
+});
+
 test("no contact e-mail or phone reaches the browser in page payloads @prod", async ({ page }) => {
   await login(page);
 

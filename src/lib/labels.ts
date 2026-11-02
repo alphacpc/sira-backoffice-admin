@@ -1,7 +1,7 @@
 import type { Tone } from "@/components/data/status-badge";
 import type {
-  CompanyStatus, FeatureDef, Incident, Invoice, KycDocumentStatus, PaymentAttempt, Plan,
-  ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus,
+  CompanyStatus, FeatureDef, Incident, Invoice, KycDocumentStatus, PaymentAttempt, PermissionDomain, Plan,
+  ServiceHealth, Subscription, SubscriptionChangeKind, SubscriptionStatus, UserStatus,
 } from "@/lib/types";
 
 type Badge = { label: string; tone: Tone };
@@ -94,3 +94,33 @@ export function urgencyBadge(deadline: "suspension" | "expiration", daysLeft: nu
   if (daysLeft <= 5) return { label, tone: "warning" };
   return { label, tone: "neutral" };
 }
+
+
+export const userStatusBadge = (s: UserStatus): Badge =>
+  pick({
+    active: { label: "Actif", tone: "success" },
+    suspended: { label: "Suspendu", tone: "warning" },
+  }, s);
+
+export const sessionStateBadge = (s: "active" | "revoked" | "expired"): Badge =>
+  pick({
+    active: { label: "Active", tone: "success" },
+    revoked: { label: "Révoquée", tone: "neutral" },
+    expired: { label: "Expirée", tone: "neutral" },
+  }, s);
+
+const DOMAIN_LABELS: Record<PermissionDomain, string> = {
+  companies: "Compagnies",
+  fleet: "Flotte",
+  bookings: "Réservations",
+  parcels: "Colis",
+  hr: "Ressources humaines",
+  customers: "Clients",
+  marketing: "Marketing",
+  notifications: "Notifications",
+  compliance: "Conformité",
+  monitoring: "Supervision",
+  platform: "Plateforme",
+};
+
+export const permissionDomainLabel = (d: PermissionDomain): string => DOMAIN_LABELS[d];
