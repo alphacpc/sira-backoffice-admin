@@ -161,8 +161,8 @@ describe("tickets", () => {
     expect(used.length).toBeGreaterThan(0);
     expect(used.every((r) => r.status === "USED" && r.scanCount > 0)).toBe(true);
     expect(Object.keys(all[0]!).sort()).toEqual([
-      "bookingCode", "bookingId", "companyId", "companyName", "departure", "id", "issuedAt", "passengerName",
-      "routeLabel", "scanCount", "seatNumber", "status", "ticketCode",
+      "amount", "bookingCode", "bookingId", "busPlate", "channel", "companyId", "companyName", "currency", "departure", "id",
+      "issuedAt", "passengerName", "paymentStatus", "routeLabel", "scanCount", "seatNumber", "status", "ticketCode",
     ]);
   });
 

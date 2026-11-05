@@ -343,6 +343,8 @@ export interface Ticket {
   seatNumber: string | null; status: TicketStatus; issuedAt: string;
   /** ISO dates of the scans, oldest first. */
   scans: string[];
+  /** Crew member (controller) who performed each scan, aligned with `scans`; `null` when unknown. */
+  scannedBy?: (string | null)[];
 }
 
 export type ParcelStatus = "PENDING" | "IN_TRANSIT" | "AT_HUB" | "DELIVERED" | "CANCELLED" | "RETURNED" | "LOST";
@@ -587,3 +589,37 @@ export interface BackofficeSession {
 /** Stage of a company in the KYC review board. `approved` is never stored: it means the company is active. */
 export type KycStage = "submitted" | "needs_info" | "in_review" | "approved" | "rejected";
 export interface KycOverride { stage: Exclude<KycStage, "approved">; note: string | null; at: string }
+
+export type RentalStatus = "REQUESTED" | "QUOTED" | "CONFIRMED" | "COMPLETED" | "CANCELLED";
+export type RentalPurpose = "WEDDING" | "SCHOOL" | "SPORT" | "BUSINESS" | "PILGRIMAGE" | "OTHER";
+
+/** Charter of a whole bus to a client (customer, school, team, firm). `customerPhone` never leaves the server unmasked. */
+export interface Rental {
+  id: string; companyId: string; rentalCode: string;
+  customerName: string; customerPhone: string; purpose: RentalPurpose; passengers: number;
+  pickup: string; destination: string; departure: string;
+  /** `null` for a one-way trip. */
+  returnAt: string | null; estimatedKm: number;
+  busId: string | null; driverId: string | null;
+  status: RentalStatus;
+  quoteAmount: number | null; currency: string;
+  /** Deposit that must be paid before the rental can be confirmed. */
+  depositRequired: number;
+  cautionAmount: number;
+  paidAmount: number;
+  payments: { at: string; amount: number }[];
+  history: { at: string; label: string; actor: string }[];
+  /** Invoice issued when the quote is sent; `null` while the rental is only a request. */
+  invoiceNumber: string | null; invoiceIssuedAt: string | null;
+  createdAt: string; cancelledAt: string | null; cancelReason: string | null;
+}
+
+/** How a company's invoices look: logo, two colours, texts. */
+export interface InvoiceTemplate {
+  /** `data:image/...;base64,` URL, or `null` to show the company monogram. */
+  logoDataUrl: string | null;
+  primaryColor: string; accentColor: string;
+  headerNote: string; footerNote: string; legalMentions: string;
+  /** VAT rate in percent, 0 hides the VAT lines. */
+  taxRate: number; paymentTermsDays: number; showQr: boolean;
+}

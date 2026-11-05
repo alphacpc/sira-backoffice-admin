@@ -1,18 +1,18 @@
 import {
-  ArrowsLeftRight, Basket, CalendarCheck, CheckCircle, CreditCard, Gauge, Globe, MagnifyingGlass, Pulse, Receipt, Ticket, Warning, XCircle,
+  ArrowsLeftRight, Basket, CalendarCheck, CheckCircle, CreditCard, Bus, Gauge, Globe, MagnifyingGlass, Pulse, Receipt, Ticket, Warning, XCircle,
 } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
-import { LinkPager } from "@/components/billing/hub/link-pager";
 import { StatStrip, type Stat } from "@/components/billing/hub/stat-strip";
 import { FilterSelect } from "@/components/data/filter-select";
 import { PageHeader } from "@/components/data/page-header";
-import { MethodsGrid, OnlineView, TicketsGrid } from "@/components/sales/hub/sales-cards";
+import { MethodsGrid, OnlineView } from "@/components/sales/hub/sales-cards";
 import { SalesOverviewView } from "@/components/sales/hub/sales-overview";
-import { BookingsList, TransactionsList } from "@/components/sales/hub/sales-tables";
+import { BookingsList, InvoicesList, RentalsList, TicketsList, TransactionsList } from "@/components/sales/hub/sales-tables";
 import { LinkTabs, type LinkTab } from "@/components/ui/link-tabs";
 import { parseFilter } from "@/lib/filters";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { parseCompanyFilter } from "@/lib/repos/fleet";
+import { RENTAL_STATUSES } from "@/lib/repos/rentals";
 import { BOOKING_CHANNELS, BOOKING_PAYMENT_STATUSES, BOOKING_STATUSES, ONLINE_UNPAID_TTL_MINUTES, TICKET_STATUSES, TRANSACTION_STATUSES } from "@/lib/repos/sales";
 import { PERIODS, SALES_TABS, salesHubRepo, type SalesTab } from "@/lib/repos/sales-hub";
 import { fleetHubRepo } from "@/lib/repos/fleet-hub";
@@ -20,13 +20,14 @@ import { firstString } from "@/lib/search-params";
 
 const BASE = "/ventes";
 export const salesTabPath = (t: SalesTab) => (t === "apercu" ? BASE : `${BASE}/${t}`);
-const PAGE = 12;
 
 const META: Record<SalesTab, { label: string; icon: LinkTab["icon"]; description: string; placeholder: string }> = {
   apercu: { label: "Aperçu", icon: Pulse, description: "Le pouls des ventes : chiffre d'affaires, conversion, lignes qui marchent et moments de réservation.", placeholder: "code, voyageur, ligne, compagnie…" },
   reservations: { label: "Réservations", icon: Receipt, description: "Réservations des voyageurs de toutes les compagnies, de la plus récente à la plus ancienne.", placeholder: "code, voyageur, ligne, siège…" },
   paiements: { label: "Paiements", icon: CreditCard, description: "Transactions en ligne et au guichet, avec les incohérences détectées.", placeholder: "référence, voyageur, moyen, montant…" },
-  billets: { label: "Billets", icon: Ticket, description: "Billets émis aux voyageurs, présentés comme des cartes d'embarquement.", placeholder: "code du billet, voyageur, ligne…" },
+  billets: { label: "Billets", icon: Ticket, description: "Billets émis aux voyageurs, avec leur trajet, leur siège, leur montant et leurs scans.", placeholder: "code du billet, voyageur, ligne…" },
+  locations: { label: "Locations", icon: Bus, description: "Bus loués en entier à un client (mariage, école, équipe, entreprise), du devis au solde.", placeholder: "code, client, itinéraire, bus…" },
+  factures: { label: "Factures", icon: Receipt, description: "Factures envoyées aux clients avec les devis de location : lien de paiement, QR code et statut de règlement.", placeholder: "numéro, client, location…" },
   "moyens-de-paiement": { label: "Moyens de paiement", icon: Basket, description: "Moyens de paiement acceptés par chaque compagnie, avec leur trafic et leur taux de réussite.", placeholder: "moyen, opérateur, compagnie…" },
   "en-ligne": { label: "Libre-service", icon: Globe, description: `Réservations faites par les voyageurs eux-mêmes. Une réservation non payée expire ${ONLINE_UNPAID_TTL_MINUTES} minutes après sa création.`, placeholder: "code, voyageur, compagnie…" },
 };
@@ -46,7 +47,6 @@ export async function SalesHubPage({ tab, searchParams }: { tab: SalesTab; searc
   const anomaly = tab === "paiements" ? parseFilter(firstString(sp.anomalie), ["oui"] as const) : undefined;
   const days = Number(firstString(sp.periode));
   const period = (PERIODS as readonly number[]).includes(days) ? days : 30;
-  const page = Math.max(1, Math.floor(Number(firstString(sp.page)) || 1));
 
   const tabHref = (t: SalesTab) => {
     const qs = new URLSearchParams();
@@ -125,12 +125,33 @@ export async function SalesHubPage({ tab, searchParams }: { tab: SalesTab; searc
     ];
     toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Tous" }, { value: "ISSUED", label: "Émis" }, { value: "CHECKED_IN", label: "Enregistrés" }, { value: "USED", label: "Utilisés" }, { value: "CANCELLED", label: "Annulés" }])}</>;
     empty = list.length === 0;
-    body = (
-      <>
-        <TicketsGrid tickets={list.slice((page - 1) * PAGE, page * PAGE)} />
-        <LinkPager basePath={salesTabPath(tab)} page={page} pageCount={Math.ceil(list.length / PAGE)} total={list.length} size={PAGE} params={{ q: q || undefined, compagnie: companyId, statut: status }} />
-      </>
-    );
+    body = <TicketsList rows={list} />;
+  } else if (tab === "locations") {
+    const status = parseFilter(rawStatus, RENTAL_STATUSES);
+    const all = salesHubRepo.rentals(undefined, co);
+    const list = salesHubRepo.rentals(q, { ...co, status });
+    stats = [
+      { label: "Locations", value: formatNumber(all.length), icon: Bus },
+      { label: "Demandes et devis", value: formatNumber(all.filter((r) => r.status === "REQUESTED" || r.status === "QUOTED").length), icon: CalendarCheck },
+      { label: "Confirmées", value: formatNumber(all.filter((r) => r.status === "CONFIRMED").length), icon: CheckCircle },
+      { label: "Encaissé", value: formatMoney(all.reduce((n, r) => n + r.paidAmount, 0), "XOF"), icon: Gauge },
+    ];
+    toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Tous" }, { value: "REQUESTED", label: "Demandes" }, { value: "QUOTED", label: "Devis envoyés" }, { value: "CONFIRMED", label: "Confirmées" }, { value: "COMPLETED", label: "Terminées" }, { value: "CANCELLED", label: "Annulées" }])}</>;
+    empty = list.length === 0;
+    body = <RentalsList rows={list} />;
+  } else if (tab === "factures") {
+    const status = parseFilter(rawStatus, ["TO_PAY", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"] as const);
+    const all = salesHubRepo.invoices(undefined, co);
+    const list = salesHubRepo.invoices(q, { ...co, status });
+    stats = [
+      { label: "Factures", value: formatNumber(all.length), icon: Receipt },
+      { label: "À encaisser", value: formatMoney(all.filter((i) => i.status !== "CANCELLED").reduce((n, i) => n + i.balance, 0), "XOF"), icon: Gauge },
+      { label: "Payées", value: formatNumber(all.filter((i) => i.status === "PAID").length), icon: CheckCircle },
+      { label: "En retard", value: formatNumber(all.filter((i) => i.status === "OVERDUE").length), icon: Warning },
+    ];
+    toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Tous" }, { value: "TO_PAY", label: "À payer" }, { value: "PARTIAL", label: "Acompte reçu" }, { value: "PAID", label: "Payées" }, { value: "OVERDUE", label: "En retard" }, { value: "CANCELLED", label: "Annulées" }])}</>;
+    empty = list.length === 0;
+    body = <InvoicesList rows={list} />;
   } else if (tab === "moyens-de-paiement") {
     const all = salesHubRepo.methods(undefined, co);
     const list = salesHubRepo.methods(q, co);

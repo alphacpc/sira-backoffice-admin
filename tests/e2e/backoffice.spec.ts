@@ -1869,3 +1869,59 @@ test("no contact e-mail, phone or full IP address reaches the browser in page pa
   const rawAfter = await (await page.request.get("/parametres/profil")).text();
   for (const code of codes) expect(rawAfter, `raw ${code}`).not.toContain(code.trim());
 });
+
+test("a rental goes from request to completion with its checks", async ({ page }) => {
+  await startLogin(page);
+  await page.getByLabel("Code à 6 chiffres").fill("123456");
+  await page.getByRole("button", { name: "Valider" }).click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/connexion"));
+  await page.goto("/ventes/locations?statut=REQUESTED");
+  await page.getByRole("row").nth(1).click();
+  await expect(page).toHaveURL(/\/ventes\/locations\/[0-9a-f-]+$/);
+  await expect(page.getByTestId("rental-status")).toHaveText("Demande");
+  await page.getByPlaceholder("ex. 250000").fill("200000");
+  await page.getByRole("button", { name: "Envoyer le devis" }).click();
+  await expect(page.getByTestId("rental-status")).toHaveText("Devis envoyé");
+  await expect(page.getByTestId("rental-quote")).toContainText("200");
+  await page.getByRole("button", { name: "Confirmer la location" }).click();
+  await expect(page.getByTestId("rental-error")).toContainText("bus et un chauffeur");
+  await page.getByRole("combobox").first().selectOption({ index: 1 });
+  await page.getByRole("combobox").nth(1).selectOption({ index: 1 });
+  await page.getByRole("button", { name: "Affecter" }).click();
+  await page.getByRole("button", { name: "Enregistrer le paiement" }).click();
+  await expect(page.getByTestId("rental-history").locator("li").first()).toContainText("Paiement");
+});
+
+test("a quoted rental has an invoice that can be paid and a company template that can be customised", async ({ page }) => {
+  await startLogin(page);
+  await page.getByLabel("Code à 6 chiffres").fill("123456");
+  await page.getByRole("button", { name: "Valider" }).click();
+  await page.waitForURL((u) => !u.pathname.startsWith("/connexion"));
+  await page.goto("/ventes/locations?statut=QUOTED");
+  await page.getByRole("row").nth(1).click();
+  await expect(page.getByTestId("rental-invoice")).toContainText("FAC-LOC-");
+  await page.getByRole("link", { name: "Ouvrir la facture" }).click();
+  await expect(page).toHaveURL(/\/ventes\/factures\/FAC-LOC-\d{4}$/);
+  await expect(page.getByTestId("invoice-sheet")).toBeVisible();
+  await expect(page.getByAltText("QR code de paiement")).toBeVisible();
+  await expect(page.getByTestId("invoice-link")).toContainText("https://pay.sira.app/f/FAC-LOC-");
+  await expect(page.getByTestId("invoice-status")).toHaveText("À payer");
+  await page.getByTestId("invoice-pay").click();
+  await expect(page.getByTestId("invoice-status")).toHaveText("Payée");
+  await expect(page.getByTestId("invoice-balance")).toContainText("0");
+  await expect(page.getByAltText("QR code de paiement")).toHaveCount(0);
+
+  await page.getByRole("link", { name: "Personnaliser le modèle" }).click();
+  await expect(page).toHaveURL(/\/compagnies\/[^/]+\/modele-facture$/);
+  await page.getByRole("button", { name: "Bordeaux" }).click();
+  await page.getByRole("checkbox").uncheck();
+  await page.getByTestId("template-save").click();
+  await expect(page.getByTestId("template-message")).toContainText("Modèle enregistré");
+  await page.getByRole("checkbox").check();
+  await page.locator('input[type="number"]').first().fill("99");
+  await page.getByTestId("template-save").click();
+  await expect(page.getByTestId("template-message")).toContainText("TVA");
+
+  await page.goto("/ventes/factures");
+  await expect(page.getByRole("row").nth(1)).toContainText("FAC-LOC-");
+});

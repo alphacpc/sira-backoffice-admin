@@ -41,6 +41,7 @@ export interface TicketRow {
   id: string; ticketCode: string; bookingId: string; bookingCode: string; companyId: string; companyName: string;
   passengerName: string; routeLabel: string; departure: string; seatNumber: string | null;
   status: TicketStatus; issuedAt: string; scanCount: number;
+  amount: number; currency: string; channel: BookingChannel; paymentStatus: BookingPaymentStatus; busPlate: string;
 }
 
 /** Client-safe projection of a payment method with its traffic. */
@@ -72,7 +73,8 @@ export interface TransactionDetail {
   anomalies: { kind: AnomalyKind; label: string; explanation: string }[];
 }
 
-export interface TicketDetail { ticket: TicketRow; scans: string[] }
+export interface TicketScan { at: string; byName: string | null; byId: string | null }
+export interface TicketDetail { ticket: TicketRow; scans: string[]; scanLog: TicketScan[]; tripId: string }
 
 export interface ExpiringBooking {
   id: string; bookingCode: string; companyName: string; passengerName: string;
@@ -154,6 +156,8 @@ function ticketRow(t: Ticket): TicketRow {
     companyId: t.companyId, companyName: companyName(t.companyId), passengerName: booking?.passengerName ?? "—",
     routeLabel: trip.routeLabel, departure: trip.departure, seatNumber: t.seatNumber,
     status: t.status, issuedAt: t.issuedAt, scanCount: t.scans.length,
+    amount: booking?.amount ?? 0, currency: booking?.currency ?? "XOF", channel: booking?.channel ?? "counter",
+    paymentStatus: booking?.paymentStatus ?? "pending", busPlate: trip.busPlate,
   };
 }
 
@@ -286,7 +290,13 @@ export const ticketsRepo = {
 
   detailByCode(code: string): TicketDetail | undefined {
     const ticket = getStore().tickets.find((t) => t.ticketCode === code);
-    return ticket ? { ticket: ticketRow(ticket), scans: [...ticket.scans] } : undefined;
+    if (!ticket) return undefined;
+    const crew = getStore().crew;
+    const scanLog = ticket.scans.map((at, i) => {
+      const byId = ticket.scannedBy?.[i] ?? null;
+      return { at, byId, byName: crew.find((c) => c.id === byId)?.name ?? null };
+    });
+    return { ticket: ticketRow(ticket), scans: [...ticket.scans], scanLog, tripId: ticket.tripId };
   },
 };
 

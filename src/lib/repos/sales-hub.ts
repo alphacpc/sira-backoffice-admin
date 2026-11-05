@@ -3,10 +3,12 @@ import {
   bookingsRepo, onlineRepo, paymentMethodsRepo, ticketsRepo, transactionsRepo,
   type BookingRow, type OnlineStats, type PaymentMethodRow, type TicketRow, type TransactionRow,
 } from "@/lib/repos/sales";
+import { rentalInvoicesRepo, type RentalInvoiceRow, type RentalInvoiceStatus } from "@/lib/repos/rental-invoices";
+import { rentalsRepo, type RentalRow } from "@/lib/repos/rentals";
 import { getStore } from "@/lib/repos/store";
-import type { BookingChannel, BookingPaymentStatus, BookingStatus, TicketStatus, TransactionStatus } from "@/lib/types";
+import type { BookingChannel, BookingPaymentStatus, BookingStatus, RentalStatus, TicketStatus, TransactionStatus } from "@/lib/types";
 
-export const SALES_TABS = ["apercu", "reservations", "paiements", "billets", "moyens-de-paiement", "en-ligne"] as const;
+export const SALES_TABS = ["apercu", "reservations", "paiements", "billets", "locations", "factures", "moyens-de-paiement", "en-ligne"] as const;
 export type SalesTab = (typeof SALES_TABS)[number];
 export const PERIODS = [7, 30, 90] as const;
 const DAY = 86_400_000;
@@ -51,6 +53,14 @@ export const salesHubRepo = {
     const hit = matcher(q);
     return ticketsRepo.listRows(f).filter((t) => hit(t.ticketCode, t.bookingCode, t.passengerName, t.companyName, t.routeLabel, t.seatNumber));
   },
+  rentals(q?: string, f: Co & { status?: RentalStatus } = {}): RentalRow[] {
+    const hit = matcher(q);
+    return rentalsRepo.listRows(f).filter((r) => hit(r.rentalCode, r.customerName, r.companyName, r.pickup, r.destination, r.busLabel, r.driverName));
+  },
+  invoices(q?: string, f: Co & { status?: RentalInvoiceStatus } = {}): RentalInvoiceRow[] {
+    const hit = matcher(q);
+    return rentalInvoicesRepo.listRows(f).filter((i) => hit(i.number, i.rentalCode, i.customerName, i.companyName));
+  },
   methods(q?: string, f: Co = {}): PaymentMethodRow[] {
     const hit = matcher(q);
     return paymentMethodsRepo.listRows(f).filter((m) => hit(m.name, m.provider, m.companyName));
@@ -62,7 +72,7 @@ export const salesHubRepo = {
   counts(q?: string, f: Co = {}): Record<SalesTab, number> {
     return {
       apercu: 0, reservations: salesHubRepo.bookings(q, f).length, paiements: salesHubRepo.transactions(q, f).length,
-      billets: salesHubRepo.tickets(q, f).length, "moyens-de-paiement": salesHubRepo.methods(q, f).length,
+      billets: salesHubRepo.tickets(q, f).length, locations: salesHubRepo.rentals(q, f).length, factures: salesHubRepo.invoices(q, f).length, "moyens-de-paiement": salesHubRepo.methods(q, f).length,
       "en-ligne": salesHubRepo.online().expiring.filter((e) => matcher(q)(e.bookingCode, e.passengerName, e.companyName)).length,
     };
   },

@@ -72,7 +72,7 @@ const ROUTE_PREFIXES = [
   "/offre-facturation", "/utilisateurs-acces", "/ventes", "/colis-clients", "/communication", "/conformite", "/supervision", "/parametres",
   "/compagnies", "/offre/plans", "/facturation/abonnements", "/facturation/factures", "/utilisateurs",
   "/flotte/bus", "/flotte/lignes", "/flotte/trajets",
-  "/ventes/reservations", "/ventes/paiements", "/ventes/billets",
+  "/ventes/reservations", "/ventes/paiements", "/ventes/billets", "/ventes/locations",
   "/colis", "/clients/comptes", "/clients/avis",
   "/communication/notifications", "/communication/campagnes",
   "/conformite/journal-audit", "/conformite/demandes-rgpd",

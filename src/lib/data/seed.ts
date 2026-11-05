@@ -8,6 +8,7 @@ import type {
   Station, Subscription, SubscriptionChangeKind, SubscriptionHistoryEntry, SubscriptionStatus, Trip,
   PaymentMethod, PaymentMethodKind, Ticket, TicketStatus, Transaction, TransactionStatus,
   Customer, Feedback, FeedbackStatus, FeedbackType, LoyaltyAccount, LoyaltyProgram, LoyaltyTransaction, MembershipType,
+  InvoiceTemplate, Rental, RentalPurpose, RentalStatus,
   Parcel, ParcelHistoryEntry, ParcelLeg, ParcelStatus, ParcelType, Sponsorship, SponsorshipRewardType, SponsorshipStatus,
   AppNotification, CampaignObjective, CampaignStatus, MarketingCampaign, MarketingMessage, MarketingMessageStatus, MarketingSchedule, MarketingSegment, NotificationChannel, NotificationStatus, ScheduleStatus,
   AdminStatus, BackofficeAdmin, BackofficeSession, KycOverride,
@@ -62,6 +63,8 @@ export interface Store {
   bookings: Booking[];
   transactions: Transaction[];
   tickets: Ticket[];
+  rentals: Rental[];
+  invoiceTemplates: Record<string, InvoiceTemplate>;
   parcels: Parcel[];
   parcelLegs: ParcelLeg[];
   parcelHistory: ParcelHistoryEntry[];
@@ -274,7 +277,7 @@ export function buildSeed(now: Date = new Date()): Store {
     subscriptionHistory: [], paymentAttempts: [], retryOutcomes: {},
     users: [], roles: [], permissions: [], rolePermissions: [], sessions: [],
     stations: [], routes: [], fleets: [], vendors: [], seatMaps: [], maintenances: [], crew: [],
-    paymentMethods: [], bookings: [], transactions: [], tickets: [],
+    paymentMethods: [], bookings: [], transactions: [], tickets: [], rentals: [], invoiceTemplates: {},
     parcels: [], parcelLegs: [], parcelHistory: [], customers: [], loyaltyPrograms: [],
     loyaltyAccounts: [], loyaltyTransactions: [], sponsorships: [], feedbacks: [],
     notifications: [], marketingCampaigns: [], marketingSegments: [], marketingMessages: [], marketingSchedules: [],
@@ -518,6 +521,7 @@ export function buildSeed(now: Date = new Date()): Store {
     user.lastLoginAt = iso(Math.max(...starts));
   });
 
+  seedRentals(store, now);
   seedDataSubjectRequests(store, iso);
   seedConsents(store, iso);
   seedAuditLogs(store, now, iso);
@@ -752,6 +756,7 @@ function seedSales(store: Store, now: Date, iso: (offsetDays: number) => string)
       store.tickets.push({
         id: uid(34, ticketSeq), companyId: b.companyId, bookingId: b.id, tripId: b.tripId,
         ticketCode: hashCode("TK-", ticketSeq), seatNumber: b.seatNumber, status, issuedAt, scans,
+        scannedBy: scans.map(() => store.buses.find((x) => x.id === trip.busId)?.controllerId ?? null),
       });
       ticketSeq++;
     };
@@ -1655,4 +1660,70 @@ function seedBackofficeTeam(store: Store, iso: (offsetDays: number) => string): 
   for (const [days, username, action] of TEAM_JOURNAL) {
     store.activity.push({ id: uid(83, journalSeq++), companyId: null, at: iso(days), actor: `${username}@sira.app`, action, scope: "backoffice" });
   }
+}
+
+const RENTAL_CLIENTS: [string, RentalPurpose, number][] = [
+  ["Famille Ndiaye", "WEDDING", 48], ["École Sainte-Marie", "SCHOOL", 52], ["AS Teranga Football", "SPORT", 30],
+  ["Sonatel Événements", "BUSINESS", 40], ["Groupe Pèlerins de Touba", "PILGRIMAGE", 60], ["Mairie de Thiès", "OTHER", 35],
+  ["Famille Diallo", "WEDDING", 45], ["Lycée Blaise Diagne", "SCHOOL", 50], ["Club Casa Sports", "SPORT", 28],
+  ["Banque Atlantique", "BUSINESS", 38], ["Dahira Mouride de Kaolack", "PILGRIMAGE", 55], ["Association Jappo", "OTHER", 32],
+];
+
+/** Twelve charters spread over the active companies: every status, one-way and return, and one bus double-booked. */
+const INVOICE_PALETTES: [string, string][] = [["#1b2a41", "#f59e0b"], ["#14532d", "#eab308"], ["#7f1d1d", "#d97706"], ["#4c1d95", "#f97316"]];
+
+function seedRentals(store: Store, now: Date): void {
+  const DAYS = 86_400_000;
+  const at = (d: number, h = 8) => { const t = new Date(now.getTime() + d * DAYS); t.setUTCHours(h, 0, 0, 0); return t.toISOString(); };
+  const active = store.companies.filter((c) => c.status === "active");
+  if (active.length === 0) return;
+  active.slice(0, INVOICE_PALETTES.length).forEach((c, k) => {
+    const [primaryColor, accentColor] = INVOICE_PALETTES[k]!;
+    store.invoiceTemplates[c.id] = {
+      logoDataUrl: null, primaryColor, accentColor, headerNote: "Location de bus avec chauffeur",
+      footerNote: "Merci de votre confiance. Bon voyage !", legalMentions: `${c.name} · NINEA ${c.ninea} · RC ${c.registrationNumber}`,
+      taxRate: 18, paymentTermsDays: 7, showQr: true,
+    };
+  });
+  // [status, departure day offset, trip length (days) or null for one-way, quote?, paid share]
+  const plan: [RentalStatus, number, number | null, number, number][] = [
+    ["REQUESTED", 20, 1, 0, 0], ["REQUESTED", 35, null, 0, 0], ["QUOTED", 14, 2, 1, 0], ["QUOTED", 25, null, 1, 0],
+    ["CONFIRMED", 3, 1, 1, 0.4], ["CONFIRMED", 9, 3, 1, 0.5], ["CONFIRMED", 4, null, 1, 1], ["CONFIRMED", 4, 2, 1, 0.3],
+    ["COMPLETED", -12, 1, 1, 1], ["COMPLETED", -30, 2, 1, 1], ["CANCELLED", 18, 1, 1, 0], ["CANCELLED", -3, null, 1, 0],
+  ];
+  let invoiceSeq = 1;
+  plan.forEach(([status, day, len, quoted, share], i) => {
+    const company = active[(i === 7 ? 4 : i) % active.length]!;
+    const [name, purpose, passengers] = RENTAL_CLIENTS[i]!;
+    const buses = store.buses.filter((b) => b.companyId === company.id && b.status !== "retired" && b.seatCapacity >= passengers);
+    const crew = store.crew.filter((c) => c.companyId === company.id && c.role === "DRIVER");
+    const stations = store.stations.filter((s) => s.companyId === company.id);
+    const origin = stations[0]?.city ?? CITIES[i % CITIES.length]!;
+    const dest = CITIES[(i * 3 + 2) % CITIES.length]!;
+    const km = 60 + ((i * 47) % 380);
+    const currency = company.currency ?? "XOF";
+    const quote = quoted ? Math.round((km * (len === null ? 1 : 2) * 700 + 40_000) / 5_000) * 5_000 : null;
+    const needsBus = status === "CONFIRMED" || status === "COMPLETED";
+    // Rentals 4 and 7 (same company index, same day) deliberately share a bus to show the conflict flag.
+    const bus = needsBus ? (i === 7 ? store.rentals[4]?.busId ?? buses[0]?.id : buses[(i * 2) % Math.max(buses.length, 1)]?.id) ?? null : null;
+    const driver = needsBus ? (i === 7 ? store.rentals[4]?.driverId : crew[i % Math.max(crew.length, 1)]?.id) ?? null : null;
+    const deposit = quote ? Math.round(quote * 0.3 / 1_000) * 1_000 : 0;
+    const paid = quote ? Math.round(quote * share / 1_000) * 1_000 : 0;
+    const created = at(day - 10, 9);
+    const history: Rental["history"] = [{ at: created, label: "Demande reçue", actor: "admin@sira.app" }];
+    if (quoted) history.push({ at: at(day - 8, 10), label: "Devis envoyé", actor: "admin@sira.app" });
+    if (needsBus) history.push({ at: at(day - 5, 11), label: "Bus et chauffeur affectés, location confirmée", actor: "admin@sira.app" });
+    if (status === "COMPLETED") history.push({ at: at(day + (len ?? 1), 18), label: "Location terminée", actor: "admin@sira.app" });
+    if (status === "CANCELLED") history.push({ at: at(day - 2, 12), label: "Location annulée", actor: "admin@sira.app" });
+    store.rentals.push({
+      id: uid(80, i + 1), companyId: company.id, rentalCode: `LOC-${(0x3A9C41 + i * 7919).toString(36).toUpperCase().padStart(8, "0")}`,
+      customerName: name, customerPhone: `+22177${String(1_000_000 + i * 137_911).slice(-7)}`, purpose, passengers,
+      pickup: origin, destination: dest, departure: at(day), returnAt: len === null ? null : at(day + len, 18), estimatedKm: km,
+      busId: bus, driverId: driver, status, quoteAmount: quote, currency, depositRequired: deposit,
+      cautionAmount: quote ? Math.round(quote * 0.1 / 1_000) * 1_000 : 0, paidAmount: paid,
+      payments: paid > 0 ? [{ at: at(day - 6, 15), amount: paid }] : [], history,
+      invoiceNumber: quoted ? `FAC-LOC-${String(invoiceSeq++).padStart(4, "0")}` : null, invoiceIssuedAt: quoted ? at(day - 8, 10) : null, createdAt: created,
+      cancelledAt: status === "CANCELLED" ? at(day - 2, 12) : null, cancelReason: status === "CANCELLED" ? "Le client a renoncé au voyage" : null,
+    });
+  });
 }
