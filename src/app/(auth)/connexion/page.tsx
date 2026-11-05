@@ -1,23 +1,16 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { ThemedLogo } from "@/components/shell/logo";
+import { AUTH_PANELS, AuthShell, type AuthPanel } from "@/components/auth/auth-shell";
+import { firstString } from "@/lib/search-params";
 import { LoginForm } from "./login-form";
 
-export default function ConnexionPage() {
+export default async function ConnexionPage(props: { searchParams: Promise<{ disposition?: string | string[] }> }) {
+  const asked = firstString((await props.searchParams).disposition);
+  const panel = AUTH_PANELS.find((p) => p === asked) as AuthPanel | undefined;
   return (
-    <main className="flex min-h-screen items-center justify-center p-6">
-      <Card className="w-full max-w-sm">
-        <CardContent className="space-y-6 py-8">
-          <div>
-            <ThemedLogo height={36} />
-            <h1 className="mt-4 text-xl font-semibold">Connexion au backoffice</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Réservé à l&apos;équipe plateforme.</p>
-          </div>
-          <LoginForm />
-          <p className="text-xs text-muted-foreground">
-            Démo : admin@sira.app / sira-demo, puis le code 123456.
-          </p>
-        </CardContent>
-      </Card>
-    </main>
+    <AuthShell
+      title="Bon retour parmi nous" description="Connectez-vous à la console d'administration de la plateforme."
+      step={{ current: 1, total: 2, label: "Identifiants" }} panel={panel}
+    >
+      <LoginForm />
+    </AuthShell>
   );
 }
