@@ -1,16 +1,39 @@
+import { Buildings, CalendarBlank, CheckCircle, Cpu, FileText, Globe, Siren, User } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { DetailRow } from "@/components/data/detail-row";
+import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { IncidentActions } from "@/components/monitoring/incident-actions";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { serviceFilterHref } from "@/lib/filters";
 import { formatDateTime } from "@/lib/format";
 import { impactScopeLabel, incidentStatusBadge, severityBadge } from "@/lib/labels";
 import { incidentsRepo } from "@/lib/repos/monitoring";
 
 export const dynamic = "force-dynamic";
+
+type IconType = ComponentType<{ size?: number; weight?: "duotone"; "aria-hidden"?: boolean; className?: string }>;
+
+function Info({ icon: Icon, label, children }: { icon: IconType; label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-border p-4">
+      <Icon size={24} weight="duotone" aria-hidden className="mt-0.5 shrink-0 text-orange-500" />
+      <div className="min-w-0">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+        <div className="mt-0.5 text-sm font-semibold">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Section({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-card border border-border bg-card p-6 shadow-card">
+      <h3 className="mb-4 text-sm font-semibold">{title}</h3>
+      {children}
+    </section>
+  );
+}
 
 function duration(minutes: number): string {
   if (minutes < 60) return `${minutes} min`;
@@ -43,41 +66,50 @@ export default async function IncidentPage({ params }: { params: Promise<{ id: s
           Incident résolu : seul le postmortem peut encore être renseigné ou modifié.
         </p>
       )}
-      <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader><CardTitle>Incident</CardTitle></CardHeader>
-          <CardContent><dl>
-            <DetailRow label="Gravité"><StatusBadge tone={severity.tone}>{severity.label}</StatusBadge></DetailRow>
-            <DetailRow label="Statut"><StatusBadge tone={status.tone}>{status.label}</StatusBadge></DetailRow>
-            <DetailRow label="Service">
-              <Link href={serviceFilterHref("/supervision/services", i.serviceName)} className="hover:underline">{i.serviceName}</Link>
-            </DetailRow>
-            <DetailRow label="Portée">{impactScopeLabel(i.impactScope)}</DetailRow>
-            <DetailRow label="Compagnie touchée">
-              {i.affectedCompanyId && detail.companyName
-                ? <Link href={`/compagnies/${i.affectedCompanyId}`} className="hover:underline">{detail.companyName}</Link>
-                : "—"}
-            </DetailRow>
-            <DetailRow label="Détecté le">{formatDateTime(i.detectedAt)}</DetailRow>
-            <DetailRow label="Résolu le">{i.resolvedAt ? formatDateTime(i.resolvedAt) : "—"}</DetailRow>
-            <DetailRow label={i.resolvedAt ? "Durée" : "Ouvert depuis"}>
-              <span data-testid="incident-duration">{duration(detail.durationMinutes)}</span>
-            </DetailRow>
-            <DetailRow label="Déclaré par">{i.reportedBy}</DetailRow>
-            <DetailRow label="Postmortem">
-              {i.postmortemUrl
-                ? <a data-testid="incident-postmortem" href={i.postmortemUrl} target="_blank" rel="noreferrer noopener" className="text-accent-text hover:underline">Ouvrir le compte rendu</a>
-                : <span data-testid="incident-postmortem">Aucun</span>}
-            </DetailRow>
-          </dl></CardContent>
-        </Card>
-        <Card>
-          <CardHeader><CardTitle>Description</CardTitle></CardHeader>
-          <CardContent>
-            {i.description ? <p className="text-sm">{i.description}</p> : <p className="text-sm text-muted-foreground">Aucune description.</p>}
+      <div className="space-y-5">
+        <section className="flex flex-wrap items-center gap-4 rounded-card border border-border bg-card p-6 shadow-card">
+          <Siren size={40} weight="duotone" aria-hidden className="shrink-0 text-orange-500" />
+          <div className="min-w-0 flex-1">
+            <p className="text-lg font-bold">{i.title}</p>
+            <p className="text-sm text-muted-foreground"><span className="font-mono">{i.incidentCode}</span> · {i.serviceName}</p>
+          </div>
+          <StatusBadge tone={severity.tone}>{severity.label}</StatusBadge>
+          <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+          <div className="text-right">
+            <p className="text-2xl font-bold tabular-nums" data-testid="incident-duration">{duration(detail.durationMinutes)}</p>
+            <p className="text-sm text-muted-foreground">{i.resolvedAt ? "Durée" : "Ouvert depuis"}</p>
+          </div>
+        </section>
+
+        <div className="grid gap-5 lg:grid-cols-2">
+          <Section title="Description">
+            {i.description
+              ? <blockquote className="border-l-2 border-orange-500 pl-4 text-sm leading-relaxed">{i.description}</blockquote>
+              : <p className="text-sm text-muted-foreground">Aucune description.</p>}
             <p className="mt-4 text-xs text-muted-foreground">Seul l&apos;état courant est conservé : l&apos;historique des changements de statut n&apos;existe pas.</p>
-          </CardContent>
-        </Card>
+          </Section>
+          <Section title="Postmortem">
+            <div className="flex items-center gap-3">
+              <FileText size={28} weight="duotone" aria-hidden className="shrink-0 text-orange-500" />
+              {i.postmortemUrl
+                ? <a data-testid="incident-postmortem" href={i.postmortemUrl} target="_blank" rel="noreferrer noopener" className="text-sm font-semibold text-accent-text hover:underline">Ouvrir le compte rendu</a>
+                : <span data-testid="incident-postmortem" className="text-sm text-muted-foreground">Aucun</span>}
+            </div>
+          </Section>
+        </div>
+
+        <Section title="Détails">
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <Info icon={Cpu} label="Service"><Link href={serviceFilterHref("/supervision/services", i.serviceName)} className="hover:underline">{i.serviceName}</Link></Info>
+            <Info icon={Globe} label="Portée">{impactScopeLabel(i.impactScope)}</Info>
+            <Info icon={Buildings} label="Compagnie touchée">
+              {i.affectedCompanyId && detail.companyName ? <Link href={`/compagnies/${i.affectedCompanyId}`} className="hover:underline">{detail.companyName}</Link> : "—"}
+            </Info>
+            <Info icon={CalendarBlank} label="Détecté le">{formatDateTime(i.detectedAt)}</Info>
+            <Info icon={CheckCircle} label="Résolu le">{i.resolvedAt ? formatDateTime(i.resolvedAt) : "—"}</Info>
+            <Info icon={User} label="Déclaré par">{i.reportedBy}</Info>
+          </div>
+        </Section>
       </div>
     </>
   );

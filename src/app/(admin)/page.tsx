@@ -1,7 +1,8 @@
 import {
-  ArrowRight, Bus, CalendarCheck, CheckCircle, Coins, Funnel, MagnifyingGlass, Package, Percent, Receipt, ShieldCheck, Siren, Ticket, Warning,
+  ArrowRight, Bus, CreditCard, FileMagnifyingGlass, Timer, CalendarCheck, CheckCircle, Coins, Funnel, MagnifyingGlass, Package, Percent, Receipt, ShieldCheck, Siren, Ticket, Warning,
 } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
+import type { ComponentType } from "react";
 import { ParetoChart, SalesChart } from "@/components/dashboard/pro-charts";
 import { FilterSelect } from "@/components/data/filter-select";
 import { Pill, type Tone } from "@/components/compliance/hub/pills";
@@ -15,7 +16,7 @@ import { cn } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
-const ATTENTION: Record<string, string> = { danger: "border-rose-200 bg-rose-50 text-rose-800 dark:border-rose-400/30 dark:bg-rose-400/10 dark:text-rose-200", warning: "border-amber-200 bg-amber-50 text-amber-800 dark:border-amber-400/30 dark:bg-amber-400/10 dark:text-amber-200", info: "border-sky-200 bg-sky-50 text-sky-800 dark:border-sky-400/30 dark:bg-sky-400/10 dark:text-sky-200" };
+const ATTENTION_ICON: Record<string, ComponentType<{ size?: number; weight?: "duotone"; "aria-hidden"?: boolean }>> = { incidents: Siren, pastdue: Receipt, dsr: ShieldCheck, kyc: FileMagnifyingGlass, expiring: Timer, stuck: CreditCard };
 const SEV_BAR: Record<string, string> = { LOW: "#a1a1aa", MEDIUM: WARN, HIGH: ACCENT, CRITICAL: BAD };
 const dm = (iso: string) => `${iso.slice(8, 10)}/${iso.slice(5, 7)}`;
 
@@ -68,18 +69,31 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
       </header>
 
       {/* À traiter */}
-      <section aria-label="À traiter" className="rounded-2xl bg-white p-4 shadow-card dark:bg-card">
-        <div className="flex flex-wrap items-center gap-3">
-          <p className="flex items-center gap-2 text-sm font-semibold">
-            {b.attention.length === 0 ? <CheckCircle size={20} weight="fill" aria-hidden className="text-lime-600" /> : <Warning size={20} weight="fill" aria-hidden className="text-amber-500" />}
+      <section aria-label="À traiter" className="rounded-2xl bg-white p-5 shadow-card dark:bg-card">
+        <div className="mb-4 flex items-center justify-between gap-3">
+          <p className="flex items-center gap-2 text-base font-semibold">
+            {b.attention.length === 0 ? <CheckCircle size={22} weight="fill" aria-hidden className="text-lime-600" /> : <Warning size={22} weight="fill" aria-hidden className="text-amber-500" />}
             {b.attention.length === 0 ? "Tout est à jour" : "À traiter maintenant"}
           </p>
-          {b.attention.map((a) => (
-            <Link key={a.key} href={a.href} className={cn("inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium transition-opacity hover:opacity-80", ATTENTION[a.tone])}>
-              <b className="tabular-nums">{a.count}</b>{a.label}<ArrowRight size={12} aria-hidden />
-            </Link>
-          ))}
+          {b.attention.length > 0 && <span className="rounded-full bg-muted px-2.5 py-1 text-xs font-medium text-muted-foreground">{b.attention.length} point{b.attention.length > 1 ? "s" : ""} d&apos;attention</span>}
         </div>
+        <ul className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {b.attention.map((a) => {
+            const Icon = ATTENTION_ICON[a.key] ?? Warning;
+            return (
+              <li key={a.key}>
+                <Link href={a.href} className="group flex items-center gap-4 rounded-xl border border-border bg-card p-4 transition hover:-translate-y-0.5 hover:shadow-card">
+                  <span className={cn("flex shrink-0 items-center justify-center text-orange-500")}><Icon size={30} weight="duotone" aria-hidden /></span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-3xl font-bold leading-none tracking-tight tabular-nums">{a.count}</p>
+                    <p className="mt-1.5 truncate text-sm text-muted-foreground">{a.label}</p>
+                  </div>
+                  <ArrowRight size={18} aria-hidden className="shrink-0 text-muted-foreground transition group-hover:translate-x-1 group-hover:text-foreground" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
       </section>
 
       {/* Indicateurs */}
