@@ -2,7 +2,7 @@ import { addActivity } from "@/lib/repos/activity";
 import { kycTypesRepo } from "@/lib/repos/billing";
 import { companyFleetSummary } from "@/lib/repos/fleet";
 import { getStore } from "@/lib/repos/store";
-import type { Company, CompanyDetail, CompanyStatus, KycDocument, KycStage } from "@/lib/types";
+import type { BookingChannel, BookingStatus, Company, CompanyDetail, ParcelStatus, UsageBreakdown, CompanyStatus, KycDocument, KycStage } from "@/lib/types";
 
 /** Projection safe to hand to a client component: no contact data. */
 export type CompanyRow = Pick<Company, "id" | "slug" | "name" | "status" | "partnerTier" | "createdAt" | "activatedAt"> & {
@@ -61,6 +61,35 @@ function activateIfKycComplete(company: Company): void {
   addActivity(company.id, "system", "Compagnie activée (KYC complet)");
 }
 
+function usageBreakdown(id: string): UsageBreakdown {
+  const s = getStore();
+  const bk = new Map<string, UsageBreakdown["bookings"][number]>();
+  for (const b of s.bookings.filter((x) => x.companyId === id)) {
+    const key = `${b.channel}|${b.status}`;
+    const row = bk.get(key) ?? { channel: b.channel as BookingChannel, status: b.status as BookingStatus, count: 0, amount: 0, currency: b.currency };
+    row.count += 1; row.amount += b.amount; bk.set(key, row);
+  }
+  const pc = new Map<string, UsageBreakdown["parcels"][number]>();
+  for (const p of s.parcels.filter((x) => x.companyId === id)) {
+    const row = pc.get(p.status) ?? { status: p.status as ParcelStatus, count: 0, fees: 0, currency: p.currency };
+    row.count += 1; row.fees += p.shippingFee; pc.set(p.status, row);
+  }
+  const api = new Map<string, { endpoint: string; method: string; count: number; sumMs: number; maxResponseMs: number; errors: number }>();
+  for (const r of s.apiUsage.filter((x) => x.companyId === id)) {
+    const key = `${r.method} ${r.endpoint}`;
+    const row = api.get(key) ?? { endpoint: r.endpoint, method: r.method, count: 0, sumMs: 0, maxResponseMs: 0, errors: 0 };
+    row.count += r.count; row.sumMs += r.avgResponseMs * r.count;
+    row.maxResponseMs = Math.max(row.maxResponseMs, r.maxResponseMs);
+    if (r.statusClass !== "2xx") row.errors += r.count;
+    api.set(key, row);
+  }
+  return {
+    bookings: [...bk.values()].sort((a, b) => b.count - a.count),
+    parcels: [...pc.values()].sort((a, b) => b.count - a.count),
+    api: [...api.values()].map(({ sumMs, ...r }) => ({ ...r, avgResponseMs: r.count ? Math.round(sumMs / r.count) : 0 })).sort((a, b) => b.count - a.count),
+  };
+}
+
 export const companiesRepo = {
   list(filter: { status?: CompanyStatus; q?: string } = {}): Company[] {
     const q = filter.q?.trim().toLowerCase();
@@ -105,6 +134,7 @@ export const companiesRepo = {
       limits: s.limits[id] ?? null,
       features: s.features[id] ?? [],
       usage: s.usage[id] ?? [],
+      usageBreakdown: usageBreakdown(id),
       referral: s.referrals[id] ?? { code: null, credits: [] },
       employees: s.employees.filter((e) => e.companyId === id),
       ...companyFleetSummary(id),
@@ -138,6 +168,7 @@ export const companiesRepo = {
     if (decision === "rejected" && !reason?.trim()) throw new Error("Un motif de rejet est obligatoire");
     doc.status = decision;
     doc.reviewedAt = new Date().toISOString();
+    doc.reviewedBy = actor;
     doc.rejectionReason = decision === "rejected" ? reason!.trim() : null;
     addActivity(
       doc.companyId, actor,
@@ -145,6 +176,21 @@ export const companiesRepo = {
     );
     const company = s.companies.find((c) => c.id === doc.companyId);
     if (company && decision === "approved") activateIfKycComplete(company);
+    return doc;
+  },
+
+  /** Overwrites a submitted file: the document goes back to « pending » and must be reviewed again. */
+  replaceDocument(docId: string, fileName: string, actor = "admin@sira.app"): KycDocument {
+    const s = getStore();
+    const doc = s.documents.find((d) => d.id === docId);
+    if (!doc) throw new Error("Document introuvable");
+    doc.status = "pending";
+    doc.uploadedAt = new Date().toISOString();
+    doc.reviewedAt = null;
+    doc.reviewedBy = null;
+    doc.rejectionReason = null;
+    doc.replacedFileName = fileName;
+    addActivity(doc.companyId, actor, `Document ${doc.typeName} remplacé`);
     return doc;
   },
 

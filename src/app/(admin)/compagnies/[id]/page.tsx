@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { CompanyTabs } from "@/components/company/company-tabs";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
+import { isBackofficeAdmin } from "@/lib/auth/session";
 import { companyStatusBadge } from "@/lib/labels";
 import { companiesRepo } from "@/lib/repos/companies";
 
@@ -17,6 +18,7 @@ export default async function CompanyPage({
   const { onglet } = await searchParams;
   const detail = companiesRepo.detail(id);
   if (!detail) notFound();
+  const canReplace = await isBackofficeAdmin();
   const badge = companyStatusBadge(detail.company.status);
   return (
     <>
@@ -25,7 +27,7 @@ export default async function CompanyPage({
         description={`Identifiant : ${detail.company.slug}`}
         actions={<span data-testid="company-status"><StatusBadge tone={badge.tone}>{badge.label}</StatusBadge></span>}
       />
-      <CompanyTabs detail={detail} initialTab={onglet} />
+      <CompanyTabs detail={detail} initialTab={onglet} canReplaceKycFile={canReplace} />
     </>
   );
 }

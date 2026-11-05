@@ -266,6 +266,8 @@ function slugify(name: string): string {
     .replace(/^-|-$/g, "");
 }
 
+const KYC_REVIEWERS = ["Awa Diallo", "Moussa Ndiaye", "Fatou Sow"];
+
 export function buildSeed(now: Date = new Date()): Store {
   const iso = (offsetDays: number) => new Date(now.getTime() + offsetDays * DAY).toISOString();
   const store: Store = {
@@ -336,6 +338,7 @@ export function buildSeed(now: Date = new Date()): Store {
         uploadedAt: iso(-(30 - k * 3 - draftIdx)),
         reviewedAt: docStatus === "pending" ? null : iso(-(20 - k)),
         rejectionReason: docStatus === "rejected" ? "Document illisible" : null,
+        reviewedBy: docStatus === "pending" ? null : KYC_REVIEWERS[(i + k) % KYC_REVIEWERS.length]!,
       });
     });
 

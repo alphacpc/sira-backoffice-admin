@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import {
   errorMessage, requireReason, requireString, run, SESSION_EXPIRED, type ActionResult,
 } from "@/lib/actions/run";
-import { requireSession } from "@/lib/auth/session";
+import { isBackofficeAdmin, requireSession } from "@/lib/auth/session";
 import {
   companiesRepo, KYC_MIN_AGES, KYC_SORTS, KYC_STAGES, type KycBoard, type KycBoardQuery,
 } from "@/lib/repos/companies";
@@ -31,6 +31,27 @@ export async function rejectDocument(docId: string, reason: string): Promise<Act
     requireString(docId, "Document");
     const motif = requireReason(reason);
     const doc = companiesRepo.reviewDocument(docId, "rejected", motif, actor);
+    refresh(doc.companyId);
+  });
+}
+
+const KYC_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const KYC_FILE_MAX = 10 * 1024 * 1024;
+
+export async function replaceKycDocument(docId: string, formData: FormData): Promise<ActionResult> {
+  try {
+    await requireSession();
+  } catch {
+    return { ok: false, error: SESSION_EXPIRED };
+  }
+  if (!(await isBackofficeAdmin())) return { ok: false, error: "Réservé à l'administrateur" };
+  return run((actor) => {
+    requireString(docId, "Document");
+    const file = formData.get("file");
+    if (!(file instanceof File) || file.size === 0) throw new Error("Choisis un fichier");
+    if (!KYC_FILE_TYPES.includes(file.type)) throw new Error("Format accepté : PDF, JPEG ou PNG");
+    if (file.size > KYC_FILE_MAX) throw new Error("Fichier trop volumineux (10 Mo au plus)");
+    const doc = companiesRepo.replaceDocument(docId, file.name.slice(0, 120), actor);
     refresh(doc.companyId);
   });
 }

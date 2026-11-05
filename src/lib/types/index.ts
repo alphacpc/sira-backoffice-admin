@@ -28,7 +28,11 @@ export interface KycDocument {
   status: KycDocumentStatus;
   uploadedAt: string;
   reviewedAt: string | null;
+  /** Backoffice team member who approved or rejected the document. */
+  reviewedBy?: string | null;
   rejectionReason: string | null;
+  /** Name of the file last uploaded in place of the original (the mock keeps no file content). */
+  replacedFileName?: string | null;
 }
 
 export type SubscriptionStatus =
@@ -154,6 +158,13 @@ export interface Incident {
   detectedAt: string;
 }
 
+/** Exhaustive aggregates behind the usage counters of a company (no personal data). */
+export interface UsageBreakdown {
+  bookings: { channel: BookingChannel; status: BookingStatus; count: number; amount: number; currency: string }[];
+  parcels: { status: ParcelStatus; count: number; fees: number; currency: string }[];
+  api: { endpoint: string; method: string; count: number; avgResponseMs: number; maxResponseMs: number; errors: number }[];
+}
+
 export interface CompanyDetail {
   company: Company;
   documents: KycDocument[];
@@ -163,6 +174,7 @@ export interface CompanyDetail {
   limits: PlanLimits | null;
   features: FeatureFlag[];
   usage: UsageMetric[];
+  usageBreakdown: UsageBreakdown;
   referral: Referral;
   employees: Employee[];
   buses: FleetBus[];
