@@ -23,8 +23,20 @@ const CREW_FIELD: Record<CrewRole, "driverId" | "driverAssistantId" | "controlle
   DRIVER: "driverId", DRIVER_ASSISTANT: "driverAssistantId", CONTROLLER: "controllerId",
 };
 
-/** One crew assignment of a bus: the member's name only, never an identifier. */
-export interface CrewAssignment { role: CrewRole; name: string | null }
+/** One crew assignment of a bus: name and registry id (used to link the crew member's page). */
+export interface CrewAssignment { role: CrewRole; name: string | null; id: string | null }
+
+/** What the backoffice knows about who sits on a seat of a trip. */
+export interface SeatOccupant {
+  bookingId: string; bookingCode: string; passengerName: string;
+  channel: "counter" | "online"; paymentStatus: "pending" | "paid" | "failed";
+  /** Customer account of the passenger (client page), else the platform user, else none (counter sale). */
+  customerId: string | null; userId: string | null;
+  ticket: {
+    code: string; status: string; issuedAt: string;
+    scans: { at: string; controllerId: string | null; controllerName: string | null }[];
+  } | null;
+}
 
 export interface SeatCounts { total: number; free: number; booked: number; occupied: number; blocked: number }
 
@@ -156,6 +168,8 @@ export interface BusDetail {
   expiries: BusExpiry[];
   maintenances: MaintenanceRow[];
   trips: TripRow[];
+  /** Seat maps of this bus, one per trip, most recent departure first. */
+  seatMaps: { tripId: string; routeLabel: string; departure: string; map: SeatMapView }[];
 }
 
 export interface TripDetail {
@@ -165,6 +179,8 @@ export interface TripDetail {
   busCode: string;
   crew: CrewAssignment[];
   seatMap: SeatMapView | null;
+  /** Occupant of each booked or occupied seat, by seat code. */
+  seats: Record<string, SeatOccupant>;
 }
 
 export interface RouteDetail {
@@ -252,7 +268,7 @@ function crewName(crewId: string | null): string | null {
 }
 
 function crewOf(bus: Bus): CrewAssignment[] {
-  return CREW_ROLES.map((role) => ({ role, name: crewName(bus[CREW_FIELD[role]]) }));
+  return CREW_ROLES.map((role) => ({ role, name: crewName(bus[CREW_FIELD[role]]), id: bus[CREW_FIELD[role]] }));
 }
 
 function busRow(bus: Bus): BusRow {
@@ -343,6 +359,13 @@ export const busesRepo = {
       ],
       maintenances: s.maintenances.filter((m) => m.busId === id).sort(byNewest((m) => m.scheduledDate)).map(maintenanceRow),
       trips: s.trips.filter((t) => t.busId === id).sort(byNewest((t) => t.departure)).map(tripRow),
+      seatMaps: s.seatMaps
+        .filter((m) => m.busId === id)
+        .flatMap((m) => {
+          const t = s.trips.find((x) => x.id === m.tripId);
+          return t ? [{ tripId: t.id, routeLabel: tripRow(t).routeLabel, departure: t.departure, map: seatMapView(m) }] : [];
+        })
+        .sort(byNewest((x) => x.departure)),
     };
   },
 
@@ -430,6 +453,28 @@ export const routesRepo = {
   },
 };
 
+function seatOccupants(tripId: string): Record<string, SeatOccupant> {
+  const s = getStore();
+  const out: Record<string, SeatOccupant> = {};
+  for (const b of s.bookings.filter((x) => x.tripId === tripId && x.status === "confirmed" && x.seatNumber)) {
+    const ticket = s.tickets.find((t) => t.bookingId === b.id) ?? null;
+    out[b.seatNumber!] = {
+      bookingId: b.id, bookingCode: b.bookingCode, passengerName: b.passengerName, channel: b.channel,
+      paymentStatus: b.paymentStatus,
+      customerId: b.userId ? s.customers.find((c) => c.userId === b.userId)?.id ?? null : null,
+      userId: b.userId,
+      ticket: ticket && {
+        code: ticket.ticketCode, status: ticket.status, issuedAt: ticket.issuedAt,
+        scans: ticket.scans.map((at, i) => {
+          const controllerId = ticket.scannedBy?.[i] ?? null;
+          return { at, controllerId, controllerName: crewName(controllerId) };
+        }),
+      },
+    };
+  }
+  return out;
+}
+
 export const tripsRepo = {
   listRows(filter: { companyId?: string; status?: TripStatus } = {}): TripRow[] {
     return getStore().trips
@@ -450,8 +495,9 @@ export const tripsRepo = {
       distanceKm: route?.distanceKm ?? 0,
       durationMinutes: route?.durationMinutes ?? 0,
       busCode: bus?.busCode ?? "—",
-      crew: bus ? crewOf(bus) : CREW_ROLES.map((role) => ({ role, name: null })),
+      crew: bus ? crewOf(bus) : CREW_ROLES.map((role) => ({ role, name: null, id: null })),
       seatMap: map ? seatMapView(map) : null,
+      seats: seatOccupants(id),
     };
   },
 };
@@ -504,5 +550,41 @@ export const vendorsRepo = {
         };
       })
       .sort(byCompanyThen((r) => r.name));
+  },
+};
+
+export interface CrewDetail {
+  member: { id: string; name: string; role: CrewRole };
+  companyId: string;
+  companyName: string;
+  buses: { id: string; plate: string; busCode: string }[];
+  trips: TripRow[];
+  /** Tickets this member scanned (controllers only), most recent first. */
+  scans: { ticketCode: string; at: string; tripId: string; routeLabel: string; passengerName: string }[];
+}
+
+export const crewRepo = {
+  detail(id: string): CrewDetail | undefined {
+    const s = getStore();
+    const member = s.crew.find((c) => c.id === id);
+    if (!member) return undefined;
+    const field = CREW_FIELD[member.role];
+    const buses = s.buses.filter((b) => b[field] === id);
+    const busIds = new Set(buses.map((b) => b.id));
+    const scans = s.tickets.flatMap((t) =>
+      t.scans.flatMap((at, i) => {
+        if (t.scannedBy?.[i] !== id) return [];
+        const trip = s.trips.find((x) => x.id === t.tripId);
+        const booking = s.bookings.find((x) => x.id === t.bookingId);
+        return [{ ticketCode: t.ticketCode, at, tripId: t.tripId, routeLabel: trip ? tripRow(trip).routeLabel : "—", passengerName: booking?.passengerName ?? "—" }];
+      }));
+    return {
+      member: { id: member.id, name: member.name, role: member.role },
+      companyId: member.companyId,
+      companyName: companyName(member.companyId),
+      buses: buses.map((b) => ({ id: b.id, plate: b.plate, busCode: b.busCode })),
+      trips: s.trips.filter((t) => busIds.has(t.busId)).sort(byNewest((t) => t.departure)).slice(0, 15).map(tripRow),
+      scans: scans.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 30),
+    };
   },
 };

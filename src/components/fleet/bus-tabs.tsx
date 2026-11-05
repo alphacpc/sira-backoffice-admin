@@ -1,10 +1,11 @@
+import { Buildings, Bus, CalendarBlank, CheckCircle, GasPump, MapPin, MinusCircle, Wrench } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
-import { DetailRow } from "@/components/data/detail-row";
+import type { ComponentType, ReactNode } from "react";
 import { StatusBadge } from "@/components/data/status-badge";
 import { TabsWithUrl } from "@/components/data/tabs-with-url";
 import { CrewList } from "@/components/fleet/crew-list";
+import { SeatMap } from "@/components/fleet/seat-map";
 import { ExpiryBadge } from "@/components/fleet/expiry-badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDate, formatDateTime, formatMoney } from "@/lib/format";
 import {
   busStatusBadge, busTypeLabel, fuelTypeLabel, maintenanceCategoryLabel, maintenanceStatusBadge, tripStatusBadge,
@@ -17,7 +18,42 @@ function Empty({ children }: { children: React.ReactNode }) {
   return <p className="text-sm text-muted-foreground">{children}</p>;
 }
 
-const yesNo = (value: boolean) => (value ? "Oui" : "Non");
+type IconType = ComponentType<{ size?: number; weight?: "duotone"; "aria-hidden"?: boolean; className?: string }>;
+
+function Info({ icon: Icon, label, children }: { icon: IconType; label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-start gap-3 rounded-xl border border-border p-4">
+      <Icon size={24} weight="duotone" aria-hidden className="mt-0.5 shrink-0 text-orange-500" />
+      <div className="min-w-0">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+        <div className="mt-0.5 text-sm font-semibold">{children}</div>
+      </div>
+    </div>
+  );
+}
+
+function Panel({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="rounded-card border border-border bg-card p-6 shadow-card">
+      <h3 className="mb-4 text-sm font-semibold">{title}</h3>
+      {children}
+    </section>
+  );
+}
+
+function Equip({ label, on, detail }: { label: string; on: boolean; detail?: string }) {
+  const Icon = on ? CheckCircle : MinusCircle;
+  return (
+    <li className={`flex items-center gap-3 rounded-xl border border-border p-3 ${on ? "" : "opacity-60"}`}>
+      <Icon size={22} weight="duotone" aria-hidden className={`shrink-0 ${on ? "text-orange-500" : "text-muted-foreground"}`} />
+      <span className="flex-1 text-sm font-semibold">{label}</span>
+      {detail && <span className="text-xs text-muted-foreground">{detail}</span>}
+    </li>
+  );
+}
+
+const TH = "py-2 text-left text-xs font-medium uppercase tracking-wide text-muted-foreground";
+const BODY = "[&_td]:py-2.5 [&_tr]:border-b [&_tr]:border-border [&_tr:last-child]:border-0";
 
 /** Server Component: tab contents are rendered here; only rendered nodes reach TabsWithUrl. */
 export function BusTabs({ detail, initialTab }: { detail: BusDetail; initialTab?: string }) {
@@ -28,56 +64,75 @@ export function BusTabs({ detail, initialTab }: { detail: BusDetail; initialTab?
     {
       value: "caracteristiques", label: "Caractéristiques",
       content: (
-        <div className="grid gap-4 md:grid-cols-2">
-          <Card><CardContent><dl>
-            <DetailRow label="Code">{bus.busCode}</DetailRow>
-            <DetailRow label="Plaque">{bus.plate}</DetailRow>
-            <DetailRow label="Marque et modèle">{bus.brand} {bus.model}</DetailRow>
-            <DetailRow label="Année">{bus.year}</DetailRow>
-            <DetailRow label="Type">{busTypeLabel(bus.busType)}</DetailRow>
-            <DetailRow label="Carburant">{fuelTypeLabel(bus.fuelType)}</DetailRow>
-            <DetailRow label="Numéro de moteur">{bus.engineNumber}</DetailRow>
-            <DetailRow label="Couleur">{bus.color}</DetailRow>
-            <DetailRow label="Places assises">{bus.seatCapacity}</DetailRow>
-            <DetailRow label="Places debout">{bus.standingCapacity}</DetailRow>
-            <DetailRow label="Soute à bagages">{bus.luggageCapacity} m³</DetailRow>
-            <DetailRow label="Accessible en fauteuil roulant">{yesNo(bus.wheelchairAccessible)}</DetailRow>
-            <DetailRow label="Climatisation">{yesNo(bus.airConditioned)}</DetailRow>
-            <DetailRow label="GPS">{bus.gpsEnabled ? `Oui · ${bus.gpsDeviceId ?? "boîtier inconnu"}` : "Non"}</DetailRow>
-            <DetailRow label="Caméra">{yesNo(bus.cameraInstalled)}</DetailRow>
-            <DetailRow label="Capteur de carburant">{yesNo(bus.fuelSensorInstalled)}</DetailRow>
-          </dl></CardContent></Card>
-          <div className="space-y-4">
-            <Card><CardContent><dl>
-              <DetailRow label="Statut"><StatusBadge tone={status.tone}>{status.label}</StatusBadge></DetailRow>
-              <DetailRow label="Compagnie">
-                <Link href={`/compagnies/${bus.companyId}?onglet=flotte`} className="hover:underline">{detail.companyName}</Link>
-              </DetailRow>
-              <DetailRow label="Flotte">{detail.fleetName ?? "—"}</DetailRow>
-              <DetailRow label="Ligne">
-                {bus.routeId && detail.routeLabel ? (
-                  <Link href={`/flotte/lignes/${bus.routeId}`} className="hover:underline">{detail.routeLabel}</Link>
-                ) : "—"}
-              </DetailRow>
-              <DetailRow label="Dépôt">{detail.depotName ?? "—"}</DetailRow>
-              <DetailRow label="Date d'achat">{formatDate(bus.purchaseDate)}</DetailRow>
-              <DetailRow label="Prix d'achat">{formatMoney(bus.purchasePrice, detail.currency)}</DetailRow>
-              <DetailRow label="Hors service depuis le">{bus.retiredAt ? formatDate(bus.retiredAt) : "—"}</DetailRow>
-            </dl></CardContent></Card>
-            <Card>
-              <CardHeader><CardTitle>Échéances</CardTitle></CardHeader>
-              <CardContent><dl>
+        <div className="space-y-5">
+          <section className="flex flex-wrap items-center gap-4 rounded-card border border-border bg-card p-6 shadow-card">
+            <Bus size={40} weight="duotone" aria-hidden className="shrink-0 text-orange-500" />
+            <div className="min-w-0 flex-1">
+              <p className="font-mono text-lg font-bold">{bus.plate}</p>
+              <p className="text-sm text-muted-foreground">{bus.busCode} · {bus.brand} {bus.model} · {bus.year}</p>
+            </div>
+            <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
+            <div className="text-right">
+              <p className="text-3xl font-bold tabular-nums">{bus.seatCapacity}</p>
+              <p className="text-sm text-muted-foreground">places assises</p>
+            </div>
+          </section>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Panel title="Rattachement">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Info icon={Buildings} label="Compagnie"><Link href={`/compagnies/${bus.companyId}?onglet=flotte`} className="hover:underline">{detail.companyName}</Link></Info>
+                <Info icon={Bus} label="Flotte">{detail.fleetName ?? "—"}</Info>
+                <Info icon={MapPin} label="Ligne">
+                  {bus.routeId && detail.routeLabel ? <Link href={`/flotte/lignes/${bus.routeId}`} className="hover:underline">{detail.routeLabel}</Link> : "—"}
+                </Info>
+                <Info icon={MapPin} label="Dépôt">{detail.depotName ?? "—"}</Info>
+                <Info icon={CalendarBlank} label="Date d'achat">{formatDate(bus.purchaseDate)}</Info>
+                <Info icon={CalendarBlank} label="Prix d'achat">{formatMoney(bus.purchasePrice, detail.currency)}</Info>
+                {bus.retiredAt && <Info icon={CalendarBlank} label="Hors service depuis le">{formatDate(bus.retiredAt)}</Info>}
+              </div>
+            </Panel>
+
+            <Panel title="Échéances">
+              <ul className="space-y-2">
                 {detail.expiries.map((e) => (
-                  <DetailRow key={e.key} label={e.label}>
-                    <span className="inline-flex items-center gap-2" data-testid={`expiry-${e.key}`}>
-                      {formatDate(e.date)} <ExpiryBadge state={e.state} daysLeft={e.daysLeft} />
-                    </span>
-                  </DetailRow>
+                  <li key={e.key} className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm" data-testid={`expiry-${e.key}`}>
+                    <span className="font-semibold">{e.label}</span>
+                    <span className="inline-flex items-center gap-2">{formatDate(e.date)} <ExpiryBadge state={e.state} daysLeft={e.daysLeft} /></span>
+                  </li>
                 ))}
-                <DetailRow label="Dernière maintenance">{formatDate(bus.lastMaintenanceDate)}</DetailRow>
-                <DetailRow label="Prochaine maintenance">{formatDate(bus.nextMaintenanceDate)}</DetailRow>
-              </dl></CardContent>
-            </Card>
+                <li className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
+                  <span className="inline-flex items-center gap-2 font-semibold"><Wrench size={18} weight="duotone" aria-hidden className="text-orange-500" />Dernière maintenance</span>
+                  {formatDate(bus.lastMaintenanceDate)}
+                </li>
+                <li className="flex items-center justify-between gap-3 rounded-xl border border-border p-3 text-sm">
+                  <span className="inline-flex items-center gap-2 font-semibold"><Wrench size={18} weight="duotone" aria-hidden className="text-orange-500" />Prochaine maintenance</span>
+                  {formatDate(bus.nextMaintenanceDate)}
+                </li>
+              </ul>
+            </Panel>
+          </div>
+
+          <div className="grid gap-5 lg:grid-cols-2">
+            <Panel title="Caractéristiques">
+              <div className="grid gap-3 sm:grid-cols-2">
+                <Info icon={Bus} label="Type">{busTypeLabel(bus.busType)}</Info>
+                <Info icon={GasPump} label="Carburant">{fuelTypeLabel(bus.fuelType)}</Info>
+                <Info icon={Bus} label="Places debout">{bus.standingCapacity}</Info>
+                <Info icon={Bus} label="Soute à bagages">{bus.luggageCapacity} m³</Info>
+                <Info icon={Bus} label="Numéro de moteur"><span className="font-mono">{bus.engineNumber}</span></Info>
+                <Info icon={Bus} label="Couleur">{bus.color}</Info>
+              </div>
+            </Panel>
+            <Panel title="Équipements">
+              <ul className="grid gap-2 sm:grid-cols-2">
+                <Equip label="Climatisation" on={bus.airConditioned} />
+                <Equip label="Accès fauteuil roulant" on={bus.wheelchairAccessible} />
+                <Equip label="GPS" on={bus.gpsEnabled} detail={bus.gpsEnabled ? bus.gpsDeviceId ?? "boîtier inconnu" : undefined} />
+                <Equip label="Caméra" on={bus.cameraInstalled} />
+                <Equip label="Capteur de carburant" on={bus.fuelSensorInstalled} />
+              </ul>
+            </Panel>
           </div>
         </div>
       ),
@@ -85,37 +140,37 @@ export function BusTabs({ detail, initialTab }: { detail: BusDetail; initialTab?
     {
       value: "equipage", label: "Équipage",
       content: (
-        <Card><CardContent className="space-y-2">
+        <Panel title="Équipage">
           <CrewList crew={detail.crew} />
-          <p className="text-xs text-muted-foreground">
+          <p className="mt-3 text-xs text-muted-foreground">
             Registre d&apos;équipage du backoffice : sans compte ni coordonnées. Les affectations ne sont pas modifiables ici.
           </p>
-        </CardContent></Card>
+        </Panel>
       ),
     },
     {
       value: "maintenance", label: "Maintenance",
       content: (
-        <Card><CardContent>
+        <Panel title={`Maintenance (${detail.maintenances.length})`}>
           {detail.maintenances.length === 0 ? <Empty>Aucune maintenance enregistrée.</Empty> : (
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-muted-foreground">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border">
                 <tr>
-                  <th className="py-1 font-medium">Code</th>
-                  <th className="py-1 font-medium">Type</th>
-                  <th className="py-1 font-medium">Catégorie</th>
-                  <th className="py-1 font-medium">Fournisseur</th>
-                  <th className="py-1 font-medium">Prévue le</th>
-                  <th className="py-1 font-medium">Statut</th>
-                  <th className="py-1 font-medium">Coût total</th>
+                  <th className={TH}>Code</th>
+                  <th className={TH}>Type</th>
+                  <th className={TH}>Catégorie</th>
+                  <th className={TH}>Fournisseur</th>
+                  <th className={TH}>Prévue le</th>
+                  <th className={TH}>Statut</th>
+                  <th className={TH}>Coût total</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className={BODY}>
                 {detail.maintenances.map((m) => {
                   const b = maintenanceStatusBadge(m.status);
                   return (
-                    <tr key={m.id} className="border-t border-border">
-                      <td className="py-1.5 font-mono text-xs">{m.code}</td>
+                    <tr key={m.id}>
+                      <td className="font-mono text-xs">{m.code}</td>
                       <td>{m.type}</td>
                       <td>{maintenanceCategoryLabel(m.category)}</td>
                       <td>{m.vendorName ?? "Interne"}</td>
@@ -128,29 +183,43 @@ export function BusTabs({ detail, initialTab }: { detail: BusDetail; initialTab?
               </tbody>
             </table>
           )}
-        </CardContent></Card>
+        </Panel>
       ),
     },
     {
       value: "trajets", label: "Trajets et sièges",
       content: (
-        <Card><CardContent>
+        <div className="space-y-5">
+          <Panel title={`Plan de sièges (${detail.seatMaps.length})`}>
+            {detail.seatMaps.length === 0 ? <Empty>Aucun plan de sièges pour ce bus.</Empty> : (
+              <div className="grid gap-5 lg:grid-cols-2">
+                {detail.seatMaps.map((m) => (
+                  <div key={m.tripId} className="rounded-xl border border-border p-4">
+                    <Link href={`/flotte/trajets/${m.tripId}`} className="text-sm font-semibold hover:underline">{m.routeLabel}</Link>
+                    <p className="mb-3 text-xs text-muted-foreground">{formatDateTime(m.departure)}</p>
+                    <SeatMap map={m.map} />
+                  </div>
+                ))}
+              </div>
+            )}
+          </Panel>
+        <Panel title={`Trajets (${detail.trips.length})`}>
           {detail.trips.length === 0 ? <Empty>Aucun trajet pour ce bus.</Empty> : (
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs text-muted-foreground">
+            <table className="w-full text-sm">
+              <thead className="border-b border-border">
                 <tr>
-                  <th className="py-1 font-medium">Départ</th>
-                  <th className="py-1 font-medium">Ligne</th>
-                  <th className="py-1 font-medium">Statut</th>
-                  <th className="py-1 font-medium">Places libres</th>
+                  <th className={TH}>Départ</th>
+                  <th className={TH}>Ligne</th>
+                  <th className={TH}>Statut</th>
+                  <th className={TH}>Places libres</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className={BODY}>
                 {detail.trips.map((t) => {
                   const b = tripStatusBadge(t.status);
                   return (
-                    <tr key={t.id} className="border-t border-border">
-                      <td className="py-1.5">
+                    <tr key={t.id}>
+                      <td>
                         <Link href={`/flotte/trajets/${t.id}`} className="hover:underline">{formatDateTime(t.departure)}</Link>
                       </td>
                       <td>{t.routeLabel}</td>
@@ -162,7 +231,8 @@ export function BusTabs({ detail, initialTab }: { detail: BusDetail; initialTab?
               </tbody>
             </table>
           )}
-        </CardContent></Card>
+        </Panel>
+        </div>
       ),
     },
   ];

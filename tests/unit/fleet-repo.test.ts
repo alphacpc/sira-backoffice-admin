@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import {
-  busesRepo, daysUntil, expiryState, fleetCompanies, fleetsRepo, maintenanceRepo, parseCompanyFilter, routesRepo,
+  busesRepo, crewRepo, daysUntil, expiryState, fleetCompanies, fleetsRepo, maintenanceRepo, parseCompanyFilter, routesRepo,
   seatCounts, seatMapsRepo, stationsRepo, tripsRepo, vendorsRepo,
 } from "@/lib/repos/fleet";
 import { getStore, resetStore } from "@/lib/repos/store";
@@ -74,12 +74,13 @@ describe("busesRepo.detail", () => {
     expect(busesRepo.detail("nope", NOW)).toBeUndefined();
   });
   it("lists the three crew assignments by name, in role order, with null when unassigned", () => {
-    expect(busesRepo.detail(busId("DK-1050-AB"), NOW)!.crew).toEqual([
+    expect(busesRepo.detail(busId("DK-1050-AB"), NOW)!.crew.map(({ role, name }) => ({ role, name }))).toEqual([
       { role: "DRIVER", name: "Saliou Sané" },
       { role: "DRIVER_ASSISTANT", name: "Alioune Lo" },
       { role: "CONTROLLER", name: "Mamadou Diagne" },
     ]);
-    expect(busesRepo.detail(busId("DK-1052-AB"), NOW)!.crew.map((c) => c.name)).toEqual([null, null, null]);
+    expect(busesRepo.detail(busId("DK-1052-AB"), NOW)!.crew.map((c) => [c.name, c.id])).toEqual([[null, null], [null, null], [null, null]]);
+    expect(busesRepo.detail(busId("DK-1050-AB"), NOW)!.crew.every((c) => c.id !== null)).toBe(true);
   });
   it("computes the expiries against the injected date", () => {
     const d = busesRepo.detail(busId("DK-1051-AB"), NOW)!;
@@ -235,5 +236,20 @@ describe("fleets, stations and routes", () => {
     expect(d.buses.map((b) => b.plate)).toEqual(["DK-1051-AB"]);
     expect(d.trips).toHaveLength(2);
     expect(routesRepo.detail("nope")).toBeUndefined();
+  });
+});
+
+describe("seat occupants and crew page", () => {
+  it("links each seat of a trip to its booking, ticket and the controller who scanned it", () => {
+    const withScan = tripsRepo.listRows().map((t) => tripsRepo.detail(t.id)!).find((d) =>
+      Object.values(d.seats).some((o) => o.ticket?.scans.some((x) => x.controllerId)));
+    expect(withScan).toBeDefined();
+    const occ = Object.values(withScan!.seats).find((o) => o.ticket?.scans.some((x) => x.controllerId))!;
+    const scan = occ.ticket!.scans.find((x) => x.controllerId)!;
+    expect(scan.controllerId).not.toBeNull();
+    expect(scan.controllerName).toBeTruthy();
+    const crew = crewRepo.detail(scan.controllerId!)!;
+    expect(crew.member.role).toBe("CONTROLLER");
+    expect(crew.scans.some((x) => x.ticketCode === occ.ticket!.code)).toBe(true);
   });
 });
