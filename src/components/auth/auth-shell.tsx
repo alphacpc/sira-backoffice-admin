@@ -16,6 +16,9 @@ const COUNTRIES = [
   { country: "Sénégal", city: "Dakar" }, { country: "Guinée", city: "Conakry" }, { country: "Côte d'Ivoire", city: "Abidjan" },
 ];
 
+/** Entrance delay for the n-th element of the page. */
+const rise = (n: number, base = 0.15): React.CSSProperties => ({ animationDelay: `${(base + n * 0.08).toFixed(2)}s` });
+
 function Points() {
   return (
     <ul className="space-y-3.5">
@@ -32,7 +35,7 @@ function Points() {
 /** The map, big and readable: it is the content of the panel, never a backdrop. */
 function MapImage({ className }: { className?: string }) {
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={MAP} alt="Carte de l'Afrique : le Sénégal, la Guinée et la Côte d'Ivoire en ambre" className={className} />;
+  return <img src={MAP} alt="Carte de l'Afrique : le Sénégal, la Guinée et la Côte d'Ivoire en ambre" className={cn("auth-map", className)} />;
 }
 
 /**
@@ -86,25 +89,25 @@ export interface AuthShellProps {
 function Content({ title, description, step, children, footer, centered, logoSize }: AuthShellProps & { logoSize: number }) {
   return (
     <>
-      <div className={cn(centered && "flex justify-center")}><ThemedLogo height={logoSize} /></div>
+      <div className={cn("auth-rise", centered && "flex justify-center")} style={rise(0)}><ThemedLogo height={logoSize} /></div>
       {step && (
-        <div className={cn("mt-9 flex items-center gap-3", centered && "justify-center")} aria-label={`Étape ${step.current} sur ${step.total}`}>
+        <div className={cn("auth-rise mt-9 flex items-center gap-3", centered && "justify-center")} style={rise(1)} aria-label={`Étape ${step.current} sur ${step.total}`}>
           <span className="flex gap-1.5">
             {Array.from({ length: step.total }, (_, i) => <span key={i} className={cn("h-1.5 w-8 rounded-full", i < step.current ? "bg-accent" : "bg-border")} />)}
           </span>
           <span className="text-xs font-semibold text-muted-foreground">{step.label}</span>
         </div>
       )}
-      <h1 className={cn("text-3xl font-extrabold tracking-tight", step ? "mt-4" : "mt-9")}>{title}</h1>
-      {description && <p className="mt-2 text-[15px] text-muted-foreground">{description}</p>}
-      {children && <div className="mt-8">{children}</div>}
-      {footer && <div className="mt-8">{footer}</div>}
+      <h1 className={cn("auth-rise text-3xl font-extrabold tracking-tight", step ? "mt-4" : "mt-9")} style={rise(2)}>{title}</h1>
+      {description && <p className="auth-rise mt-2 text-[15px] text-muted-foreground" style={rise(3)}>{description}</p>}
+      {children && <div className="auth-rise mt-8" style={rise(4)}>{children}</div>}
+      {footer && <div className="auth-rise mt-8" style={rise(5)}>{footer}</div>}
     </>
   );
 }
 
 function Copyright({ className }: { className?: string }) {
-  return <p className={cn("text-xs text-muted-foreground", className)}>© {new Date().getFullYear()} Sira. Tous droits réservés.</p>;
+  return <p className={cn("auth-rise text-xs text-muted-foreground", className)} style={rise(8)}>© {new Date().getFullYear()} Sira. Tous droits réservés.</p>;
 }
 
 export function AuthShell(props: AuthShellProps) {
@@ -114,12 +117,12 @@ export function AuthShell(props: AuthShellProps) {
     return (
       <div className={cn("relative min-h-screen overflow-hidden", SAND)}>
         <MapImage className="pointer-events-none absolute inset-y-0 right-0 h-full w-full object-contain object-right-center opacity-35 lg:opacity-100 lg:w-[68%] lg:object-center" />
-        <header className="absolute right-0 top-0 hidden max-w-md p-12 lg:block xl:right-8 xl:p-14">
+        <header className="auth-rise absolute right-0 top-0 hidden max-w-md p-12 lg:block xl:right-8 xl:p-14" style={rise(6)}>
           <p className="inline-flex items-center gap-2 rounded-full bg-[#0a2a47] px-3.5 py-1.5 text-xs font-semibold text-white"><span className="size-1.5 rounded-full bg-[#f4a521]" />Console plateforme</p>
           <p className="mt-4 text-4xl font-extrabold leading-[1.1] tracking-tight text-[#0a2a47]">Toutes les lignes, un seul poste de contrôle.</p>
         </header>
         <main className="relative flex min-h-screen items-center px-5 py-10 sm:px-10 lg:px-16 xl:px-24">
-          <div className={cn("w-full max-w-md rounded-3xl bg-card p-8 shadow-2xl ring-1 ring-black/5 sm:p-10", centered && "text-center")}>
+          <div className={cn("auth-rise w-full max-w-md rounded-3xl bg-card p-8 shadow-2xl ring-1 ring-black/5 sm:p-10", centered && "text-center")} style={rise(-1.5)}>
             <Content {...props} logoSize={52} />
           </div>
         </main>
