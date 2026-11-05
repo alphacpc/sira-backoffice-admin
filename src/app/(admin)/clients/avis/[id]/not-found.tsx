@@ -1,13 +1,10 @@
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { NotFoundView } from "@/components/data/not-found-view";
 
-export default function FeedbackNotFound() {
+export default function ClientsAvisNotFound() {
   return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <p className="text-lg font-medium">Avis introuvable</p>
-        <Link href="/clients/avis" className="mt-2 inline-block text-sm text-accent-text underline">Retour aux avis</Link>
-      </CardContent>
-    </Card>
+    <NotFoundView
+      variant="inline" title="Avis introuvable" description="Cet élément a peut-être été supprimé, ou le lien est incorrect."
+      backHref="/clients/avis" backLabel="Retour aux avis"
+    />
   );
 }

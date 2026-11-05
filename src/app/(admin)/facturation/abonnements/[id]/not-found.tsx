@@ -1,15 +1,10 @@
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { NotFoundView } from "@/components/data/not-found-view";
 
-export default function SubscriptionNotFound() {
+export default function FacturationAbonnementsNotFound() {
   return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <p className="text-lg font-medium">Abonnement introuvable</p>
-        <Link href="/facturation/abonnements" className="mt-2 inline-block text-sm text-accent-text underline">
-          Retour aux abonnements
-        </Link>
-      </CardContent>
-    </Card>
+    <NotFoundView
+      variant="inline" title="Abonnement introuvable" description="Cet élément a peut-être été supprimé, ou le lien est incorrect."
+      backHref="/facturation/abonnements" backLabel="Retour aux abonnements"
+    />
   );
 }

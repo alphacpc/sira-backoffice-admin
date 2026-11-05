@@ -1,15 +1,10 @@
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { NotFoundView } from "@/components/data/not-found-view";
 
-export default function RouteNotFound() {
+export default function FlotteLignesNotFound() {
   return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <p className="text-lg font-medium">Ligne introuvable</p>
-        <Link href="/flotte/lignes" className="mt-2 inline-block text-sm text-accent-text underline">
-          Retour à la liste
-        </Link>
-      </CardContent>
-    </Card>
+    <NotFoundView
+      variant="inline" title="Ligne introuvable" description="Cet élément a peut-être été supprimé, ou le lien est incorrect."
+      backHref="/flotte/lignes" backLabel="Retour aux lignes"
+    />
   );
 }

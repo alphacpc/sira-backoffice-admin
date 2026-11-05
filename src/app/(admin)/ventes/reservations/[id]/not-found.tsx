@@ -1,15 +1,10 @@
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { NotFoundView } from "@/components/data/not-found-view";
 
-export default function BookingNotFound() {
+export default function VentesReservationsNotFound() {
   return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <p className="text-lg font-medium">Réservation introuvable</p>
-        <Link href="/ventes/reservations" className="mt-2 inline-block text-sm text-accent-text underline">
-          Retour aux réservations
-        </Link>
-      </CardContent>
-    </Card>
+    <NotFoundView
+      variant="inline" title="Réservation introuvable" description="Cet élément a peut-être été supprimé, ou le lien est incorrect."
+      backHref="/ventes/reservations" backLabel="Retour aux réservations"
+    />
   );
 }

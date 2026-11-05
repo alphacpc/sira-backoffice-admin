@@ -115,3 +115,13 @@ body {
 .sira-city__name { padding: 2px 8px; border-radius: 9999px; background: color-mix(in srgb, var(--card) 92%, transparent); color: var(--foreground); font-size: 11px; font-weight: 600; box-shadow: 0 2px 8px rgb(0 0 0 / 0.14); }
 .sira-city.is-active .sira-city__dot { border-color: #0a2a47; background: #0a2a47; }
 .sira-city.is-active .sira-city__name { background: #0a2a47; color: #fff; }
+
+/* Page introuvable : la roue (le « 0 » de 404) tourne puis s'arrête, une seule fois. */
+@keyframes nf-wheel-stop {
+  from { transform: rotate(-900deg); }
+  to { transform: rotate(0deg); }
+}
+.nf-wheel { transform-origin: 50% 50%; animation: nf-wheel-stop 1.8s cubic-bezier(0.1, 0.7, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .nf-wheel { animation: none; }
+}

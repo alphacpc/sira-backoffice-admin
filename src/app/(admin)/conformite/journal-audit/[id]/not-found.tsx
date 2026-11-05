@@ -1,13 +1,10 @@
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { NotFoundView } from "@/components/data/not-found-view";
 
-export default function AuditLineNotFound() {
+export default function ConformiteJournalAuditNotFound() {
   return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <p className="text-lg font-medium">Ligne de journal introuvable</p>
-        <Link href="/conformite/journal-audit" className="mt-2 inline-block text-sm text-accent-text underline">Retour au journal d&apos;audit</Link>
-      </CardContent>
-    </Card>
+    <NotFoundView
+      variant="inline" title="Ligne de journal introuvable" description="Cet élément a peut-être été supprimé, ou le lien est incorrect."
+      backHref="/conformite/journal-audit" backLabel="Retour au journal d'audit"
+    />
   );
 }

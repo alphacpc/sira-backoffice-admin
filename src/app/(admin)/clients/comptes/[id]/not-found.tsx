@@ -1,13 +1,10 @@
-import Link from "next/link";
-import { Card, CardContent } from "@/components/ui/card";
+import { NotFoundView } from "@/components/data/not-found-view";
 
-export default function CustomerNotFound() {
+export default function ClientsComptesNotFound() {
   return (
-    <Card>
-      <CardContent className="py-12 text-center">
-        <p className="text-lg font-medium">Client introuvable</p>
-        <Link href="/clients/comptes" className="mt-2 inline-block text-sm text-accent-text underline">Retour aux comptes clients</Link>
-      </CardContent>
-    </Card>
+    <NotFoundView
+      variant="inline" title="Client introuvable" description="Cet élément a peut-être été supprimé, ou le lien est incorrect."
+      backHref="/clients/comptes" backLabel="Retour aux comptes clients"
+    />
   );
 }
