@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { liveAuditDetail } from "@/lib/api/misc-detail-live";
+import { isLive } from "@/lib/api/config";
 import { DetailRow } from "@/components/data/detail-row";
 import { PageHeader } from "@/components/data/page-header";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,7 +13,7 @@ export const dynamic = "force-dynamic";
 
 export default async function AuditLineDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = auditRepo.detail(id);
+  const detail = isLive() ? await liveAuditDetail(id) : auditRepo.detail(id);
   if (!detail) notFound();
   const { row } = detail;
   return (

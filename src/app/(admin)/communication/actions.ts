@@ -1,14 +1,24 @@
 "use server";
+import { isLive } from "@/lib/api/config";
+import { apiCall } from "@/lib/api/http";
 
 import { revalidatePath } from "next/cache";
 import {
-  notWiredInLive, requireReason, requireString, run, runReveal, type ActionResult, type RevealResult,
+  notWiredInLive, runLive, requireReason, requireString, run, runReveal, type ActionResult, type RevealResult,
 } from "@/lib/actions/run";
 import { campaignsRepo, notificationsRepo, schedulesRepo } from "@/lib/repos/communication";
 
 export async function cancelCampaign(campaignId: string, reason: string): Promise<ActionResult> {
-  const notWired = await notWiredInLive();
-  if (notWired) return notWired;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(campaignId, "Campagne");
+      const motif = requireReason(reason);
+      await apiCall(`/admin/marketing-campaigns/${encodeURIComponent(campaignId)}/cancel`, { method: "PATCH", body: { reason: motif }, token });
+      revalidatePath("/communication/campagnes");
+      revalidatePath(`/communication/campagnes/${campaignId}`);
+      revalidatePath("/communication/programmations");
+    });
+  }
   return run((actor) => {
     requireString(campaignId, "Campagne");
     const motif = requireReason(reason);
@@ -21,8 +31,14 @@ export async function cancelCampaign(campaignId: string, reason: string): Promis
 }
 
 export async function cancelSchedule(scheduleId: string, reason: string): Promise<ActionResult> {
-  const notWired = await notWiredInLive();
-  if (notWired) return notWired;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(scheduleId, "Programmation");
+      const motif = requireReason(reason);
+      await apiCall(`/admin/marketing-schedules/${encodeURIComponent(scheduleId)}/cancel`, { method: "PATCH", body: { reason: motif }, token });
+      revalidatePath("/communication/programmations");
+    });
+  }
   return run((actor) => {
     requireString(scheduleId, "Programmation");
     const motif = requireReason(reason);

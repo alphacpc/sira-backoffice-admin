@@ -1,5 +1,6 @@
 import { notFound } from "next/navigation";
 import { isLive } from "@/lib/api/config";
+import { liveCampaignDetail } from "@/lib/api/misc-detail-live";
 import { CampaignTabs } from "@/components/communication/campaign-tabs";
 import { CancelCampaignButton } from "@/components/communication/cancel-campaign-button";
 import { PageHeader } from "@/components/data/page-header";
@@ -16,10 +17,9 @@ export default async function CampaignPage({
   searchParams: Promise<{ onglet?: string }>;
 }) {
   // Live: the detail still reads the demonstration store, so it answers 404.
-  if (isLive()) notFound();
   const { id } = await params;
   const { onglet } = await searchParams;
-  const detail = campaignsRepo.detail(id);
+  const detail = isLive() ? await liveCampaignDetail(id) : campaignsRepo.detail(id);
   if (!detail) notFound();
   const { campaign } = detail;
   const status = campaignStatusBadge(campaign.status);

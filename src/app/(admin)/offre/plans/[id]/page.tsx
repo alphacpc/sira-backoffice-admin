@@ -1,6 +1,8 @@
 import { Bus, CheckCircle, Crown, Gift, UsersThree } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { livePlanDetail } from "@/lib/api/misc-detail-live";
+import { isLive } from "@/lib/api/config";
 import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -35,7 +37,7 @@ const TH = "py-2 text-left text-xs font-medium uppercase tracking-wide text-mute
 
 export default async function PlanPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = plansRepo.detail(id);
+  const detail = isLive() ? await livePlanDetail(id) : plansRepo.detail(id);
   if (!detail) notFound();
   const { plan, features, subscriptions } = detail;
   const status = planStatusBadge(plan.status);
