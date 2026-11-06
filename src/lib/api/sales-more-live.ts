@@ -172,3 +172,51 @@ export async function liveTicketDetail(code: string): Promise<TicketDetail | nul
     scanLog: scannedAt ? [{ at: scannedAt, byName: null, byId: strOrNull(t.scannedBy) }] : [],
   };
 }
+
+// --- rental detail ------------------------------------------------------------------------------------------
+
+import { liveBuses } from "@/lib/api/fleet-live";
+import { userNames } from "@/lib/api/comp-live";
+import type { RentalDetail } from "@/lib/repos/rentals";
+
+const ACTIONS = ["quote", "assign", "pay", "confirm", "complete", "cancel"] as const;
+
+/** Assignable buses are the company's active buses; drivers are its crew registry (employee codes, no names on the platform). */
+export async function liveRentalDetail(id: string): Promise<RentalDetail | null> {
+  let raw: unknown;
+  try {
+    raw = await call<unknown>(`/admin/rentals/${encodeURIComponent(id)}`);
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
+    throw e;
+  }
+  const d = obj(raw);
+  const names = await companyNames();
+  const rental = toRentalRow(d.rental, names);
+  const [buses, crewRaw, actors] = await Promise.all([
+    liveBuses({ companyId: rental.companyId, status: "active" }).catch(() => []),
+    loadAll("/admin/crew", withFilters({ companyId: rental.companyId, role: "DRIVER" })).catch(() => []),
+    userNames(arr(d.history).map((h) => str(h.actorUserId))),
+  ]);
+  const drivers = crewRaw.map(obj).map((c) => ({ id: str(c.id), name: str(c.employeeCode, "Chauffeur") }));
+  const driverName = drivers.find((c) => c.id === rental.driverId)?.name ?? rental.driverName;
+  return {
+    rental: { ...rental, driverName },
+    payments: arr(d.payments).map((p) => ({ at: str(p.at), amount: num(p.amount) })),
+    history: arr(d.history).map((h) => ({ at: str(h.at), label: str(h.label, "—"), actor: actors.get(str(h.actorUserId)) ?? "Système" })),
+    buses: buses.map((b) => ({ id: b.id, label: `${b.plate} · ${b.brandModel}`, seats: b.seatCapacity })),
+    drivers,
+    nextActions: (Array.isArray(d.nextActions) ? d.nextActions : []).map((a) => String(a).toLowerCase()).filter((a): a is (typeof ACTIONS)[number] => (ACTIONS as readonly string[]).includes(a)),
+  };
+}
+
+/** The invoice card only shows the number, the total, the balance and the status. */
+export async function liveRentalInvoiceLite(number: string): Promise<RentalInvoiceRow | null> {
+  try {
+    const raw = obj(await call<unknown>(`/admin/rental-invoices/${encodeURIComponent(number)}`));
+    return toRentalInvoiceRow(raw.invoice && typeof raw.invoice === "object" ? raw.invoice : raw, await companyNames());
+  } catch (e) {
+    if (e instanceof ApiError) return null;
+    throw e;
+  }
+}

@@ -42,36 +42,75 @@ function refreshRental(id: string, companyId: string): void {
 }
 
 export async function quoteRental(id: string, amount: number): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(id, "Location");
+      await apiCall(`/admin/rentals/${encodeURIComponent(id)}/quote`, { method: "POST", body: { amount: Number(amount) }, token });
+      revalidatePath("/ventes/locations");
+      revalidatePath(`/ventes/locations/${id}`);
+    });
+  }
   return run((actor) => { requireString(id, "Location"); const r = rentalsRepo.quote(id, Number(amount), actor); refreshRental(r.id, r.companyId); });
 }
 export async function assignRental(id: string, busId: string, driverId: string): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(id, "Location");
+      requireString(busId, "Bus");
+      requireString(driverId, "Chauffeur");
+      await apiCall(`/admin/rentals/${encodeURIComponent(id)}/assignment`, { method: "PUT", body: { busId, driverId }, token });
+      revalidatePath("/ventes/locations");
+      revalidatePath(`/ventes/locations/${id}`);
+    });
+  }
   return run((actor) => {
     requireString(id, "Location"); requireString(busId, "Bus"); requireString(driverId, "Chauffeur");
     const r = rentalsRepo.assign(id, busId, driverId, actor); refreshRental(r.id, r.companyId);
   });
 }
 export async function payRental(id: string, amount: number): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(id, "Location");
+      await apiCall(`/admin/rentals/${encodeURIComponent(id)}/payments`, { method: "POST", body: { amount: Number(amount) }, token });
+      revalidatePath("/ventes/locations");
+      revalidatePath(`/ventes/locations/${id}`);
+    });
+  }
   return run((actor) => { requireString(id, "Location"); const r = rentalsRepo.recordPayment(id, Number(amount), actor); refreshRental(r.id, r.companyId); });
 }
 export async function confirmRental(id: string): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(id, "Location");
+      await apiCall(`/admin/rentals/${encodeURIComponent(id)}/confirm`, { method: "POST", token });
+      revalidatePath("/ventes/locations");
+      revalidatePath(`/ventes/locations/${id}`);
+    });
+  }
   return run((actor) => { requireString(id, "Location"); const r = rentalsRepo.confirm(id, actor); refreshRental(r.id, r.companyId); });
 }
 export async function completeRental(id: string): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(id, "Location");
+      await apiCall(`/admin/rentals/${encodeURIComponent(id)}/complete`, { method: "POST", token });
+      revalidatePath("/ventes/locations");
+      revalidatePath(`/ventes/locations/${id}`);
+    });
+  }
   return run((actor) => { requireString(id, "Location"); const r = rentalsRepo.complete(id, actor); refreshRental(r.id, r.companyId); });
 }
 export async function cancelRental(id: string, reason: string): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(id, "Location");
+      const motif = requireReason(reason);
+      await apiCall(`/admin/rentals/${encodeURIComponent(id)}/cancel`, { method: "POST", body: { reason: motif }, token });
+      revalidatePath("/ventes/locations");
+      revalidatePath(`/ventes/locations/${id}`);
+    });
+  }
   return run((actor) => { requireString(id, "Location"); const r = rentalsRepo.cancel(id, requireReason(reason), actor); refreshRental(r.id, r.companyId); });
 }
 

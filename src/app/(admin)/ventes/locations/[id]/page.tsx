@@ -5,6 +5,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLive } from "@/lib/api/config";
+import { liveRentalDetail, liveRentalInvoiceLite } from "@/lib/api/sales-more-live";
 import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -34,14 +35,13 @@ const PAYMENT = { none: "Aucun paiement", deposit: "Acompte versé", settled: "S
 
 export default async function RentalPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  // Not wired to the platform yet: never look a live id up in the demonstration store.
-  if (isLive()) notFound();
-  const d = rentalsRepo.detail(id);
+  const live = isLive();
+  const d = live ? await liveRentalDetail(id) : rentalsRepo.detail(id);
   if (!d) notFound();
   const { rental: r } = d;
   const st = STATUS[r.status];
   const money = (n: number) => formatMoney(n, r.currency);
-  const invoice = r.invoiceNumber ? rentalInvoicesRepo.byNumber(r.invoiceNumber) : undefined;
+  const invoice = r.invoiceNumber ? (live ? ((await liveRentalInvoiceLite(r.invoiceNumber)) ?? undefined) : rentalInvoicesRepo.byNumber(r.invoiceNumber)) : undefined;
   return (
     <>
       <PageHeader
