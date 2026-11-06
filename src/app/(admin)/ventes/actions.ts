@@ -128,8 +128,14 @@ export async function payRentalInvoice(number: string): Promise<ActionResult> {
 }
 
 export async function saveInvoiceTemplate(companyId: string, template: InvoiceTemplate): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(companyId, "Compagnie");
+      await apiCall(`/admin/companies/${encodeURIComponent(companyId)}/invoice-template`, { method: "PUT", body: template, token });
+      revalidatePath(`/compagnies/${companyId}/modele-facture`);
+      revalidatePath("/ventes/factures", "layout");
+    });
+  }
   return run((actor) => {
     requireString(companyId, "Compagnie");
     rentalInvoicesRepo.saveTemplate(companyId, template, actor);

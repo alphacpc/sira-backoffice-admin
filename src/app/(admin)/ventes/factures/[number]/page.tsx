@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLive } from "@/lib/api/config";
+import { liveRentalInvoice } from "@/lib/api/sales-more-live";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { InvoiceActions } from "@/components/sales/invoice-actions";
@@ -13,9 +14,7 @@ export const dynamic = "force-dynamic";
 
 export default async function InvoicePage({ params }: { params: Promise<{ number: string }> }) {
   const { number } = await params;
-  // Not wired to the platform yet: never look a live id up in the demonstration store.
-  if (isLive()) notFound();
-  const inv = rentalInvoicesRepo.byNumber(decodeURIComponent(number));
+  const inv = isLive() ? await liveRentalInvoice(decodeURIComponent(number)) : rentalInvoicesRepo.byNumber(decodeURIComponent(number));
   if (!inv) notFound();
   const st = INVOICE_STATUS[inv.status];
   const qr = inv.balance > 0 && inv.template.showQr ? await qrFor(inv.payLink, inv.template.primaryColor) : null;

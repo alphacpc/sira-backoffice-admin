@@ -1,7 +1,7 @@
 import { loadAll, names as companyNames, soft } from "@/lib/api/care-live";
 import { arr, liveBookings, liveTransactions, num, numOrNull, obj, pick, str, strOrNull, withFilters } from "@/lib/api/sales-live";
 import type { RentalInvoiceRow, RentalInvoiceStatus } from "@/lib/repos/rental-invoices";
-import type { RentalRow } from "@/lib/repos/rentals";
+import { RENTAL_PURPOSES, type RentalRow } from "@/lib/repos/rentals";
 import type { ExpiringBooking, OnlineStats, PaymentMethodRow, TicketRow } from "@/lib/repos/sales";
 import type {
   BookingChannel, BookingPaymentStatus, PaymentMethodKind, RentalPurpose, RentalStatus, TicketStatus,
@@ -219,4 +219,44 @@ export async function liveRentalInvoiceLite(number: string): Promise<RentalInvoi
     if (e instanceof ApiError) return null;
     throw e;
   }
+}
+
+// --- rental invoice sheet -----------------------------------------------------------------------------------
+
+import type { RentalInvoice } from "@/lib/repos/rental-invoices";
+import type { InvoiceTemplate } from "@/lib/types";
+
+export function toTemplate(raw: unknown): InvoiceTemplate {
+  const t = obj(raw);
+  return {
+    logoDataUrl: strOrNull(t.logoDataUrl), primaryColor: str(t.primaryColor, "#1f2937"), accentColor: str(t.accentColor, "#f59e0b"),
+    headerNote: str(t.headerNote), footerNote: str(t.footerNote), legalMentions: str(t.legalMentions), taxRate: num(t.taxRate),
+    paymentTermsDays: num(t.paymentTermsDays, 7), showQr: t.showQr === true,
+  };
+}
+
+/** The issuer shows its legal identity only (name, country, NINEA, registration): the company's e-mail and phone stay out. */
+export async function liveRentalInvoice(number: string): Promise<RentalInvoice | null> {
+  let raw: unknown;
+  try {
+    raw = await call<unknown>(`/admin/rental-invoices/${encodeURIComponent(number)}`);
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
+    throw e;
+  }
+  const i = obj(raw);
+  const companyId = str(i.companyId);
+  const [company, template] = await Promise.all([
+    soft<unknown>(`/companies/${encodeURIComponent(companyId)}`), soft<unknown>(`/admin/companies/${encodeURIComponent(companyId)}/invoice-template`),
+  ]);
+  const c = obj(company);
+  return {
+    number: str(i.number, number), rentalId: str(i.rentalId), rentalCode: str(i.rentalCode, "—"), companyId,
+    issuer: { name: str(c.name, "—"), lines: [str(c.country)].filter(Boolean), ninea: str(c.ninea, "—"), registration: str(c.registrationNumber, "—") },
+    customer: { name: str(i.customerName, "—"), lines: [str(i.customerPhone), RENTAL_PURPOSES[pick<RentalPurpose>(i.purpose, PURPOSES, true, "OTHER")]].filter(Boolean) },
+    lines: arr(i.lines).map((l) => ({ label: str(l.label, "—"), detail: str(l.detail), amount: num(l.amount) })),
+    subtotal: num(i.subtotal), taxRate: num(i.taxRate), taxAmount: num(i.taxAmount), total: num(i.total), paid: num(i.paid), balance: num(i.balance),
+    cautionAmount: num(i.cautionAmount), currency: str(i.currency, "XOF"), issuedAt: str(i.issuedAt), dueAt: str(i.dueAt),
+    status: pick<RentalInvoiceStatus>(i.status, INVOICE, true, "TO_PAY"), payLink: str(i.payLink), template: toTemplate(template),
+  };
 }
