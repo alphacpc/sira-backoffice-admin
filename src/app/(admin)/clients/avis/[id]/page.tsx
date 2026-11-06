@@ -1,6 +1,7 @@
 import { Buildings, ChatCircleText, MapPin, Package, Ticket, User } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { liveFeedbackDetail } from "@/lib/api/care-detail-live";
 import type { ComponentType, ReactNode } from "react";
 import { IgnoreFeedbackButton } from "@/components/clients/ignore-feedback-button";
 import { PageHeader } from "@/components/data/page-header";
@@ -38,8 +39,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 export default async function FeedbackDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   // Detail pages are not wired to the platform yet: never read the demonstration store in live mode.
-  if (isLive()) notFound();
-  const detail = feedbackRepo.detail(id);
+  const detail = isLive() ? await liveFeedbackDetail(id) : feedbackRepo.detail(id);
   if (!detail) notFound();
   const { feedback: f } = detail;
   const status = feedbackStatusBadge(f.status);

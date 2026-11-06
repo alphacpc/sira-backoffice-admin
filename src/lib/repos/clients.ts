@@ -43,7 +43,8 @@ export interface CustomerDetail {
   customer: Customer;
   userId: string;
   userStatus: UserStatus;
-  parcelCount: number;
+  /** `null` live: the platform does not count a customer's parcels. */
+  parcelCount: number | null;
   totalPoints: number;
   accounts: LoyaltyAccountDetail[];
   sponsorships: SponsorshipRow[];

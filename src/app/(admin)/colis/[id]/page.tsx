@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { liveParcelDetail } from "@/lib/api/care-detail-live";
 import { isLive } from "@/lib/api/config";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -18,8 +19,7 @@ export default async function ParcelPage({
   const { id } = await params;
   const { onglet } = await searchParams;
   // Detail pages are not wired to the platform yet: never read the demonstration store in live mode.
-  if (isLive()) notFound();
-  const detail = parcelsRepo.detail(id);
+  const detail = isLive() ? await liveParcelDetail(id) : parcelsRepo.detail(id);
   if (!detail) notFound();
   const { parcel } = detail;
   const status = parcelStatusBadge(parcel.status);

@@ -63,7 +63,7 @@ export function CustomerTabs({ detail, initialTab }: { detail: CustomerDetail; i
           </div>
           <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <Info icon={User} label="Compte utilisateur"><Link href={`/utilisateurs/${detail.userId}`} className="hover:underline">Voir le compte</Link></Info>
-            <Info icon={Package} label="Colis envoyés">{detail.parcelCount}</Info>
+            {detail.parcelCount !== null && <Info icon={Package} label="Colis envoyés">{detail.parcelCount}</Info>}
             <Info icon={Star} label="Points cumulés">{formatNumber(detail.totalPoints)} pts</Info>
             <Info icon={CalendarBlank} label="Client depuis le">{formatDate(c.createdAt)}</Info>
           </div>
