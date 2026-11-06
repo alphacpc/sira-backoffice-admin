@@ -142,3 +142,33 @@ export async function liveRentalCounts(q?: string, companyId?: string) {
   const [locations, factures] = await Promise.all([total("/admin/rentals"), total("/admin/rental-invoices")]);
   return { locations, factures };
 }
+
+// --- ticket detail ------------------------------------------------------------------------------------------
+
+import { call } from "@/lib/api/sales-live";
+import { ApiError } from "@/lib/api/http";
+import { liveBookingDetail } from "@/lib/api/sales-detail-live";
+import type { TicketDetail } from "@/lib/repos/sales";
+
+/** Only the last scan is known from the ticket; the full scan log needs a controller id and is not shown. */
+export async function liveTicketDetail(code: string): Promise<TicketDetail | null> {
+  let raw: unknown;
+  try {
+    raw = await call<unknown>(`/admin/tickets/${encodeURIComponent(code)}`);
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
+    throw e;
+  }
+  const t = obj(raw);
+  const [names, booking] = await Promise.all([companyNames(), liveBookingDetail(str(t.bookingId)).catch(() => null)]);
+  const b = booking?.booking;
+  const ticket = toTicketRow(t, names, new Map(b ? [[str(t.bookingId), {
+    passengerName: booking.booking.passengerName ?? "—", routeLabel: booking.routeLabel, departure: booking.departure, amount: b.amount, currency: b.currency,
+    channel: b.channel, paymentStatus: b.paymentStatus,
+  }]] : []));
+  const scannedAt = strOrNull(t.scannedAt);
+  return {
+    ticket: { ...ticket, busPlate: booking?.busPlate ?? "—" }, scans: [], tripId: b ? b.tripId : "",
+    scanLog: scannedAt ? [{ at: scannedAt, byName: null, byId: strOrNull(t.scannedBy) }] : [],
+  };
+}

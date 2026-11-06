@@ -5,6 +5,7 @@ import {
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { isLive } from "@/lib/api/config";
+import { liveTicketDetail } from "@/lib/api/sales-more-live";
 import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -33,9 +34,7 @@ const PAYMENT = { paid: "Payé", pending: "En attente", failed: "Échoué" } as 
 
 export default async function TicketPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  // Not wired to the platform yet: never look a live id up in the demonstration store.
-  if (isLive()) notFound();
-  const detail = ticketsRepo.detailByCode(decodeURIComponent(code));
+  const detail = isLive() ? await liveTicketDetail(decodeURIComponent(code)) : ticketsRepo.detailByCode(decodeURIComponent(code));
   if (!detail) notFound();
   const { ticket: t, scanLog } = detail;
   const status = ticketStatusBadge(t.status);
