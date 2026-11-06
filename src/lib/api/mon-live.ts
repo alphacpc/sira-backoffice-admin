@@ -235,3 +235,33 @@ export async function liveServiceNames(): Promise<string[]> {
   const list = await soft<unknown>("/health/services");
   return Array.isArray(list) ? arr(list).map((s) => str(s.serviceName)).filter(Boolean).sort() : [];
 }
+
+// --- incident detail ----------------------------------------------------------------------------------------
+
+import { call } from "@/lib/api/sales-live";
+import { ApiError } from "@/lib/api/http";
+import { userNames } from "@/lib/api/comp-live";
+import type { IncidentDetail } from "@/lib/repos/monitoring";
+
+export async function liveIncidentDetail(id: string, now: Date): Promise<IncidentDetail | null> {
+  let raw: unknown;
+  try {
+    raw = await call<unknown>(`/incidents/${encodeURIComponent(id)}`);
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
+    throw e;
+  }
+  const i = obj(raw);
+  const company = strOrNull(i.affectedCompanyId);
+  const [names, users] = await Promise.all([companyNames(), userNames([str(i.reportedByUserId)])]);
+  const row = toIncidentRow(i, names);
+  const end = row.resolvedAt ? Date.parse(row.resolvedAt) : now.getTime();
+  return {
+    incident: {
+      id: row.id, incidentCode: row.incidentCode, serviceName: row.serviceName, severity: row.severity, status: row.status, title: row.title,
+      description: strOrNull(i.description), impactScope: row.impactScope, affectedCompanyId: company, detectedAt: row.detectedAt, resolvedAt: row.resolvedAt,
+      reportedBy: users.get(str(i.reportedByUserId)) ?? "—", postmortemUrl: strOrNull(i.postmortemUrl), createdAt: str(i.createdAt), updatedAt: strOrNull(i.updatedAt),
+    },
+    companyName: row.companyName, durationMinutes: Math.max(0, Math.round((end - Date.parse(row.detectedAt)) / 60_000)),
+  };
+}

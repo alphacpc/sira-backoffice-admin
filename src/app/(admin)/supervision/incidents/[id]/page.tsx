@@ -1,6 +1,8 @@
 import { Buildings, CalendarBlank, CheckCircle, Cpu, FileText, Globe, Siren, User } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
+import { liveIncidentDetail } from "@/lib/api/mon-live";
 import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -44,7 +46,7 @@ function duration(minutes: number): string {
 
 export default async function IncidentPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = incidentsRepo.detail(id, new Date());
+  const detail = isLive() ? await liveIncidentDetail(id, new Date()) : incidentsRepo.detail(id, new Date());
   if (!detail) notFound();
   const { incident: i } = detail;
   const status = incidentStatusBadge(i.status);

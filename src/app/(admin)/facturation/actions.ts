@@ -1,8 +1,10 @@
 "use server";
+import { isLive } from "@/lib/api/config";
+import { apiCall } from "@/lib/api/http";
 
 import { revalidatePath } from "next/cache";
 import { requireSession } from "@/lib/auth/session";
-import { notWiredInLive, requireReason, requireString, run, runReveal, type ActionResult, type RevealResult } from "@/lib/actions/run";
+import { notWiredInLive, runLive, requireReason, requireString, run, runReveal, type ActionResult, type RevealResult } from "@/lib/actions/run";
 import { invoicesRepo, REMINDER_CHANNELS, remindOwner, resendInvoice, subscriptionsRepo, type ReminderChannel } from "@/lib/repos/billing";
 import { companiesRepo } from "@/lib/repos/companies";
 import { getStore } from "@/lib/repos/store";
@@ -19,8 +21,14 @@ function refreshBilling(subscriptionId: string, companyId: string) {
 }
 
 export async function retrySubscriptionPayment(subscriptionId: string): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(subscriptionId, "Abonnement");
+      await apiCall(`/admin/billing/subscriptions/${encodeURIComponent(subscriptionId)}/retry-payment`, { method: "POST", token });
+      revalidatePath("/offre-facturation");
+      revalidatePath(`/facturation/abonnements/${subscriptionId}`);
+    });
+  }
   return run((actor) => {
     requireString(subscriptionId, "Abonnement");
     const attempt = subscriptionsRepo.retryPayment(subscriptionId, actor);
@@ -34,8 +42,15 @@ export async function retrySubscriptionPayment(subscriptionId: string): Promise<
 }
 
 export async function cancelSubscription(subscriptionId: string, reason: string): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(subscriptionId, "Abonnement");
+      const motif = requireReason(reason);
+      await apiCall(`/admin/billing/subscriptions/${encodeURIComponent(subscriptionId)}/cancel`, { method: "POST", body: { reason: motif }, token });
+      revalidatePath("/offre-facturation");
+      revalidatePath(`/facturation/abonnements/${subscriptionId}`);
+    });
+  }
   return run((actor) => {
     requireString(subscriptionId, "Abonnement");
     const motif = requireReason(reason);

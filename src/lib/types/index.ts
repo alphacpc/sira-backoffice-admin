@@ -85,7 +85,7 @@ export interface PartnerTier { code: PartnerTierCode; minMonths: number; discoun
 export interface KycDocumentType { code: string; name: string; required: boolean; active: boolean }
 
 export type SubscriptionChangeKind =
-  | "ACTIVATION" | "UPGRADE" | "DOWNGRADE" | "PLAN_CHANGE" | "CANCELLATION";
+  | "TRIAL_START" | "ACTIVATION" | "UPGRADE" | "DOWNGRADE" | "RENEWAL" | "PLAN_CHANGE" | "CANCELLATION" | "REACTIVATION";
 
 export interface SubscriptionHistoryEntry {
   id: string;

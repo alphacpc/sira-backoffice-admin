@@ -77,6 +77,7 @@ export const paymentStatusBadge = (s: PaymentAttempt["status"]): Badge =>
   }, s);
 
 const CHANGE_KIND_LABELS: Record<SubscriptionChangeKind, string> = {
+  TRIAL_START: "Début d'essai", RENEWAL: "Renouvellement", REACTIVATION: "Réactivation",
   ACTIVATION: "Activation",
   UPGRADE: "Montée en gamme",
   DOWNGRADE: "Descente en gamme",

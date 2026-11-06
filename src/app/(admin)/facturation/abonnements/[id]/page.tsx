@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
+import { liveSubscriptionDetail } from "@/lib/api/billing-live";
 import { SubscriptionActions } from "@/components/billing/subscription-actions";
 import { SubscriptionTabs } from "@/components/billing/subscription-tabs";
 import { PageHeader } from "@/components/data/page-header";
@@ -16,7 +18,7 @@ export default async function SubscriptionPage({
 }) {
   const { id } = await params;
   const { onglet } = await searchParams;
-  const detail = subscriptionsRepo.detail(id);
+  const detail = isLive() ? await liveSubscriptionDetail(id) : subscriptionsRepo.detail(id);
   if (!detail) notFound();
   const sub = detail.subscription;
   const badge = subscriptionStatusBadge(sub.status);

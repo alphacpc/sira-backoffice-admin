@@ -153,3 +153,61 @@ export async function liveHubCounts(q: string): Promise<Record<HubTab, number | 
     factures: n ? numOrNull(c.factures) : null, impayes: n ? numOrNull(c.impayes) : null,
   };
 }
+
+// --- detail pages -------------------------------------------------------------------------------------------
+
+import { call } from "@/lib/api/sales-live";
+import { ApiError } from "@/lib/api/http";
+import type { InvoiceDetail, SubscriptionDetail } from "@/lib/repos/billing";
+import type { Plan, SubscriptionChangeKind, SubscriptionHistoryEntry } from "@/lib/types";
+
+const KINDS: readonly SubscriptionChangeKind[] = ["TRIAL_START", "ACTIVATION", "UPGRADE", "DOWNGRADE", "RENEWAL", "PLAN_CHANGE", "CANCELLATION", "REACTIVATION"];
+
+async function detailOf(path: string): Promise<unknown | null> {
+  try {
+    return await call<unknown>(path);
+  } catch (e) {
+    if (e instanceof ApiError && (e.status === 404 || e.status === 400)) return null;
+    throw e;
+  }
+}
+
+export async function liveSubscriptionDetail(id: string): Promise<SubscriptionDetail | null> {
+  const raw = await detailOf(`/admin/billing/subscriptions/${encodeURIComponent(id)}`);
+  if (!raw) return null;
+  const d = obj(raw);
+  const row = toSubscription(d.subscription);
+  const [history, payments, invoices] = await Promise.all([
+    soft<unknown>(`/admin/billing/subscriptions/${encodeURIComponent(id)}/history`),
+    loadAll(`/admin/billing/subscriptions/${encodeURIComponent(id)}/payment-attempts`, new URLSearchParams()), liveInvoices({}).catch(() => []),
+  ]);
+  const plan = obj(d.plan);
+  return {
+    subscription: {
+      id: row.id, companyId: row.companyId, planId: str(obj(d.subscription).planId), planName: row.planName, status: row.status, billingCycle: row.billingCycle,
+      price: row.price, currency: row.currency, nextBillingDate: row.nextBillingDate, trialEndDate: strOrNull(d.trialEndDate), pastDueSince: strOrNull(d.pastDueSince),
+    },
+    companyName: row.companyName,
+    plan: str(plan.id) ? ({ id: str(plan.id), code: "—", name: str(plan.name, "—"), priceMonthly: 0, priceYearly: 0, setupFee: 0, currency: row.currency, trialDays: 0, status: "active", limits: { maxUsers: 0, maxBuses: 0 }, featureCodes: [] } satisfies Plan) : null,
+    history: (Array.isArray(history) ? history.map(obj) : []).map((h): SubscriptionHistoryEntry => ({
+      id: str(h.id), subscriptionId: id, kind: (KINDS as readonly string[]).includes(str(h.kind)) ? (str(h.kind) as SubscriptionChangeKind) : "PLAN_CHANGE",
+      fromPlan: strOrNull(h.fromPlan), toPlan: strOrNull(h.toPlan), at: str(h.at),
+    })),
+    payments: payments.map(toPayment), invoices: invoices.filter((i) => i.subscriptionId === id),
+    canRetry: d.canRetry === true, canCancel: d.canCancel === true,
+  };
+}
+
+export async function liveInvoiceDetail(id: string): Promise<InvoiceDetail | null> {
+  const raw = await detailOf(`/admin/billing/invoices/${encodeURIComponent(id)}`);
+  if (!raw) return null;
+  const d = obj(raw);
+  const inv = toInvoice(d.invoice);
+  const sub = d.subscription && typeof d.subscription === "object" ? toSubscription(d.subscription) : null;
+  return {
+    invoice: { id: inv.id, companyId: inv.companyId, subscriptionId: inv.subscriptionId, number: inv.number, amount: inv.amount, currency: inv.currency, status: inv.status, issuedAt: inv.issuedAt },
+    companyName: inv.companyName,
+    subscription: sub ? { id: sub.id, companyId: sub.companyId, planName: sub.planName, status: sub.status, billingCycle: sub.billingCycle, price: sub.price, currency: sub.currency, nextBillingDate: sub.nextBillingDate, companyName: sub.companyName } : null,
+    payment: d.payment && typeof d.payment === "object" ? toPayment(d.payment) : null,
+  };
+}

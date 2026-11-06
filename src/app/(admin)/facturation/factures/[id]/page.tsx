@@ -1,6 +1,8 @@
 import { ArrowRight, Buildings, CalendarBlank, CreditCard, Crown, Receipt } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
+import { liveInvoiceDetail } from "@/lib/api/billing-live";
 import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -26,7 +28,7 @@ function Info({ icon: Icon, label, children }: { icon: IconType; label: string; 
 
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = invoicesRepo.detail(id);
+  const detail = isLive() ? await liveInvoiceDetail(id) : invoicesRepo.detail(id);
   if (!detail) notFound();
   const { invoice, subscription, payment } = detail;
   const status = invoiceStatusBadge(invoice.status);

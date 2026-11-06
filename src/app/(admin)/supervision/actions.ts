@@ -50,8 +50,14 @@ export async function declareIncident(input: IncidentInput): Promise<ActionResul
 }
 
 export async function advanceIncident(incidentId: string, target: IncidentStatus): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(incidentId, "Incident");
+      await apiCall(`/incidents/${encodeURIComponent(incidentId)}`, { method: "PATCH", body: { status: target }, token });
+      revalidatePath("/supervision/incidents");
+      revalidatePath(`/supervision/incidents/${incidentId}`);
+    });
+  }
   return run((actor) => {
     requireString(incidentId, "Incident");
     refreshIncident(incidentsRepo.advance(incidentId, target, actor));
@@ -59,8 +65,14 @@ export async function advanceIncident(incidentId: string, target: IncidentStatus
 }
 
 export async function setIncidentPostmortem(incidentId: string, url: string): Promise<ActionResult> {
-  const inert = await notWiredInLive();
-  if (inert) return inert;
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(incidentId, "Incident");
+      requireText(url, "URL");
+      await apiCall(`/incidents/${encodeURIComponent(incidentId)}`, { method: "PATCH", body: { postmortemUrl: url.trim() }, token });
+      revalidatePath(`/supervision/incidents/${incidentId}`);
+    });
+  }
   return run((actor) => {
     requireString(incidentId, "Incident");
     requireText(url, "URL");
