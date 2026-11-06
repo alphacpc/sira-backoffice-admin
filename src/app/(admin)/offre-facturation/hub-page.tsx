@@ -25,6 +25,11 @@ import { plansRepo, subscriptionsRepo } from "@/lib/repos/billing";
 import { HUB_PAGE_SIZE, HUB_TABS, PAYMENT_CHANNELS, URGENCIES, hubRepo, type HubTab } from "@/lib/repos/billing-hub";
 import { kycTypesRepo } from "@/lib/repos/billing";
 import type { SubscriptionStatus } from "@/lib/types";
+import { isLive } from "@/lib/api/config";
+import {
+  liveFeatures, liveHubCounts, liveInvoices, liveKycTypes, livePaymentFigures, livePayments, livePlans, liveSubscriptionFigures,
+  liveSubscriptions, liveTiers, liveUnpaid,
+} from "@/lib/api/billing-live";
 
 const BASE = "/offre-facturation";
 /** Path of a tab: the first one lives at the root of the section. */
@@ -49,12 +54,17 @@ export async function HubPage({ tab, searchParams }: { tab: HubTab; searchParams
   const q = (firstString(sp.q) ?? "").trim().slice(0, 80);
   const statut = firstString(sp.statut);
   const page = Math.max(1, Math.floor(Number(firstString(sp.page)) || 1));
-  const counts = hubRepo.counts(q);
+  const live = isLive();
+  // Live: a null counter means its source failed, so the tab shows no badge.
+  const liveCounts = live ? await liveHubCounts(q) : null;
+  const counts: Record<HubTab, number> = liveCounts
+    ? (Object.fromEntries(HUB_TABS.map((t) => [t, liveCounts[t] ?? 0])) as Record<HubTab, number>)
+    : hubRepo.counts(q);
   const meta = META[tab];
 
   const tabHref = (t: HubTab) => (q ? `${tabPath(t)}?${new URLSearchParams({ q }).toString()}` : tabPath(t));
   const tabs: LinkTab[] = HUB_TABS.map((t, i) => ({
-    key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: counts[t],
+    key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: liveCounts && liveCounts[t] === null ? undefined : counts[t],
     urgent: t === "impayes", divider: i === 4,
   }));
   const keep: Record<string, string> = q ? { q } : {};
@@ -73,8 +83,8 @@ export async function HubPage({ tab, searchParams }: { tab: HubTab; searchParams
 
   if (tab === "plans") {
     const status = parseFilter(statut, ["active", "inactive"] as const);
-    const all = hubRepo.plans();
-    const list = hubRepo.plans(q, status);
+    const all = live ? await livePlans() : hubRepo.plans();
+    const list = live ? await livePlans(q || undefined, status) : hubRepo.plans(q, status);
     stats = [
       { label: "Plans", value: formatNumber(all.length), icon: Stack },
       { label: "Plans actifs", value: formatNumber(all.filter((p) => p.status === "active").length), icon: CheckCircle },
@@ -91,8 +101,9 @@ export async function HubPage({ tab, searchParams }: { tab: HubTab; searchParams
     );
   } else if (tab === "fonctionnalites") {
     const kind = parseFilter(statut, ["boolean", "quota"] as const);
-    const all = hubRepo.features();
-    const list = hubRepo.features(q, kind);
+    const all = live ? await liveFeatures() : hubRepo.features();
+    const list = live ? await liveFeatures(q || undefined, kind) : hubRepo.features(q, kind);
+    const plansForGrid = live ? (await livePlans()).map((p) => ({ id: p.id, name: p.name, status: p.status })) : plansRepo.list();
     stats = [
       { label: "Fonctionnalités", value: formatNumber(all.length), icon: PuzzlePiece },
       { label: "Activables", value: formatNumber(all.filter((f) => f.kind === "boolean").length), icon: ToggleRight },
@@ -103,18 +114,18 @@ export async function HubPage({ tab, searchParams }: { tab: HubTab; searchParams
     body = (
       <>
         {filter("Type", [{ value: "all", label: "Tous" }, { value: "boolean", label: "Activables" }, { value: "quota", label: "À quota" }])}
-        <FeaturesGrid features={list} plans={plansRepo.list()} />
+        <FeaturesGrid features={list} plans={plansForGrid} />
       </>
     );
   } else if (tab === "paliers") {
-    const all = hubRepo.tiers();
-    const list = hubRepo.tiers(q);
+    const all = live ? await liveTiers() : hubRepo.tiers();
+    const list = live ? await liveTiers(q || undefined) : hubRepo.tiers(q);
     empty = list.length === 0;
     body = <TiersLadder tiers={list} />;
   } else if (tab === "documents") {
     const f = parseFilter(statut, ["required", "optional", "inactive"] as const);
-    const all = hubRepo.kycTypes();
-    const list = hubRepo.kycTypes(q, f);
+    const all = live ? await liveKycTypes() : hubRepo.kycTypes();
+    const list = live ? await liveKycTypes(q || undefined, f) : hubRepo.kycTypes(q, f);
     empty = list.length === 0;
     body = (
       <>
@@ -124,14 +135,15 @@ export async function HubPage({ tab, searchParams }: { tab: HubTab; searchParams
     );
   } else if (tab === "abonnements") {
     const status = parseFilter(statut, SUB_STATUSES);
-    const all = hubRepo.subscriptions();
-    const list = hubRepo.subscriptions(q, status);
+    const all = live ? [] : hubRepo.subscriptions();
+    const list = live ? await liveSubscriptions({ q: q || undefined, status }) : hubRepo.subscriptions(q, status);
+    const fig = live ? await liveSubscriptionFigures() : null;
     const n = (s: SubscriptionStatus) => all.filter((x) => x.status === s).length;
     stats = [
-      { label: "Abonnements", value: formatNumber(all.length), icon: ArrowsClockwise },
-      { label: "Actifs", value: formatNumber(n("active")), icon: CheckCircle },
-      { label: "En essai", value: formatNumber(n("trial")), icon: Gift },
-      { label: "Impayés ou suspendus", value: formatNumber(n("past_due") + n("suspended")), icon: WarningCircle },
+      { label: "Abonnements", value: formatNumber(fig ? fig.total : all.length), icon: ArrowsClockwise },
+      { label: "Actifs", value: formatNumber(fig ? fig.active : n("active")), icon: CheckCircle },
+      { label: "En essai", value: formatNumber(fig ? fig.trial : n("trial")), icon: Gift },
+      { label: "Impayés ou suspendus", value: formatNumber(fig ? fig.unpaid : n("past_due") + n("suspended")), icon: WarningCircle },
     ];
     empty = list.length === 0;
     body = (
@@ -150,13 +162,14 @@ export async function HubPage({ tab, searchParams }: { tab: HubTab; searchParams
     const date = (raw: string | undefined) => (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : undefined);
     const from = date(firstString(sp.du));
     const to = date(firstString(sp.au));
-    const all = hubRepo.payments();
-    const list = hubRepo.payments(q, { status, channel, from, to });
+    const all = live ? [] : hubRepo.payments();
+    const list = live ? await livePayments({ q: q || undefined, status, from, to }) : hubRepo.payments(q, { status, channel, from, to });
+    const fig = live ? await livePaymentFigures() : null;
     stats = [
-      { label: "Tentatives", value: formatNumber(all.length), icon: CreditCard },
-      { label: "Payées", value: formatNumber(all.filter((p) => p.status === "paid").length), icon: CheckCircle },
-      { label: "Échouées", value: formatNumber(all.filter((p) => p.status === "failed").length), icon: XCircle },
-      { label: "Montant encaissé", value: formatMoney(all.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0), "XOF"), icon: Coins },
+      { label: "Tentatives", value: formatNumber(fig ? fig.count : all.length), icon: CreditCard },
+      { label: "Payées", value: formatNumber(fig ? fig.paid : all.filter((p) => p.status === "paid").length), icon: CheckCircle },
+      { label: "Échouées", value: formatNumber(fig ? fig.failed : all.filter((p) => p.status === "failed").length), icon: XCircle },
+      { label: "Montant encaissé", value: formatMoney(fig ? fig.paidAmount : all.filter((p) => p.status === "paid").reduce((s, p) => s + p.amount, 0), "XOF"), icon: Coins },
     ];
     toolbarFilter = (
       <PaymentsFilters basePath={tabPath(tab)} current={{ q, statut: status ?? "all", canal: channel ?? "all", du: from ?? "", au: to ?? "" }} />
@@ -168,7 +181,7 @@ export async function HubPage({ tab, searchParams }: { tab: HubTab; searchParams
     const date = (raw: string | undefined) => (raw && /^\d{4}-\d{2}-\d{2}$/.test(raw) ? raw : undefined);
     const from = date(firstString(sp.du));
     const to = date(firstString(sp.au));
-    const list = hubRepo.invoices(q, { status, from, to });
+    const list = live ? await liveInvoices({ q: q || undefined, status, from, to }) : hubRepo.invoices(q, { status, from, to });
     toolbarFilter = (
       <PaymentsFilters
         basePath={tabPath(tab)} channels={false}
@@ -186,8 +199,8 @@ export async function HubPage({ tab, searchParams }: { tab: HubTab; searchParams
   } else {
     const status = parseFilter(statut, ["past_due", "suspended"] as const);
     const urgency = parseFilter(firstString(sp.urgence), URGENCIES);
-    const all = hubRepo.unpaid(q);
-    const list = hubRepo.unpaid(q, { status, urgency });
+    const all = live ? await liveUnpaid({ q: q || undefined }) : hubRepo.unpaid(q);
+    const list = live ? await liveUnpaid({ q: q || undefined, status, urgency }) : hubRepo.unpaid(q, { status, urgency });
     toolbarFilter = (
       <>
         <FilterSelect label="Statut" param="statut" basePath={tabPath(tab)} current={status ?? "all"} keep={{ ...keep, ...(urgency ? { urgence: urgency } : {}) }}

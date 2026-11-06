@@ -34,6 +34,7 @@ const TRIP_STATUS = { planned: ["sky", "Planifié"], boarding: ["violet", "Embar
 const MAINT_STATUS = { PLANNED: ["sky", "Planifiée"], IN_PROGRESS: ["violet", "En cours"], COMPLETED: ["lime", "Terminée"], CANCELLED: ["rose", "Annulée"] } as const;
 
 function Due({ date }: { date: string }) {
+  if (!date) return <Muted>—</Muted>;
   const days = Math.round((Date.parse(date) - Date.now()) / 86_400_000);
   const late = days < 0;
   return (

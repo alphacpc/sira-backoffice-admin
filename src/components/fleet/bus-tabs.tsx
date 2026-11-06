@@ -69,11 +69,11 @@ export function BusTabs({ detail, initialTab }: { detail: BusDetail; initialTab?
             <Bus size={40} weight="duotone" aria-hidden className="shrink-0 text-orange-500" />
             <div className="min-w-0 flex-1">
               <p className="font-mono text-lg font-bold">{bus.plate}</p>
-              <p className="text-sm text-muted-foreground">{bus.busCode} · {bus.brand} {bus.model} · {bus.year}</p>
+              <p className="text-sm text-muted-foreground">{bus.busCode} · {[bus.brand, bus.model].filter(Boolean).join(" ") || "—"}{bus.year ? ` · ${bus.year}` : ""}</p>
             </div>
             <StatusBadge tone={status.tone}>{status.label}</StatusBadge>
             <div className="text-right">
-              <p className="text-3xl font-bold tabular-nums">{bus.seatCapacity}</p>
+              <p className="text-3xl font-bold tabular-nums">{bus.seatCapacity || "—"}</p>
               <p className="text-sm text-muted-foreground">places assises</p>
             </div>
           </section>
@@ -87,8 +87,8 @@ export function BusTabs({ detail, initialTab }: { detail: BusDetail; initialTab?
                   {bus.routeId && detail.routeLabel ? <Link href={`/flotte/lignes/${bus.routeId}`} className="hover:underline">{detail.routeLabel}</Link> : "—"}
                 </Info>
                 <Info icon={MapPin} label="Dépôt">{detail.depotName ?? "—"}</Info>
-                <Info icon={CalendarBlank} label="Date d'achat">{formatDate(bus.purchaseDate)}</Info>
-                <Info icon={CalendarBlank} label="Prix d'achat">{formatMoney(bus.purchasePrice, detail.currency)}</Info>
+                {!detail.partial && <Info icon={CalendarBlank} label="Date d'achat">{formatDate(bus.purchaseDate)}</Info>}
+                {!detail.partial && <Info icon={CalendarBlank} label="Prix d'achat">{formatMoney(bus.purchasePrice, detail.currency)}</Info>}
                 {bus.retiredAt && <Info icon={CalendarBlank} label="Hors service depuis le">{formatDate(bus.retiredAt)}</Info>}
               </div>
             </Panel>
@@ -118,19 +118,19 @@ export function BusTabs({ detail, initialTab }: { detail: BusDetail; initialTab?
               <div className="grid gap-3 sm:grid-cols-2">
                 <Info icon={Bus} label="Type">{busTypeLabel(bus.busType)}</Info>
                 <Info icon={GasPump} label="Carburant">{fuelTypeLabel(bus.fuelType)}</Info>
-                <Info icon={Bus} label="Places debout">{bus.standingCapacity}</Info>
-                <Info icon={Bus} label="Soute à bagages">{bus.luggageCapacity} m³</Info>
-                <Info icon={Bus} label="Numéro de moteur"><span className="font-mono">{bus.engineNumber}</span></Info>
-                <Info icon={Bus} label="Couleur">{bus.color}</Info>
+                <Info icon={Bus} label="Places debout">{bus.standingCapacity || "—"}</Info>
+                <Info icon={Bus} label="Soute à bagages">{bus.luggageCapacity ? `${bus.luggageCapacity} m³` : "—"}</Info>
+                {!detail.partial && <Info icon={Bus} label="Numéro de moteur"><span className="font-mono">{bus.engineNumber}</span></Info>}
+                <Info icon={Bus} label="Couleur">{bus.color || "—"}</Info>
               </div>
             </Panel>
             <Panel title="Équipements">
               <ul className="grid gap-2 sm:grid-cols-2">
                 <Equip label="Climatisation" on={bus.airConditioned} />
                 <Equip label="Accès fauteuil roulant" on={bus.wheelchairAccessible} />
-                <Equip label="GPS" on={bus.gpsEnabled} detail={bus.gpsEnabled ? bus.gpsDeviceId ?? "boîtier inconnu" : undefined} />
-                <Equip label="Caméra" on={bus.cameraInstalled} />
-                <Equip label="Capteur de carburant" on={bus.fuelSensorInstalled} />
+                {!detail.partial && <Equip label="GPS" on={bus.gpsEnabled} detail={bus.gpsEnabled ? bus.gpsDeviceId ?? "boîtier inconnu" : undefined} />}
+                {!detail.partial && <Equip label="Caméra" on={bus.cameraInstalled} />}
+                {!detail.partial && <Equip label="Capteur de carburant" on={bus.fuelSensorInstalled} />}
               </ul>
             </Panel>
           </div>

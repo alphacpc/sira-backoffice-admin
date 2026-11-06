@@ -9,11 +9,16 @@ import { MethodsGrid, OnlineView } from "@/components/sales/hub/sales-cards";
 import { SalesOverviewView } from "@/components/sales/hub/sales-overview";
 import { BookingsList, InvoicesList, RentalsList, TicketsList, TransactionsList } from "@/components/sales/hub/sales-tables";
 import { LinkTabs, type LinkTab } from "@/components/ui/link-tabs";
+import { isLive } from "@/lib/api/config";
+import { liveBookings, liveCompanyNames, liveCounts, liveOverview, liveTransactions } from "@/lib/api/sales-live";
 import { parseFilter } from "@/lib/filters";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { parseCompanyFilter } from "@/lib/repos/fleet";
 import { RENTAL_STATUSES } from "@/lib/repos/rentals";
 import { BOOKING_CHANNELS, BOOKING_PAYMENT_STATUSES, BOOKING_STATUSES, ONLINE_UNPAID_TTL_MINUTES, TICKET_STATUSES, TRANSACTION_STATUSES } from "@/lib/repos/sales";
+import {
+  liveInvoiceFigures, liveMethods, liveOnlineStats, liveRentalCounts, liveRentalFigures, liveRentalInvoices, liveRentals, liveTicketFigures, liveTickets,
+} from "@/lib/api/sales-more-live";
 import { PERIODS, SALES_TABS, salesHubRepo, type SalesTab } from "@/lib/repos/sales-hub";
 import { fleetHubRepo } from "@/lib/repos/fleet-hub";
 import { firstString } from "@/lib/search-params";
@@ -37,9 +42,14 @@ type Params = { q?: string | string[]; compagnie?: string | string[]; statut?: s
 export async function SalesHubPage({ tab, searchParams }: { tab: SalesTab; searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const q = (firstString(sp.q) ?? "").trim().slice(0, 80);
-  const companyId = parseCompanyFilter(firstString(sp.compagnie));
+  const live = isLive();
+  const rawCompany = firstString(sp.compagnie);
+  const companyId = live ? (rawCompany && /^[0-9a-f-]{36}$/i.test(rawCompany) ? rawCompany : undefined) : parseCompanyFilter(rawCompany);
   const co = { companyId };
-  const counts = salesHubRepo.counts(q, co);
+  const liveExtra = live ? await liveRentalCounts(q || undefined, companyId) : null;
+  const counts: Record<SalesTab, number> = live
+    ? { apercu: 0, reservations: 0, paiements: 0, billets: 0, locations: liveExtra?.locations ?? 0, factures: liveExtra?.factures ?? 0, "moyens-de-paiement": 0, "en-ligne": 0, ...(await liveCounts(q || undefined, companyId)) }
+    : salesHubRepo.counts(q, co);
   const meta = META[tab];
   const rawStatus = firstString(sp.statut);
   const paymentStatus = tab === "reservations" ? parseFilter(firstString(sp.paiement), BOOKING_PAYMENT_STATUSES) : undefined;
@@ -65,7 +75,7 @@ export async function SalesHubPage({ tab, searchParams }: { tab: SalesTab; searc
     for (const [k, v] of Object.entries(active)) if (v && k !== param) keep[k] = v;
     return <FilterSelect label={label} param={param} basePath={salesTabPath(tab)} current={current ?? "all"} options={options} keep={keep} searchable={param === "compagnie"} />;
   };
-  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...fleetHubRepo.companies().map((c) => ({ value: c.id, label: c.name }))]);
+  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...(live ? await liveCompanyNames() : fleetHubRepo.companies()).map((c) => ({ value: c.id, label: c.name }))]);
 
   let stats: Stat[] = [];
   let toolbar: React.ReactNode = tab === "en-ligne" ? null : <>{companyFilter}</>;
@@ -73,12 +83,19 @@ export async function SalesHubPage({ tab, searchParams }: { tab: SalesTab; searc
   let empty = false;
 
   if (tab === "apercu") {
-    body = <SalesOverviewView o={salesHubRepo.overview(period, co)} periodHref={(d) => `${salesTabPath("apercu")}?${new URLSearchParams({ ...(q ? { q } : {}), ...(companyId ? { compagnie: companyId } : {}), periode: String(d) }).toString()}`} />;
+    body = <SalesOverviewView o={live ? await liveOverview(period, companyId) : salesHubRepo.overview(period, co)} periodHref={(d) => `${salesTabPath("apercu")}?${new URLSearchParams({ ...(q ? { q } : {}), ...(companyId ? { compagnie: companyId } : {}), periode: String(d) }).toString()}`} />;
   } else if (tab === "reservations") {
     const status = parseFilter(rawStatus, BOOKING_STATUSES);
-    const all = salesHubRepo.bookings(undefined, co);
-    const list = salesHubRepo.bookings(q, { ...co, status, paymentStatus, channel });
-    stats = [
+    const lb = live ? await liveBookings({ q: q || undefined, companyId, status, paymentStatus, channel }) : null;
+    const all = lb ? lb.rows : salesHubRepo.bookings(undefined, co);
+    const list = lb ? lb.rows : salesHubRepo.bookings(q, { ...co, status, paymentStatus, channel });
+    const sum = lb?.summary;
+    stats = sum ? [
+      { label: "Réservations", value: formatNumber(sum.total), icon: Receipt },
+      { label: "Payées", value: formatNumber(sum.paid), icon: CheckCircle },
+      { label: "En ligne", value: formatNumber(sum.online), icon: Globe },
+      { label: "Montant payé", value: formatMoney(sum.paidAmount, sum.currency), icon: Gauge },
+    ] : [
       { label: "Réservations", value: formatNumber(all.length), icon: Receipt },
       { label: "Payées", value: formatNumber(all.filter((b) => b.paymentStatus === "paid").length), icon: CheckCircle },
       { label: "En ligne", value: formatNumber(all.filter((b) => b.channel === "online").length), icon: Globe },
@@ -96,9 +113,16 @@ export async function SalesHubPage({ tab, searchParams }: { tab: SalesTab; searc
     body = <BookingsList rows={list} />;
   } else if (tab === "paiements") {
     const status = parseFilter(rawStatus, TRANSACTION_STATUSES);
-    const all = salesHubRepo.transactions(undefined, co);
-    const list = salesHubRepo.transactions(q, { ...co, status, anomalyOnly: anomaly === "oui" });
-    stats = [
+    const lt = live ? await liveTransactions({ q: q || undefined, companyId, status, anomalyOnly: anomaly === "oui" }) : null;
+    const all = lt ? lt.rows : salesHubRepo.transactions(undefined, co);
+    const list = lt ? lt.rows : salesHubRepo.transactions(q, { ...co, status, anomalyOnly: anomaly === "oui" });
+    const tsum = lt?.summary;
+    stats = tsum ? [
+      { label: "Transactions", value: formatNumber(tsum.total), icon: ArrowsLeftRight },
+      { label: "Réussies", value: formatNumber(tsum.completed), icon: CheckCircle },
+      { label: "Échouées", value: formatNumber(tsum.failed), icon: XCircle },
+      { label: "Avec incohérence", value: formatNumber(tsum.withAnomaly), icon: Warning },
+    ] : [
       { label: "Transactions", value: formatNumber(all.length), icon: ArrowsLeftRight },
       { label: "Réussies", value: formatNumber(all.filter((t) => t.status === "COMPLETED").length), icon: CheckCircle },
       { label: "Échouées", value: formatNumber(all.filter((t) => t.status === "FAILED").length), icon: XCircle },
@@ -115,46 +139,49 @@ export async function SalesHubPage({ tab, searchParams }: { tab: SalesTab; searc
     body = <TransactionsList rows={list} />;
   } else if (tab === "billets") {
     const status = parseFilter(rawStatus, TICKET_STATUSES);
-    const all = salesHubRepo.tickets(undefined, co);
-    const list = salesHubRepo.tickets(q, { ...co, status });
+    const all = live ? [] : salesHubRepo.tickets(undefined, co);
+    const list = live ? await liveTickets({ q: q || undefined, companyId, status }) : salesHubRepo.tickets(q, { ...co, status });
+    const fig = live ? await liveTicketFigures() : null;
     stats = [
-      { label: "Billets", value: formatNumber(all.length), icon: Ticket },
-      { label: "Émis", value: formatNumber(all.filter((t) => t.status === "ISSUED").length), icon: CalendarCheck },
-      { label: "Utilisés", value: formatNumber(all.filter((t) => t.status === "USED" || t.status === "CHECKED_IN").length), icon: CheckCircle },
-      { label: "Annulés", value: formatNumber(all.filter((t) => t.status === "CANCELLED").length), icon: XCircle },
+      { label: "Billets", value: formatNumber(fig ? fig.total : all.length), icon: Ticket },
+      { label: "Émis", value: formatNumber(fig ? fig.issued : all.filter((t) => t.status === "ISSUED").length), icon: CalendarCheck },
+      { label: "Utilisés", value: formatNumber(fig ? fig.used : all.filter((t) => t.status === "USED" || t.status === "CHECKED_IN").length), icon: CheckCircle },
+      { label: "Annulés", value: formatNumber(fig ? fig.cancelled : all.filter((t) => t.status === "CANCELLED").length), icon: XCircle },
     ];
     toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Tous" }, { value: "ISSUED", label: "Émis" }, { value: "CHECKED_IN", label: "Enregistrés" }, { value: "USED", label: "Utilisés" }, { value: "CANCELLED", label: "Annulés" }])}</>;
     empty = list.length === 0;
     body = <TicketsList rows={list} />;
   } else if (tab === "locations") {
     const status = parseFilter(rawStatus, RENTAL_STATUSES);
-    const all = salesHubRepo.rentals(undefined, co);
-    const list = salesHubRepo.rentals(q, { ...co, status });
+    const all = live ? [] : salesHubRepo.rentals(undefined, co);
+    const list = live ? await liveRentals({ q: q || undefined, companyId, status }) : salesHubRepo.rentals(q, { ...co, status });
+    const fig = live ? await liveRentalFigures() : null;
     stats = [
-      { label: "Locations", value: formatNumber(all.length), icon: Bus },
-      { label: "Demandes et devis", value: formatNumber(all.filter((r) => r.status === "REQUESTED" || r.status === "QUOTED").length), icon: CalendarCheck },
-      { label: "Confirmées", value: formatNumber(all.filter((r) => r.status === "CONFIRMED").length), icon: CheckCircle },
-      { label: "Encaissé", value: formatMoney(all.reduce((n, r) => n + r.paidAmount, 0), "XOF"), icon: Gauge },
+      { label: "Locations", value: formatNumber(fig ? fig.total : all.length), icon: Bus },
+      { label: "Demandes et devis", value: formatNumber(fig ? fig.requestedOrQuoted : all.filter((r) => r.status === "REQUESTED" || r.status === "QUOTED").length), icon: CalendarCheck },
+      { label: "Confirmées", value: formatNumber(fig ? fig.confirmed : all.filter((r) => r.status === "CONFIRMED").length), icon: CheckCircle },
+      { label: "Encaissé", value: formatMoney(fig ? fig.collected : all.reduce((n, r) => n + r.paidAmount, 0), fig?.currency ?? "XOF"), icon: Gauge },
     ];
     toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Tous" }, { value: "REQUESTED", label: "Demandes" }, { value: "QUOTED", label: "Devis envoyés" }, { value: "CONFIRMED", label: "Confirmées" }, { value: "COMPLETED", label: "Terminées" }, { value: "CANCELLED", label: "Annulées" }])}</>;
     empty = list.length === 0;
     body = <RentalsList rows={list} />;
   } else if (tab === "factures") {
     const status = parseFilter(rawStatus, ["TO_PAY", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"] as const);
-    const all = salesHubRepo.invoices(undefined, co);
-    const list = salesHubRepo.invoices(q, { ...co, status });
+    const all = live ? [] : salesHubRepo.invoices(undefined, co);
+    const list = live ? await liveRentalInvoices({ q: q || undefined, companyId, status }) : salesHubRepo.invoices(q, { ...co, status });
+    const fig = live ? await liveInvoiceFigures() : null;
     stats = [
-      { label: "Factures", value: formatNumber(all.length), icon: Receipt },
-      { label: "À encaisser", value: formatMoney(all.filter((i) => i.status !== "CANCELLED").reduce((n, i) => n + i.balance, 0), "XOF"), icon: Gauge },
-      { label: "Payées", value: formatNumber(all.filter((i) => i.status === "PAID").length), icon: CheckCircle },
-      { label: "En retard", value: formatNumber(all.filter((i) => i.status === "OVERDUE").length), icon: Warning },
+      { label: "Factures", value: formatNumber(fig ? fig.total : all.length), icon: Receipt },
+      { label: "À encaisser", value: formatMoney(fig ? fig.toCollect : all.filter((i) => i.status !== "CANCELLED").reduce((n, i) => n + i.balance, 0), fig?.currency ?? "XOF"), icon: Gauge },
+      { label: "Payées", value: formatNumber(fig ? fig.paid : all.filter((i) => i.status === "PAID").length), icon: CheckCircle },
+      { label: "En retard", value: formatNumber(fig ? fig.overdue : all.filter((i) => i.status === "OVERDUE").length), icon: Warning },
     ];
     toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Tous" }, { value: "TO_PAY", label: "À payer" }, { value: "PARTIAL", label: "Acompte reçu" }, { value: "PAID", label: "Payées" }, { value: "OVERDUE", label: "En retard" }, { value: "CANCELLED", label: "Annulées" }])}</>;
     empty = list.length === 0;
     body = <InvoicesList rows={list} />;
   } else if (tab === "moyens-de-paiement") {
-    const all = salesHubRepo.methods(undefined, co);
-    const list = salesHubRepo.methods(q, co);
+    const all = live ? await liveMethods({ companyId }) : salesHubRepo.methods(undefined, co);
+    const list = live ? await liveMethods({ q: q || undefined, companyId }) : salesHubRepo.methods(q, co);
     stats = [
       { label: "Moyens de paiement", value: formatNumber(all.length), icon: Basket },
       { label: "Actifs", value: formatNumber(all.filter((m) => m.active).length), icon: CheckCircle },
@@ -164,7 +191,8 @@ export async function SalesHubPage({ tab, searchParams }: { tab: SalesTab; searc
     empty = list.length === 0;
     body = <MethodsGrid methods={list} />;
   } else {
-    body = <OnlineView stats={salesHubRepo.online()} ttl={ONLINE_UNPAID_TTL_MINUTES} />;
+    const online = live ? await liveOnlineStats() : null;
+    body = <OnlineView stats={online ? online.stats : salesHubRepo.online()} ttl={online ? online.ttl : ONLINE_UNPAID_TTL_MINUTES} />;
   }
 
   const elsewhere = q ? SALES_TABS.filter((t) => t !== tab && t !== "apercu" && counts[t] > 0) : [];

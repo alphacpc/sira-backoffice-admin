@@ -2,8 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  errorMessage, requireReason, requireString, run, SESSION_EXPIRED, type ActionResult,
+  errorMessage, notWiredInLive, requireReason, requireString, run, runLive, SESSION_EXPIRED, type ActionResult,
 } from "@/lib/actions/run";
+import { apiCall } from "@/lib/api/http";
+import { liveKycBoard } from "@/lib/api/kyc-live";
+import { liveRevealContact } from "@/lib/api/company-detail-live";
+import { isLive } from "@/lib/api/config";
 import { isBackofficeAdmin, requireSession } from "@/lib/auth/session";
 import {
   companiesRepo, KYC_MIN_AGES, KYC_SORTS, KYC_STAGES, type KycBoard, type KycBoardQuery,
@@ -18,7 +22,20 @@ function refresh(companyId: string | null) {
   if (companyId) revalidatePath(`/compagnies/${companyId}`);
 }
 
-export async function approveDocument(docId: string): Promise<ActionResult> {
+/** Live: the platform reviews a document under its company; the review is journalled there. */
+function liveReview(docId: string, companyId: string, status: "APPROVED" | "REJECTED", reason?: string): Promise<ActionResult> {
+  return runLive(async (token) => {
+    requireString(docId, "Document");
+    requireString(companyId, "Compagnie");
+    await apiCall(`/companies/${encodeURIComponent(companyId)}/documents/${encodeURIComponent(docId)}/review`, {
+      method: "PATCH", token, body: status === "REJECTED" ? { status, rejectionReason: requireReason(reason) } : { status },
+    });
+    refresh(companyId);
+  });
+}
+
+export async function approveDocument(docId: string, companyId = ""): Promise<ActionResult> {
+  if (isLive()) return liveReview(docId, companyId, "APPROVED");
   return run((actor) => {
     requireString(docId, "Document");
     const doc = companiesRepo.reviewDocument(docId, "approved", undefined, actor);
@@ -26,7 +43,8 @@ export async function approveDocument(docId: string): Promise<ActionResult> {
   });
 }
 
-export async function rejectDocument(docId: string, reason: string): Promise<ActionResult> {
+export async function rejectDocument(docId: string, reason: string, companyId = ""): Promise<ActionResult> {
+  if (isLive()) return liveReview(docId, companyId, "REJECTED", reason);
   return run((actor) => {
     requireString(docId, "Document");
     const motif = requireReason(reason);
@@ -39,6 +57,8 @@ const KYC_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 const KYC_FILE_MAX = 10 * 1024 * 1024;
 
 export async function replaceKycDocument(docId: string, formData: FormData): Promise<ActionResult> {
+  const inert = await notWiredInLive();
+  if (inert) return inert;
   try {
     await requireSession();
   } catch {
@@ -57,6 +77,17 @@ export async function replaceKycDocument(docId: string, formData: FormData): Pro
 }
 
 export async function moveKycStage(companyId: string, stage: string, note?: string): Promise<ActionResult> {
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(companyId, "Compagnie");
+      if (!KYC_STAGES.includes(stage as KycStage)) throw new Error("Étape invalide");
+      const motif = note?.trim() ? requireReason(note) : undefined;
+      await apiCall(`/admin/companies/${encodeURIComponent(companyId)}/kyc-stage`, {
+        method: "PATCH", token, body: { stage, ...(motif ? { note: motif } : {}) },
+      });
+      refresh(companyId);
+    });
+  }
   return run((actor) => {
     requireString(companyId, "Compagnie");
     if (!KYC_STAGES.includes(stage as KycStage)) throw new Error("Étape invalide");
@@ -87,10 +118,26 @@ export async function fetchKycBoard(query: KycBoardQuery): Promise<KycBoardResul
     sort: (KYC_SORTS as readonly string[]).includes(String(query?.sort)) ? query.sort : "oldest",
     pages,
   };
+  if (isLive()) {
+    try {
+      return { ok: true, board: await liveKycBoard(clean) };
+    } catch {
+      return { ok: false, error: "La plateforme est indisponible, réessaie dans un instant." };
+    }
+  }
   return { ok: true, board: companiesRepo.kycBoard(clean) };
 }
 
 export async function forceActivateCompany(companyId: string, reason: string): Promise<ActionResult> {
+  if (isLive()) {
+    return runLive(async (token) => {
+      requireString(companyId, "Compagnie");
+      await apiCall(`/companies/${encodeURIComponent(companyId)}/force-activate`, {
+        method: "POST", token, body: { reason: requireReason(reason) },
+      });
+      refresh(companyId);
+    });
+  }
   return run((actor) => {
     requireString(companyId, "Compagnie");
     const motif = requireReason(reason);
@@ -111,6 +158,8 @@ export async function revealContact(companyId: string, field: "email" | "phone")
   try {
     requireString(companyId, "Compagnie");
     if (field !== "email" && field !== "phone") throw new Error("Champ invalide");
+    // Live: the platform journals the reveal itself; the value is returned and never logged here.
+    if (isLive()) return { ok: true, value: await liveRevealContact(companyId, field) };
     const company = getStore().companies.find((c) => c.id === companyId);
     if (!company) throw new Error("Compagnie introuvable");
     companiesRepo.logReveal(companyId, field, actor);

@@ -1,6 +1,6 @@
 import {
   analyticsRepo, incidentsRepo, servicesRepo, STALE_AFTER_MS,
-  type ApiTotals, type IncidentRow, type ServiceRow, type UsageSummary,
+  type ApiTotals, type IncidentRow, type ServiceRow, type ServiceStats, type UsageSummary,
 } from "@/lib/repos/monitoring";
 import { getStore } from "@/lib/repos/store";
 import type { ApiUsageRow, IncidentSeverity, IncidentStatus, ServiceStatus } from "@/lib/types";
@@ -111,9 +111,10 @@ function weighted(rows: ApiUsageRow[]) {
   };
 }
 
-export function apiDash(f: { days: number; companyId?: string; q?: string }, now: Date = new Date()): ApiDash {
+/** `source` replaces the demonstration store: rows of the window and the one before it, plus the consumers already ranked. */
+export function apiDash(f: { days: number; companyId?: string; q?: string }, now: Date = new Date(), source?: { rows: ApiUsageRow[]; consumers: Consumer[] }): ApiDash {
   const hit = matcher(f.q);
-  const all = getStore().apiUsage.filter((r) => (!f.companyId || r.companyId === f.companyId) && hit(r.endpoint, r.method));
+  const all = source ? source.rows.filter((r) => hit(r.endpoint, r.method)) : getStore().apiUsage.filter((r) => (!f.companyId || r.companyId === f.companyId) && hit(r.endpoint, r.method));
   const days = daysBack(f.days, now);
   const prevDays = new Set(daysBack(f.days, now, f.days));
   const inWin = new Set(days);
@@ -143,7 +144,7 @@ export function apiDash(f: { days: number; companyId?: string; q?: string }, now
   }).sort((a, b) => b.count - a.count || a.endpoint.localeCompare(b.endpoint));
   const companies = getStore().companies;
   const ids = [...new Set(rows.map((r) => r.companyId))];
-  const consumers = ids.map((id): Consumer => {
+  const consumers = source ? source.consumers : ids.map((id): Consumer => {
     const w = weighted(rows.filter((r) => r.companyId === id));
     return {
       companyId: id, name: id ? companies.find((c) => c.id === id)?.name ?? "—" : "Anonyme (public)", count: w.count,
@@ -184,10 +185,10 @@ export interface IncidentDash {
 }
 export const TIMELINE_DAYS = 90;
 
-export function incidentDash(f: { q?: string; status?: IncidentStatus; severity?: IncidentSeverity; serviceName?: string }, now: Date = new Date()): IncidentDash {
+export function incidentDash(f: { q?: string; status?: IncidentStatus; severity?: IncidentSeverity; serviceName?: string }, now: Date = new Date(), source?: IncidentRow[]): IncidentDash {
   const hit = matcher(f.q);
-  const everything = incidentsRepo.listRows();
-  const rows = incidentsRepo.listRows({ status: f.status, severity: f.severity, serviceName: f.serviceName })
+  const everything = source ?? incidentsRepo.listRows();
+  const rows = (source ? source.filter((i) => (!f.status || i.status === f.status) && (!f.severity || i.severity === f.severity) && (!f.serviceName || i.serviceName === f.serviceName)) : incidentsRepo.listRows({ status: f.status, severity: f.severity, serviceName: f.serviceName }))
     .filter((i) => hit(i.incidentCode, i.title, i.serviceName, i.companyName));
   const durations = everything.filter((i) => i.resolvedAt).map((i) => (Date.parse(i.resolvedAt!) - Date.parse(i.detectedAt)) / 60_000);
   const span = TIMELINE_DAYS * DAY;
@@ -209,10 +210,10 @@ export function incidentDash(f: { q?: string; status?: IncidentStatus; severity?
 
 /* ───────────── Usage ───────────── */
 export interface UsageDash { cur: UsageSummary; prev: UsageSummary; deltaEvents: number | null; deltaUsers: number | null }
-export function usageDash(f: { days: number; companyId?: string; q?: string }, now: Date = new Date()): UsageDash {
+export function usageDash(f: { days: number; companyId?: string; q?: string }, now: Date = new Date(), source?: { cur: UsageSummary; prev: UsageSummary }): UsageDash {
   const hit = matcher(f.q);
-  const cur = analyticsRepo.summary({ days: f.days, companyId: f.companyId }, now);
-  const prev = analyticsRepo.summary({ days: f.days, companyId: f.companyId }, new Date(now.getTime() - f.days * DAY));
+  const cur = source ? source.cur : analyticsRepo.summary({ days: f.days, companyId: f.companyId }, now);
+  const prev = source ? source.prev : analyticsRepo.summary({ days: f.days, companyId: f.companyId }, new Date(now.getTime() - f.days * DAY));
   const delta = (a: number, b: number) => (b ? Math.round(((a - b) / b) * 100) : null);
   return {
     cur: { ...cur, byEvent: cur.byEvent.filter((e) => hit(e.eventName)) }, prev,
@@ -232,18 +233,18 @@ export interface MonOverview {
   services: { total: number; healthy: number; degraded: number; down: number; stale: number; availability24h: number | null; slowest: ServiceMetric | null };
   api: ApiDash; incidents: IncidentDash; fleet: FleetPoint[]; metrics: ServiceMetric[];
 }
-export function monOverview(f: { days: number; companyId?: string }, now: Date = new Date()): MonOverview {
-  const metrics = serviceMetrics();
-  const stats = servicesRepo.stats();
-  const live = metrics.filter((m) => !m.stale);
-  const checks = live.reduce((n, m) => n + m.states.length, 0);
-  const healthy = live.reduce((n, m) => n + m.states.filter((s) => s.status === "healthy").length, 0);
+export function monOverview(f: { days: number; companyId?: string }, now: Date = new Date(), live?: { metrics: ServiceMetric[]; stats: ServiceStats; api: ApiDash; incidents: IncidentDash; fleet: FleetPoint[] }): MonOverview {
+  const metrics = live?.metrics ?? serviceMetrics();
+  const stats = live?.stats ?? servicesRepo.stats();
+  const up = metrics.filter((m) => !m.stale);
+  const checks = up.reduce((n, m) => n + m.states.length, 0);
+  const healthy = up.reduce((n, m) => n + m.states.filter((s) => s.status === "healthy").length, 0);
   return {
     services: {
       total: metrics.length, ...stats, availability24h: checks ? r1((healthy / checks) * 100) : null,
-      slowest: [...live].sort((a, b) => b.responseTimeMs - a.responseTimeMs)[0] ?? null,
+      slowest: [...up].sort((a, b) => b.responseTimeMs - a.responseTimeMs)[0] ?? null,
     },
-    api: apiDash(f, now), incidents: incidentDash({}, now), fleet: fleetTimeline(), metrics,
+    api: live?.api ?? apiDash(f, now), incidents: live?.incidents ?? incidentDash({}, now), fleet: live?.fleet ?? fleetTimeline(), metrics,
   };
 }
 export { STALE_AFTER_MS };

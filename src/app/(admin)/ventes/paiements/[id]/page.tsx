@@ -1,18 +1,20 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
 import { DetailRow } from "@/components/data/detail-row";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatDateTime, formatMoney } from "@/lib/format";
 import { bookingPaymentBadge, bookingStatusBadge, transactionStatusBadge } from "@/lib/labels";
+import { liveTransactionDetail } from "@/lib/api/sales-detail-live";
 import { transactionsRepo } from "@/lib/repos/sales";
 
 export const dynamic = "force-dynamic";
 
 export default async function TransactionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = transactionsRepo.detail(id, new Date());
+  const detail = isLive() ? await liveTransactionDetail(id) : transactionsRepo.detail(id, new Date());
   if (!detail) notFound();
   const { transaction: t, booking: b } = detail;
   const status = transactionStatusBadge(t.status);

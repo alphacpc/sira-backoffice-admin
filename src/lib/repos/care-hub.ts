@@ -25,8 +25,8 @@ export type TrackedParcel = ParcelRow & { expectedAt: string; deliveredAt: strin
 export type TieredCustomer = CustomerRow & { tier: MembershipType | null };
 
 export interface CareOverview {
-  parcels: { total: number; byStatus: Record<ParcelStatus, number>; deliveryRate: number | null; avgHours: number | null; revenue: number; late: TrackedParcel[]; lateCount: number; byType: { type: ParcelType; value: number }[] };
-  customers: { total: number; fresh: number; corporate: number; avgPoints: number; tiers: { tier: MembershipType; value: number }[]; top: TieredCustomer[] };
+  parcels: { total: number; byStatus: Record<ParcelStatus, number> | null; deliveryRate: number | null; avgHours: number | null; revenue: number | null; late: TrackedParcel[]; lateCount: number; byType: { type: ParcelType; value: number }[] };
+  customers: { total: number; fresh: number | null; corporate: number; avgPoints: number | null; tiers: { tier: MembershipType; value: number }[]; top: TieredCustomer[] | null };
   reviews: { average: number | null; total: number; distribution: number[]; pending: number; recent: FeedbackRow[] };
 }
 

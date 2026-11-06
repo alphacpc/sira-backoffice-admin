@@ -17,13 +17,14 @@ function matcher(raw: string | undefined) {
 }
 type Co = { companyId?: string };
 
+/** Live mode: a null block means its source failed, and the view hides the card instead of showing a misleading zero. */
 export interface CommOverview {
-  notifications: { sent: number; failed: number; pending: number; successRate: number | null; byChannel: { channel: NotificationChannel; value: number }[]; failures: NotificationRow[] };
-  pipeline: { status: CampaignStatus; value: number }[];
-  upcoming: ScheduleRow[];
-  topCampaigns: { id: string; name: string; companyName: string; recipients: number; sends: number }[];
-  audience: number;
-  campaigns: number;
+  notifications: { sent: number; failed: number; pending: number; successRate: number | null; byChannel: { channel: NotificationChannel; value: number }[]; failures: NotificationRow[] } | null;
+  pipeline: { status: CampaignStatus; value: number }[] | null;
+  upcoming: ScheduleRow[] | null;
+  topCampaigns: { id: string; name: string; companyName: string; recipients: number; sends: number }[] | null;
+  audience: number | null;
+  campaigns: number | null;
 }
 
 export const commHubRepo = {

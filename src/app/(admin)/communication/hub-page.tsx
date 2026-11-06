@@ -6,7 +6,14 @@ import { CommOverviewView } from "@/components/communication/hub/comm-overview";
 import { NotificationsList } from "@/components/communication/hub/comm-tables";
 import { FilterSelect } from "@/components/data/filter-select";
 import { PageHeader } from "@/components/data/page-header";
+import { LinkPager } from "@/components/billing/hub/link-pager";
 import { LinkTabs, type LinkTab } from "@/components/ui/link-tabs";
+import { isLive } from "@/lib/api/config";
+import {
+  liveCampaignStats, liveCampaigns, liveCommCounts, liveCommOverview, liveMessages, liveNotificationStats, liveNotifications,
+  liveScheduleStats, liveSchedules, liveSegmentStats, liveSegments,
+} from "@/lib/api/comm-live";
+import { liveCompanyNames } from "@/lib/api/sales-live";
 import { parseFilter } from "@/lib/filters";
 import { formatNumber } from "@/lib/format";
 import { CAMPAIGN_STATUSES, MESSAGE_STATUSES, NOTIFICATION_CHANNELS, NOTIFICATION_STATUSES, SCHEDULE_STATUSES } from "@/lib/repos/communication";
@@ -16,6 +23,7 @@ import { parseCompanyFilter } from "@/lib/repos/fleet";
 import { firstString } from "@/lib/search-params";
 
 const BASE = "/communication";
+const PAGE = 12;
 export const commTabPath = (t: CommTab) => (t === "apercu" ? BASE : `${BASE}/${t}`);
 
 const META: Record<CommTab, { label: string; icon: LinkTab["icon"]; description: string; placeholder: string }> = {
@@ -27,14 +35,21 @@ const META: Record<CommTab, { label: string; icon: LinkTab["icon"]; description:
   programmations: { label: "Programmations", icon: CalendarBlank, description: "Envois planifiés, présentés comme un agenda. Une programmation en attente part à l'échéance.", placeholder: "campagne, message, segment…" },
 };
 
-type Params = { q?: string | string[]; compagnie?: string | string[]; statut?: string | string[]; canal?: string | string[] };
+type Params = { q?: string | string[]; compagnie?: string | string[]; statut?: string | string[]; canal?: string | string[]; page?: string | string[] };
 
 export async function CommHubPage({ tab, searchParams }: { tab: CommTab; searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const q = (firstString(sp.q) ?? "").trim().slice(0, 80);
-  const companyId = parseCompanyFilter(firstString(sp.compagnie));
+  const live = isLive();
+  const rawCompany = firstString(sp.compagnie);
+  const companyId = live ? (rawCompany && /^[0-9a-f-]{36}$/i.test(rawCompany) ? rawCompany : undefined) : parseCompanyFilter(rawCompany);
   const co = { companyId };
-  const counts = commHubRepo.counts(q, co);
+  // Live: a null counter means its source failed, so the tab shows no badge.
+  const liveCounts = live ? await liveCommCounts(q || undefined, companyId) : null;
+  const counts: Record<CommTab, number> = liveCounts
+    ? { apercu: 0, notifications: liveCounts.notifications ?? 0, campagnes: liveCounts.campagnes ?? 0, messages: liveCounts.messages ?? 0, segments: liveCounts.segments ?? 0, programmations: liveCounts.programmations ?? 0 }
+    : commHubRepo.counts(q, co);
+  const page = Math.max(1, Math.floor(Number(firstString(sp.page)) || 1));
   const meta = META[tab];
   const rawStatus = firstString(sp.statut);
   const channel = tab === "notifications" ? parseFilter(firstString(sp.canal), NOTIFICATION_CHANNELS) : undefined;
@@ -46,7 +61,7 @@ export async function CommHubPage({ tab, searchParams }: { tab: CommTab; searchP
     const text = qs.toString();
     return text ? `${commTabPath(t)}?${text}` : commTabPath(t);
   };
-  const tabs: LinkTab[] = COMM_TABS.map((t, i) => ({ key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: t === "apercu" ? undefined : counts[t], divider: i === 1 }));
+  const tabs: LinkTab[] = COMM_TABS.map((t, i) => ({ key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: t === "apercu" || (liveCounts && liveCounts[t] === null) ? undefined : counts[t], divider: i === 1 }));
 
   const active: Record<string, string | undefined> = { q: q || undefined, compagnie: companyId, statut: rawStatus, canal: channel };
   const select = (label: string, param: string, current: string | undefined, options: { value: string; label: string }[]) => {
@@ -54,7 +69,13 @@ export async function CommHubPage({ tab, searchParams }: { tab: CommTab; searchP
     for (const [k, v] of Object.entries(active)) if (v && k !== param) keep[k] = v;
     return <FilterSelect label={label} param={param} basePath={commTabPath(tab)} current={current ?? "all"} options={options} keep={keep} searchable={param === "compagnie"} />;
   };
-  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...fleetHubRepo.companies().map((c) => ({ value: c.id, label: c.name }))]);
+  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...(live ? await liveCompanyNames() : fleetHubRepo.companies()).map((c) => ({ value: c.id, label: c.name }))]);
+
+  // Live lists arrive whole (up to 500 rows); the cards are paged here. The demonstration lists stay unpaged.
+  const slice = <T,>(rows: T[]) => rows.slice((page - 1) * PAGE, page * PAGE);
+  const pager = (total: number) => live
+    ? <LinkPager basePath={commTabPath(tab)} page={page} pageCount={Math.ceil(total / PAGE)} total={total} size={PAGE} params={{ q: q || undefined, compagnie: companyId, statut: rawStatus, canal: channel }} />
+    : null;
 
   let stats: Stat[] = [];
   let toolbar: React.ReactNode = <>{companyFilter}</>;
@@ -62,12 +83,18 @@ export async function CommHubPage({ tab, searchParams }: { tab: CommTab; searchP
   let empty = false;
 
   if (tab === "apercu") {
-    body = <CommOverviewView o={commHubRepo.overview(co)} />;
+    body = <CommOverviewView o={live ? await liveCommOverview(companyId) : commHubRepo.overview(co)} live={live} />;
   } else if (tab === "notifications") {
     const status = parseFilter(rawStatus, NOTIFICATION_STATUSES);
-    const all = commHubRepo.notifications(undefined, co);
-    const list = commHubRepo.notifications(q, { ...co, channel, status });
-    stats = [
+    const all = live ? [] : commHubRepo.notifications(undefined, co);
+    const list = live ? await liveNotifications({ q: q || undefined, companyId, channel, status }) : commHubRepo.notifications(q, { ...co, channel, status });
+    const ns = live ? await liveNotificationStats(companyId) : null;
+    stats = live ? (ns ? [
+      { label: "Notifications", value: formatNumber(ns.sent + ns.failed + ns.pending), icon: Bell },
+      { label: "Envoyées", value: formatNumber(ns.sent), icon: CheckCircle },
+      { label: "Échouées", value: formatNumber(ns.failed), icon: XCircle },
+      { label: "En attente", value: formatNumber(ns.pending), icon: Clock },
+    ] : []) : [
       { label: "Notifications", value: formatNumber(all.length), icon: Bell },
       { label: "Envoyées", value: formatNumber(all.filter((n) => n.status === "SENT").length), icon: CheckCircle },
       { label: "Échouées", value: formatNumber(all.filter((n) => n.status === "FAILED").length), icon: XCircle },
@@ -81,12 +108,18 @@ export async function CommHubPage({ tab, searchParams }: { tab: CommTab; searchP
       </>
     );
     empty = list.length === 0;
-    body = <NotificationsList rows={list} />;
+    body = <NotificationsList rows={list} live={live} />;
   } else if (tab === "campagnes") {
     const status = parseFilter(rawStatus, CAMPAIGN_STATUSES);
-    const all = commHubRepo.campaigns(undefined, co);
-    const list = commHubRepo.campaigns(q, { ...co, status });
-    stats = [
+    const all = live ? [] : commHubRepo.campaigns(undefined, co);
+    const list = live ? await liveCampaigns({ q: q || undefined, companyId, status }) : commHubRepo.campaigns(q, { ...co, status });
+    const cs = live ? await liveCampaignStats(companyId) : null;
+    stats = live ? (cs ? [
+      { label: "Campagnes", value: formatNumber(cs.total), icon: Megaphone },
+      { label: "En cours", value: formatNumber(cs.running), icon: PaperPlaneTilt },
+      { label: "Programmées", value: formatNumber(cs.scheduled), icon: CalendarBlank },
+      { label: "Terminées", value: formatNumber(cs.completed), icon: CheckCircle },
+    ] : []) : [
       { label: "Campagnes", value: formatNumber(all.length), icon: Megaphone },
       { label: "En cours", value: formatNumber(all.filter((c) => c.status === "RUNNING").length), icon: PaperPlaneTilt },
       { label: "Programmées", value: formatNumber(all.filter((c) => c.status === "SCHEDULED").length), icon: CalendarBlank },
@@ -94,29 +127,41 @@ export async function CommHubPage({ tab, searchParams }: { tab: CommTab; searchP
     ];
     toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Toutes" }, { value: "DRAFT", label: "Brouillons" }, { value: "SCHEDULED", label: "Programmées" }, { value: "RUNNING", label: "En cours" }, { value: "COMPLETED", label: "Terminées" }, { value: "CANCELLED", label: "Annulées" }])}</>;
     empty = list.length === 0;
-    body = <CampaignsGrid campaigns={list} now={Date.now()} />;
+    body = <><CampaignsGrid campaigns={live ? slice(list) : list} now={Date.now()} live={live} />{pager(list.length)}</>;
   } else if (tab === "messages") {
     const status = parseFilter(rawStatus, MESSAGE_STATUSES);
-    const list = commHubRepo.messages(q, { ...co, status });
+    const list = live ? await liveMessages({ q: q || undefined, companyId, status }) : commHubRepo.messages(q, { ...co, status });
     toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Tous" }, { value: "DRAFT", label: "Brouillons" }, { value: "APPROVED", label: "Approuvés" }, { value: "SENT", label: "Envoyés" }])}</>;
     empty = list.length === 0;
-    body = <MessagesGrid messages={list} />;
+    body = <><MessagesGrid messages={live ? slice(list) : list} live={live} />{pager(list.length)}</>;
   } else if (tab === "segments") {
-    const all = commHubRepo.segments(undefined, co);
-    const list = commHubRepo.segments(q, co);
-    stats = [
+    const all = live ? [] : commHubRepo.segments(undefined, co);
+    const list = live ? await liveSegments({ q: q || undefined, companyId }) : commHubRepo.segments(q, co);
+    const ss = live ? await liveSegmentStats(companyId) : null;
+    stats = live ? (ss ? [
+      { label: "Segments", value: formatNumber(ss.count), icon: Users },
+      { label: "Taille estimée", value: formatNumber(ss.estimatedSizeTotal), icon: Target },
+      { label: "Éligibles aujourd'hui", value: formatNumber(ss.eligibleNowTotal), icon: CheckCircle },
+      { label: "Réutilisables", value: formatNumber(ss.reusableCount), icon: Warning },
+    ] : []) : [
       { label: "Segments", value: formatNumber(all.length), icon: Users },
-      { label: "Taille estimée", value: formatNumber(all.reduce((n, s) => n + s.estimatedSize, 0)), icon: Target },
+      { label: "Taille estimée", value: formatNumber(all.reduce((n, s) => n + (s.estimatedSize ?? 0), 0)), icon: Target },
       { label: "Éligibles aujourd'hui", value: formatNumber(all.reduce((n, s) => n + s.eligibleNow, 0)), icon: CheckCircle },
       { label: "Réutilisables", value: formatNumber(all.filter((s) => !s.campaignName).length), icon: Warning },
     ];
     empty = list.length === 0;
-    body = <SegmentsGrid segments={list} />;
+    body = <><SegmentsGrid segments={live ? slice(list) : list} />{pager(list.length)}</>;
   } else {
     const status = parseFilter(rawStatus, SCHEDULE_STATUSES);
-    const all = commHubRepo.schedules(undefined, co);
-    const list = commHubRepo.schedules(q, { ...co, status });
-    stats = [
+    const all = live ? [] : commHubRepo.schedules(undefined, co);
+    const list = live ? await liveSchedules({ q: q || undefined, companyId, status }) : commHubRepo.schedules(q, { ...co, status });
+    const sc = live ? await liveScheduleStats(companyId) : null;
+    stats = live ? (sc ? [
+      { label: "Programmations", value: formatNumber(sc.total), icon: CalendarBlank },
+      { label: "En attente", value: formatNumber(sc.pending), icon: Clock },
+      { label: "Envoyées", value: formatNumber(sc.sent), icon: PaperPlaneTilt },
+      { label: "Échouées", value: formatNumber(sc.failed), icon: XCircle },
+    ] : []) : [
       { label: "Programmations", value: formatNumber(all.length), icon: CalendarBlank },
       { label: "En attente", value: formatNumber(all.filter((s) => s.status === "PENDING").length), icon: Clock },
       { label: "Envoyées", value: formatNumber(all.filter((s) => s.status === "SENT").length), icon: PaperPlaneTilt },
@@ -124,7 +169,7 @@ export async function CommHubPage({ tab, searchParams }: { tab: CommTab; searchP
     ];
     toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Toutes" }, { value: "PENDING", label: "En attente" }, { value: "SENT", label: "Envoyées" }, { value: "FAILED", label: "Échouées" }, { value: "CANCELLED", label: "Annulées" }])}</>;
     empty = list.length === 0;
-    body = <ScheduleAgenda schedules={list} />;
+    body = <><ScheduleAgenda schedules={live ? slice(list) : list} />{pager(list.length)}</>;
   }
 
   const elsewhere = q ? COMM_TABS.filter((t) => t !== tab && t !== "apercu" && counts[t] > 0) : [];

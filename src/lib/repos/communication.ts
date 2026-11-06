@@ -32,14 +32,17 @@ export interface NotificationDetail {
 }
 
 export interface CampaignRow {
-  id: string; companyId: string; companyName: string; name: string; objective: CampaignObjective;
-  status: CampaignStatus; startDate: string; endDate: string; budget: number; currency: string;
+  id: string; companyId: string; companyName: string; name: string;
+  /** Null in live mode when the platform sends an unknown objective. */
+  objective: CampaignObjective | null;
+  /** Dates and budget can be missing in live mode. */
+  status: CampaignStatus; startDate: string | null; endDate: string | null; budget: number | null; currency: string;
   scheduleCount: number; createdAt: string;
 }
 
 export interface SegmentRow {
   id: string; companyId: string; companyName: string; campaignName: string | null; name: string;
-  criteriaLabel: string; estimatedSize: number; eligibleNow: number; createdAt: string;
+  criteriaLabel: string; estimatedSize: number | null; eligibleNow: number; createdAt: string;
 }
 
 export interface MessageRow {
@@ -49,7 +52,7 @@ export interface MessageRow {
 
 export interface ScheduleRow {
   id: string; companyId: string; companyName: string; campaignId: string; campaignName: string;
-  messageSubject: string; channel: NotificationChannel; segmentName: string; scheduledAt: string;
+  messageSubject: string; channel: NotificationChannel | null; segmentName: string; scheduledAt: string;
   sentAt: string | null; status: ScheduleStatus; recipientsCount: number;
   /** False once cancelled: every other status still shows the button (the server refuses what it must). */
   cancellable: boolean;

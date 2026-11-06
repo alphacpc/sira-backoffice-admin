@@ -2,11 +2,13 @@
 
 import { revalidatePath } from "next/cache";
 import {
-  requireReason, requireString, run, runReveal, type ActionResult, type RevealResult,
+  notWiredInLive, requireReason, requireString, run, runReveal, type ActionResult, type RevealResult,
 } from "@/lib/actions/run";
 import { parcelsRepo } from "@/lib/repos/parcels";
 
 export async function declareParcelLost(parcelId: string, reason: string): Promise<ActionResult> {
+  const inert = await notWiredInLive();
+  if (inert) return inert;
   return run((actor) => {
     requireString(parcelId, "Colis");
     const motif = requireReason(reason);
@@ -19,6 +21,8 @@ export async function declareParcelLost(parcelId: string, reason: string): Promi
 }
 
 export async function revealParcelRecipientPhone(parcelId: string): Promise<RevealResult> {
+  const inert = await notWiredInLive();
+  if (inert && !inert.ok) return inert;
   return runReveal((actor) => {
     requireString(parcelId, "Colis");
     const parcel = parcelsRepo.get(parcelId);

@@ -11,10 +11,15 @@ import { LinkTabs, type LinkTab } from "@/components/ui/link-tabs";
 import { parseFilter } from "@/lib/filters";
 import { formatNumber } from "@/lib/format";
 import { ACCESS_TYPES, AUDIT_ACTIONS, DATA_CATEGORIES, DSR_STATUSES, DSR_TYPES, consentsRepo, dsrRepo } from "@/lib/repos/compliance";
-import { COMPLIANCE_TABS, complianceHubRepo, type ComplianceTab } from "@/lib/repos/compliance-hub";
+import { COMPLIANCE_TABS, complianceHubRepo, fold, type ComplianceTab } from "@/lib/repos/compliance-hub";
 import { fleetHubRepo } from "@/lib/repos/fleet-hub";
 import { parseCompanyFilter } from "@/lib/repos/fleet";
 import { firstString } from "@/lib/search-params";
+import { isLive } from "@/lib/api/config";
+import {
+  liveAccess, liveAudit, liveAuditFigures, liveComplianceCounts, liveConsentUsers, liveConsents, liveOverview, liveRequestStats, liveRequests, liveRetention,
+} from "@/lib/api/comp-live";
+import { liveCompanyNames } from "@/lib/api/sales-live";
 
 const BASE = "/conformite";
 export const complianceTabPath = (t: ComplianceTab) => (t === "apercu" ? BASE : `${BASE}/${t}`);
@@ -33,10 +38,16 @@ type Params = { q?: string | string[]; compagnie?: string | string[]; statut?: s
 export async function ComplianceHubPage({ tab, searchParams }: { tab: ComplianceTab; searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const q = (firstString(sp.q) ?? "").trim().slice(0, 80);
-  const companyId = parseCompanyFilter(firstString(sp.compagnie));
+  const live = isLive();
+  const rawCompany = firstString(sp.compagnie);
+  const companyId = live ? (rawCompany && /^[0-9a-f-]{36}$/i.test(rawCompany) ? rawCompany : undefined) : parseCompanyFilter(rawCompany);
   const co = { companyId };
   const now = new Date();
-  const counts = complianceHubRepo.counts(q, co);
+  // Live: a null counter means its source failed, so the tab shows no badge.
+  const liveCounts = live ? await liveComplianceCounts(q, companyId) : null;
+  const counts: Record<ComplianceTab, number> = liveCounts
+    ? (Object.fromEntries(COMPLIANCE_TABS.map((t) => [t, liveCounts[t] ?? 0])) as Record<ComplianceTab, number>)
+    : complianceHubRepo.counts(q, co);
   const meta = META[tab];
   const action = tab === "journal-audit" ? parseFilter(firstString(sp.action), AUDIT_ACTIONS) : undefined;
   const type = parseFilter(firstString(sp.type), tab === "acces-donnees" ? ACCESS_TYPES : DSR_TYPES);
@@ -53,7 +64,7 @@ export async function ComplianceHubPage({ tab, searchParams }: { tab: Compliance
     return text ? `${complianceTabPath(t)}?${text}` : complianceTabPath(t);
   };
   const tabs: LinkTab[] = COMPLIANCE_TABS.map((t, i) => ({
-    key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: t === "apercu" ? undefined : counts[t], divider: i === 1,
+    key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: t === "apercu" || (liveCounts && liveCounts[t] === null) ? undefined : counts[t], divider: i === 1,
     urgent: t === "demandes-rgpd",
   }));
 
@@ -63,7 +74,7 @@ export async function ComplianceHubPage({ tab, searchParams }: { tab: Compliance
     for (const [k, v] of Object.entries(active)) if (v && k !== param) keep[k] = v;
     return <FilterSelect label={label} param={param} basePath={complianceTabPath(tab)} current={current ?? "all"} options={options} keep={keep} searchable={param === "compagnie"} />;
   };
-  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...fleetHubRepo.companies().map((c) => ({ value: c.id, label: c.name }))]);
+  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...(live ? await liveCompanyNames() : fleetHubRepo.companies()).map((c) => ({ value: c.id, label: c.name }))]);
 
   let stats: Stat[] = [];
   let toolbar: React.ReactNode = null;
@@ -72,23 +83,24 @@ export async function ComplianceHubPage({ tab, searchParams }: { tab: Compliance
 
   if (tab === "apercu") {
     toolbar = companyFilter;
-    body = <ComplianceOverviewView o={complianceHubRepo.overview(co, now)} />;
+    body = <ComplianceOverviewView o={live ? await liveOverview(companyId, now) : complianceHubRepo.overview(co, now)} />;
   } else if (tab === "journal-audit") {
-    const all = complianceHubRepo.journal(undefined, co);
-    const list = complianceHubRepo.journal(q, { ...co, action });
+    const all = live ? [] : complianceHubRepo.journal(undefined, co);
+    const list = live ? await liveAudit({ ...co, q: q || undefined, action }) : complianceHubRepo.journal(q, { ...co, action });
+    const fig = live ? await liveAuditFigures(companyId) : null;
     stats = [
-      { label: "Lignes", value: formatNumber(all.length), icon: FileText },
-      { label: "Connexions", value: formatNumber(all.filter((a) => a.action === "LOGIN").length), icon: CheckCircle },
-      { label: "Échecs de connexion", value: formatNumber(all.filter((a) => a.action === "LOGIN_FAILED").length), icon: Prohibit },
-      { label: "Permissions modifiées", value: formatNumber(all.filter((a) => a.action === "PERMISSION_CHANGE").length), icon: ShieldCheck },
+      { label: "Lignes", value: formatNumber(fig ? fig.total : all.length), icon: FileText },
+      { label: "Connexions", value: formatNumber(fig ? fig.login : all.filter((a) => a.action === "LOGIN").length), icon: CheckCircle },
+      { label: "Échecs de connexion", value: formatNumber(fig ? fig.failedLogins : all.filter((a) => a.action === "LOGIN_FAILED").length), icon: Prohibit },
+      { label: "Permissions modifiées", value: formatNumber(fig ? fig.permissionChange : all.filter((a) => a.action === "PERMISSION_CHANGE").length), icon: ShieldCheck },
     ];
     toolbar = <>{companyFilter}{select("Action", "action", action, [{ value: "all", label: "Toutes" }, { value: "CREATE", label: "Création" }, { value: "UPDATE", label: "Modification" }, { value: "LOGIN", label: "Connexion" }, { value: "LOGIN_FAILED", label: "Échec de connexion" }, { value: "PERMISSION_CHANGE", label: "Changement de permission" }])}</>;
     empty = list.length === 0;
     body = <AuditList rows={list} />;
   } else if (tab === "acces-donnees") {
     const accessType = parseFilter(firstString(sp.type), ACCESS_TYPES);
-    const all = complianceHubRepo.access();
-    const list = complianceHubRepo.access(q, { type: accessType, category });
+    const all = live ? await liveAccess({}) : complianceHubRepo.access();
+    const list = live ? await liveAccess({ q: q || undefined, accessType, dataCategory: category }) : complianceHubRepo.access(q, { type: accessType, category });
     stats = [
       { label: "Accès", value: formatNumber(all.length), icon: Eye },
       { label: "Consultations", value: formatNumber(all.filter((a) => a.accessType === "VIEW").length), icon: ListMagnifyingGlass },
@@ -102,8 +114,8 @@ export async function ComplianceHubPage({ tab, searchParams }: { tab: Compliance
     empty = list.length === 0;
     body = <AccessList rows={list} />;
   } else if (tab === "demandes-rgpd") {
-    const st = dsrRepo.stats(now);
-    const list = complianceHubRepo.requests(q, { ...co, status, type: type as never, overdueOnly: late === "oui" }, now);
+    const st = live ? await liveRequestStats(companyId) : dsrRepo.stats(now);
+    const list = live ? await liveRequests({ ...co, q: q || undefined, status, requestType: type, overdue: late === "oui" }, now) : complianceHubRepo.requests(q, { ...co, status, type: type as never, overdueOnly: late === "oui" }, now);
     stats = [
       { label: "Ouvertes", value: formatNumber(st.open), icon: Handshake },
       { label: "En retard", value: formatNumber(st.overdue), icon: Warning },
@@ -119,7 +131,7 @@ export async function ComplianceHubPage({ tab, searchParams }: { tab: Compliance
     empty = list.length === 0;
     body = <RequestsGrid rows={list} />;
   } else if (tab === "consentements") {
-    const list = complianceHubRepo.consents(q);
+    const list = live ? (await liveConsents()).filter((c) => !q || fold(c.consentType + " " + c.scopes.map((x) => x.name).join(" ")).includes(fold(q))) : complianceHubRepo.consents(q);
     empty = list.length === 0;
     body = (
       <div className="space-y-6">
@@ -127,14 +139,17 @@ export async function ComplianceHubPage({ tab, searchParams }: { tab: Compliance
         <section className="rounded-2xl bg-white p-6 shadow-card dark:bg-card" aria-label="Historique d'une personne">
           <h3 className="mb-1 font-semibold">Consulter l&apos;historique d&apos;une personne</h3>
           <p className="mb-4 text-sm text-muted-foreground">La consultation est enregistrée dans le journal d&apos;accès aux données, avec le motif choisi. Les lignes « Sans compagnie (ancien) » n&apos;autorisent aucun envoi.</p>
-          <ConsentLookup users={consentsRepo.userOptions()} />
+          <ConsentLookup users={live ? await liveConsentUsers() : consentsRepo.userOptions()} />
         </section>
       </div>
     );
     empty = false;
   } else {
-    const all = complianceHubRepo.retention(undefined, co, now);
-    const list = complianceHubRepo.retention(q, { ...co, custom: custom === undefined ? undefined : custom === "personnalisee" }, now);
+    const liveRet = live ? (await liveRetention()).rows.filter((r) => !companyId || r.companyId === companyId) : null;
+    const all = liveRet ?? complianceHubRepo.retention(undefined, co, now);
+    const list = liveRet
+      ? liveRet.filter((r) => (custom === undefined || r.isCustom === (custom === "personnalisee")) && (!q || fold(r.companyName).includes(fold(q))))
+      : complianceHubRepo.retention(q, { ...co, custom: custom === undefined ? undefined : custom === "personnalisee" }, now);
     stats = [
       { label: "Compagnies", value: formatNumber(all.length), icon: UsersThree },
       { label: "Durée personnalisée", value: formatNumber(all.filter((r) => r.isCustom).length), icon: Timer },

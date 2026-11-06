@@ -16,6 +16,8 @@ import { permissionDomainLabel } from "@/lib/labels";
 import { PERMISSION_DOMAINS, rolesRepo, permissionsRepo } from "@/lib/repos/access";
 import { ACCESS_TABS, accessRepo, type AccessTab } from "@/lib/repos/access-hub";
 import { firstString } from "@/lib/search-params";
+import { isLive } from "@/lib/api/config";
+import { liveAccessSummary, liveMatrix, liveRoleOptions, liveRoles, liveSessions, liveUsers } from "@/lib/api/access-live";
 import type { UserStatus } from "@/lib/types";
 
 const BASE = "/utilisateurs-acces";
@@ -34,15 +36,19 @@ type Params = { q?: string | string[]; role?: string | string[]; statut?: string
 export async function AccessHubPage({ tab, searchParams }: { tab: AccessTab; searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const q = (firstString(sp.q) ?? "").trim().slice(0, 80);
-  const counts = accessRepo.counts(q);
+  const live = isLive();
+  const summary = live ? await liveAccessSummary(q || undefined) : null;
+  const counts: Record<AccessTab, number> = summary
+    ? (Object.fromEntries(ACCESS_TABS.map((t) => [t, summary.counts[t] ?? 0])) as Record<AccessTab, number>)
+    : accessRepo.counts(q);
   const meta = META[tab];
-  const roles = rolesRepo.options();
+  const roles = live ? await liveRoleOptions() : rolesRepo.options();
   const role = parseFilter(firstString(sp.role), roles.map((r) => r.code));
   const statut = parseFilter(firstString(sp.statut), ["active", "suspended"] as const satisfies readonly UserStatus[]);
   const domain = parseFilter(firstString(sp.domaine), PERMISSION_DOMAINS);
 
   const tabHref = (t: AccessTab) => (q ? `${accessTabPath(t)}?${new URLSearchParams({ q }).toString()}` : accessTabPath(t));
-  const tabs: LinkTab[] = ACCESS_TABS.map((t) => ({ key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: counts[t] }));
+  const tabs: LinkTab[] = ACCESS_TABS.map((t) => ({ key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: summary && summary.counts[t] === null ? undefined : counts[t] }));
   const keep: Record<string, string> = { ...(q ? { q } : {}) };
   const select = (label: string, param: string, current: string | undefined, options: { value: string; label: string }[], also: Record<string, string> = {}) => (
     <FilterSelect label={label} param={param} basePath={accessTabPath(tab)} current={current ?? "all"} options={options} keep={{ ...keep, ...also }} />
@@ -55,13 +61,14 @@ export async function AccessHubPage({ tab, searchParams }: { tab: AccessTab; sea
   let empty = false;
 
   if (tab === "utilisateurs") {
-    const all = accessRepo.users();
-    const list = accessRepo.users(q, { role, status: statut });
+    const all = live ? [] : accessRepo.users();
+    const list = live ? await liveUsers({ q: q || undefined, roleCode: role, status: statut }) : accessRepo.users(q, { role, status: statut });
+    const f = summary?.figures?.users;
     stats = [
-      { label: "Comptes", value: formatNumber(all.length), icon: UsersThree },
-      { label: "Comptes actifs", value: formatNumber(all.filter((u) => u.status === "active").length), icon: CheckCircle },
-      { label: "Suspendus", value: formatNumber(all.filter((u) => u.status === "suspended").length), icon: Prohibit },
-      { label: "Sessions actives", value: formatNumber(all.reduce((n, u) => n + u.activeSessions, 0)), icon: Monitor },
+      { label: "Comptes", value: formatNumber(f ? f.total : all.length), icon: UsersThree },
+      { label: "Comptes actifs", value: formatNumber(f ? f.active : all.filter((u) => u.status === "active").length), icon: CheckCircle },
+      { label: "Suspendus", value: formatNumber(f ? f.suspended : all.filter((u) => u.status === "suspended").length), icon: Prohibit },
+      { label: "Sessions actives", value: formatNumber(f ? f.activeSessions : all.reduce((n, u) => n + u.activeSessions, 0)), icon: Monitor },
     ];
     toolbarFilter = (
       <>
@@ -72,23 +79,25 @@ export async function AccessHubPage({ tab, searchParams }: { tab: AccessTab; sea
     empty = list.length === 0;
     body = <UsersTable users={list} />;
   } else if (tab === "roles") {
-    const list = accessRepo.roles(q);
+    const list = live ? await liveRoles(q || undefined) : accessRepo.roles(q);
     empty = list.length === 0;
-    body = <RolesGrid roles={list} totalPermissions={permissionsRepo.list().length} />;
+    body = <RolesGrid roles={list} totalPermissions={live ? (summary?.counts.permissions ?? 0) : permissionsRepo.list().length} />;
   } else if (tab === "permissions") {
-    const matrix = accessRepo.permissions(q, domain);
+    const matrix = live ? await liveMatrix({ q: q || undefined, domain }) : accessRepo.permissions(q, domain);
     toolbarFilter = select("Domaine", "domaine", domain, [{ value: "all", label: "Tous" }, ...PERMISSION_DOMAINS.map((d) => ({ value: d, label: permissionDomainLabel(d) }))]);
     empty = matrix.groups.length === 0;
     body = <PermissionsMatrix matrix={matrix} />;
   } else {
-    const all = accessRepo.sessions();
-    const list = accessRepo.sessions(q, { role });
+    const all = live ? [] : accessRepo.sessions();
+    const list = live ? await liveSessions({ q: q || undefined, roleCode: role }) : accessRepo.sessions(q, { role });
     const latest = all[0];
+    const f = summary?.figures?.sessions;
+    const lastAt = f ? f.latestAt : latest?.lastSeenAt ?? null;
     stats = [
-      { label: "Sessions actives", value: formatNumber(all.length), icon: Monitor },
-      { label: "Utilisateurs connectés", value: formatNumber(new Set(all.map((s) => s.userId)).size), icon: UsersThree },
-      { label: "Sur mobile", value: formatNumber(all.filter((s) => /iphone|android/i.test(s.deviceLabel)).length), icon: DeviceMobile },
-      { label: "Dernière activité", value: latest ? formatDateTime(latest.lastSeenAt).split(" ").at(-1) ?? "—" : "—", icon: Clock, hint: latest?.displayName },
+      { label: "Sessions actives", value: formatNumber(f ? f.active : all.length), icon: Monitor },
+      { label: "Utilisateurs connectés", value: formatNumber(f ? f.connectedUsers : new Set(all.map((s) => s.userId)).size), icon: UsersThree },
+      { label: "Sur mobile", value: formatNumber(f ? f.mobile : all.filter((s) => /iphone|android/i.test(s.deviceLabel)).length), icon: DeviceMobile },
+      { label: "Dernière activité", value: lastAt ? formatDateTime(lastAt).split(" ").at(-1) ?? "—" : "—", icon: Clock, hint: f ? f.latestName ?? undefined : latest?.displayName },
     ];
     toolbarFilter = select("Rôle", "role", role, roleOptions);
     empty = list.length === 0;

@@ -39,8 +39,9 @@ const columns: ColumnDef<NotificationRow, unknown>[] = [
   { accessorKey: "createdAt", header: "Envoyée", cell: ({ row }) => <span className="whitespace-nowrap tabular-nums text-muted-foreground">{formatDateTime(row.original.createdAt)}</span> },
 ];
 
-export function NotificationsList({ rows, toolbar }: { rows: NotificationRow[]; toolbar?: React.ReactNode }) {
-  return <DataTable columns={columns} data={rows} rowHref={(n) => `/communication/notifications/${n.id}`} searchable={false} toolbar={toolbar} emptyMessage="Aucune notification pour ces critères." />;
+/** `live`: the notification detail page is not wired to the platform, so rows are not links. */
+export function NotificationsList({ rows, toolbar, live = false }: { rows: NotificationRow[]; toolbar?: React.ReactNode; live?: boolean }) {
+  return <DataTable columns={columns} data={rows} rowHref={live ? undefined : (n) => `/communication/notifications/${n.id}`} searchable={false} toolbar={toolbar} emptyMessage="Aucune notification pour ces critères." />;
 }
 
 export { CancelScheduleButton };

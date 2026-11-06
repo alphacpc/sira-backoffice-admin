@@ -4,6 +4,7 @@ import {
 } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
 import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -32,6 +33,8 @@ const PAYMENT = { paid: "Payé", pending: "En attente", failed: "Échoué" } as 
 
 export default async function TicketPage({ params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
+  // Not wired to the platform yet: never look a live id up in the demonstration store.
+  if (isLive()) notFound();
   const detail = ticketsRepo.detailByCode(decodeURIComponent(code));
   if (!detail) notFound();
   const { ticket: t, scanLog } = detail;

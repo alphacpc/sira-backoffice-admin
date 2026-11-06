@@ -20,7 +20,7 @@ const columns: ColumnDef<KycQueueItem, unknown>[] = [
   { accessorKey: "uploadedAt", header: "Déposé le", cell: ({ row }) => formatDate(row.original.uploadedAt) },
   {
     id: "actions", header: "Actions", enableSorting: false,
-    cell: ({ row }) => <KycActions docId={row.original.id} docLabel={`${row.original.typeName} de ${row.original.companyName}`} />,
+    cell: ({ row }) => <KycActions docId={row.original.id} companyId={row.original.companyId} docLabel={`${row.original.typeName} de ${row.original.companyName}`} />,
   },
 ];
 

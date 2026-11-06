@@ -173,10 +173,10 @@ export function expiryBadge(state: "expired" | "soon" | "ok", daysLeft: number):
 const BUS_TYPE_LABELS: Record<BusType, string> = {
   MINIBUS: "Minibus", COACH: "Autocar", STANDARD: "Bus standard", ARTICULATED: "Bus articulé",
 };
-export const busTypeLabel = (t: BusType): string => BUS_TYPE_LABELS[t];
+export const busTypeLabel = (t: BusType): string => BUS_TYPE_LABELS[t] ?? "—";
 
 const FUEL_LABELS: Record<FuelType, string> = { DIESEL: "Diesel", PETROL: "Essence", ELECTRIC: "Électrique", HYBRID: "Hybride" };
-export const fuelTypeLabel = (t: FuelType): string => FUEL_LABELS[t];
+export const fuelTypeLabel = (t: FuelType): string => FUEL_LABELS[t] ?? "—";
 
 const VENDOR_KIND_LABELS: Record<VendorKind, string> = {
   GARAGE: "Garage", INSURER: "Assureur", PARTS: "Pièces détachées", OTHER: "Autre",

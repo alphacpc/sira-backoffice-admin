@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
 import { NotificationContent } from "@/components/communication/notification-content";
 import { DetailRow } from "@/components/data/detail-row";
 import { PageHeader } from "@/components/data/page-header";
@@ -12,6 +13,8 @@ import { notificationsRepo } from "@/lib/repos/communication";
 export const dynamic = "force-dynamic";
 
 export default async function NotificationPage({ params }: { params: Promise<{ id: string }> }) {
+  // Live: the detail still reads the demonstration store, so it answers 404.
+  if (isLive()) notFound();
   const { id } = await params;
   const detail = notificationsRepo.detail(id);
   if (!detail) notFound();

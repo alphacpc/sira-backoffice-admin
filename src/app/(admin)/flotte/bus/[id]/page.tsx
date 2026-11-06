@@ -4,6 +4,8 @@ import { StatusBadge } from "@/components/data/status-badge";
 import { BusTabs } from "@/components/fleet/bus-tabs";
 import { RetireBusButton } from "@/components/fleet/retire-bus-button";
 import { busStatusBadge } from "@/lib/labels";
+import { isLive } from "@/lib/api/config";
+import { liveBusDetail } from "@/lib/api/fleet-live";
 import { busesRepo } from "@/lib/repos/fleet";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,7 @@ export default async function BusPage({
 }) {
   const { id } = await params;
   const { onglet } = await searchParams;
-  const detail = busesRepo.detail(id);
+  const detail = isLive() ? await liveBusDetail(id) : busesRepo.detail(id);
   if (!detail) notFound();
   const { bus } = detail;
   const badge = busStatusBadge(bus.status);
@@ -24,7 +26,7 @@ export default async function BusPage({
     <>
       <PageHeader
         title={bus.plate}
-        description={`${bus.busCode} · ${bus.brand} ${bus.model} · ${detail.companyName}`}
+        description={`${bus.busCode} · ${[bus.brand, bus.model].filter(Boolean).join(" ") || "modèle inconnu"} · ${detail.companyName}`}
         actions={
           <>
             <span data-testid="bus-status"><StatusBadge tone={badge.tone}>{badge.label}</StatusBadge></span>

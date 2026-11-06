@@ -21,7 +21,7 @@ export function PlansGrid({ plans }: { plans: PlanCard[] }) {
     <ul className="grid auto-cols-[minmax(19rem,1fr)] grid-flow-col items-stretch gap-5 overflow-x-auto px-1 pb-4 pt-6">
       {plans.map((p) => {
         const featured = top > 0 && p.liveSubscriptions === top;
-        const saving = p.priceMonthly > 0 ? Math.round((1 - p.priceYearly / (p.priceMonthly * 12)) * 100) : 0;
+        const saving = p.priceMonthly > 0 && p.priceYearly > 0 ? Math.round((1 - p.priceYearly / (p.priceMonthly * 12)) * 100) : 0;
         const inactive = p.status === "inactive";
         return (
           <li key={p.id} className={cn("relative", featured && "-mt-3")}>
@@ -63,7 +63,7 @@ export function PlansGrid({ plans }: { plans: PlanCard[] }) {
                   <span className={cn("text-base", featured ? "text-white/60" : "text-muted-foreground")}>/ mois</span>
                 </p>
                 <p className={cn("mt-2 flex flex-wrap items-center gap-2 text-base", featured ? "text-white/70" : "text-muted-foreground")}>
-                  ou {formatMoney(p.priceYearly, p.currency)} / an
+                  {p.priceYearly > 0 ? <>ou {formatMoney(p.priceYearly, p.currency)} / an</> : <>Pas de tarif annuel</>}
                   {saving > 0 && (
                     <span className={cn("rounded-full px-2.5 py-0.5 text-sm font-semibold", featured ? "bg-[#f4a521]/20 text-[#f4a521]" : "bg-lime-100 text-lime-800 dark:bg-lime-400/15 dark:text-lime-300")}>
                       −{saving} %
@@ -73,8 +73,8 @@ export function PlansGrid({ plans }: { plans: PlanCard[] }) {
               </div>
 
               <div className={cn("mt-6 grid grid-cols-3 gap-2 rounded-2xl p-3.5", featured ? "bg-white/10" : "bg-muted/70")}>
-                <Spec icon={Bus} value={formatNumber(p.maxBuses)} label="bus max" featured={featured} />
-                <Spec icon={Users} value={formatNumber(p.maxUsers)} label="utilisateurs" featured={featured} />
+                <Spec icon={Bus} value={p.maxBuses > 0 ? formatNumber(p.maxBuses) : "—"} label="bus max" featured={featured} />
+                <Spec icon={Users} value={p.maxUsers > 0 ? formatNumber(p.maxUsers) : "—"} label="utilisateurs" featured={featured} />
                 <Spec icon={Gift} value={p.trialDays > 0 ? `${p.trialDays} j` : "—"} label="d'essai" featured={featured} />
               </div>
 

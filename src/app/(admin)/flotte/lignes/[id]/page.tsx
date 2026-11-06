@@ -1,6 +1,8 @@
 import { ArrowRight, Buildings, Bus, Clock, MapPin, Path } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
+import { liveRouteDetail } from "@/lib/api/fleet-live";
 import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -40,7 +42,7 @@ const duration = (m: number) => `${Math.floor(m / 60)} h ${String(m % 60).padSta
 
 export default async function RoutePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = routesRepo.detail(id);
+  const detail = isLive() ? await liveRouteDetail(id) : routesRepo.detail(id);
   if (!detail) notFound();
   const { route } = detail;
   const badge = routeStatusBadge(route.status);

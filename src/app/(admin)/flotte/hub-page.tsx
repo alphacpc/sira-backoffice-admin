@@ -16,6 +16,12 @@ import { parseCompanyFilter } from "@/lib/repos/fleet";
 import { fleetMapRepo } from "@/lib/repos/fleet-map";
 import { StationsMapLoader, TripsMapLoader } from "@/components/map/map-loaders";
 import { cn } from "@/lib/utils";
+import { isLive } from "@/lib/api/config";
+import {
+  liveBuses, liveFleetCounts, liveFleetOverview, liveFleets, liveMaintenance, liveRoutes, liveSeatMaps, liveStationCities,
+  liveStations, liveTrips, liveVendors,
+} from "@/lib/api/fleet-live";
+import { liveCompanyNames } from "@/lib/api/sales-live";
 import { FLEET_TABS, fleetHubRepo, type FleetTab } from "@/lib/repos/fleet-hub";
 import { firstString } from "@/lib/search-params";
 
@@ -39,16 +45,24 @@ type Params = { affichage?: string | string[]; ville?: string | string[]; q?: st
 export async function FleetHubPage({ tab, searchParams }: { tab: FleetTab; searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const q = (firstString(sp.q) ?? "").trim().slice(0, 80);
-  const companyId = parseCompanyFilter(firstString(sp.compagnie));
+  const live = isLive();
+  const rawCompany = firstString(sp.compagnie);
+  const companyId = live ? (rawCompany && /^[0-9a-f-]{36}$/i.test(rawCompany) ? rawCompany : undefined) : parseCompanyFilter(rawCompany);
   const co = { companyId };
-  const counts = fleetHubRepo.counts(q, co);
+  // Live: a null counter means its source failed, so the tab shows no badge.
+  const liveCounts = live ? await liveFleetCounts(q || undefined, companyId) : null;
+  const counts: Record<FleetTab, number> = liveCounts
+    ? (Object.fromEntries(FLEET_TABS.map((t) => [t, liveCounts[t] ?? 0])) as Record<FleetTab, number>)
+    : fleetHubRepo.counts(q, co);
   const meta = META[tab];
   const rawStatus = firstString(sp.statut);
   const driver = tab === "bus" ? parseFilter(firstString(sp.conducteur), ["sans"] as const) : undefined;
 
-  const mapTab = tab === "gares" || tab === "trajets";
-  const view: "carte" | "liste" = mapTab && firstString(sp.affichage) === "liste" ? "liste" : "carte";
-  const cityParam = tab === "gares" ? parseFilter(firstString(sp.ville), fleetMapRepo.cities()) : undefined;
+  // The maps need coordinates and road geometry the platform does not serve to the backoffice yet: live shows the lists.
+  const mapTab = !live && (tab === "gares" || tab === "trajets");
+  const view: "carte" | "liste" = live || (mapTab && firstString(sp.affichage) === "liste") ? "liste" : "carte";
+  const liveCities = live && tab === "gares" ? await liveStationCities(companyId) : [];
+  const cityParam = tab === "gares" ? parseFilter(firstString(sp.ville), live ? liveCities : fleetMapRepo.cities()) : undefined;
 
   const tabHref = (t: FleetTab) => {
     const qs = new URLSearchParams();
@@ -59,7 +73,7 @@ export async function FleetHubPage({ tab, searchParams }: { tab: FleetTab; searc
   };
   const tabs: LinkTab[] = FLEET_TABS.map((t, i) => ({
     key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t),
-    count: t === "apercu" ? undefined : counts[t], divider: i === 1 || i === 5,
+    count: t === "apercu" || (liveCounts && liveCounts[t] === null) ? undefined : counts[t], divider: i === 1 || i === 5,
   }));
 
   /** Dropdown for one parameter; the other active parameters are kept. */
@@ -85,7 +99,7 @@ export async function FleetHubPage({ tab, searchParams }: { tab: FleetTab; searc
       })}
     </div>
   ) : null;
-  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...fleetHubRepo.companies().map((c) => ({ value: c.id, label: c.name }))]);
+  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...(live ? await liveCompanyNames() : fleetHubRepo.companies()).map((c) => ({ value: c.id, label: c.name }))]);
 
   let stats: Stat[] = [];
   let toolbar: React.ReactNode = <>{companyFilter}</>;
@@ -93,11 +107,11 @@ export async function FleetHubPage({ tab, searchParams }: { tab: FleetTab; searc
   let empty = false;
 
   if (tab === "apercu") {
-    body = <FleetOverviewView o={fleetHubRepo.overview(co)} />;
+    body = <FleetOverviewView o={live ? await liveFleetOverview(companyId) : fleetHubRepo.overview(co)} />;
   } else if (tab === "bus") {
     const status = parseFilter(rawStatus, ["active", "maintenance", "retired"] as const);
-    const all = fleetHubRepo.buses(undefined, co);
-    const list = fleetHubRepo.buses(q, { ...co, status, withoutDriver: driver === "sans" });
+    const all = live ? await liveBuses(co) : fleetHubRepo.buses(undefined, co);
+    const list = live ? await liveBuses({ ...co, q: q || undefined, status, withoutDriver: driver === "sans" }) : fleetHubRepo.buses(q, { ...co, status, withoutDriver: driver === "sans" });
     stats = [
       { label: "Bus", value: formatNumber(all.length), icon: Bus },
       { label: "En service", value: formatNumber(all.filter((b) => b.status === "active").length), icon: CheckCircle },
@@ -115,8 +129,8 @@ export async function FleetHubPage({ tab, searchParams }: { tab: FleetTab; searc
     body = <BusesList rows={list} />;
   } else if (tab === "trajets") {
     const status = parseFilter(rawStatus, ["planned", "boarding", "departed", "cancelled"] as const);
-    const all = fleetHubRepo.trips(undefined, co);
-    const list = fleetHubRepo.trips(q, { ...co, status });
+    const all = live ? await liveTrips(co) : fleetHubRepo.trips(undefined, co);
+    const list = live ? await liveTrips({ ...co, q: q || undefined, status }) : fleetHubRepo.trips(q, { ...co, status });
     const seats = all.reduce((n, t) => n + t.totalSeats, 0);
     const sold = all.reduce((n, t) => n + t.totalSeats - t.availableSeats, 0);
     stats = [
@@ -130,32 +144,32 @@ export async function FleetHubPage({ tab, searchParams }: { tab: FleetTab; searc
     const mapPaths = view === "carte" ? fleetMapRepo.trips(list.slice(0, 300)) : [];
     body = view === "carte" ? <TripsMapLoader paths={mapPaths} roads={fleetMapRepo.roads(mapPaths)} /> : <TripsList rows={list} />;
   } else if (tab === "lignes") {
-    const list = fleetHubRepo.routes(q, co);
+    const list = live ? await liveRoutes({ ...co, q: q || undefined }) : fleetHubRepo.routes(q, co);
     empty = list.length === 0;
     body = <RoutesList rows={list} />;
   } else if (tab === "gares") {
-    const list = fleetHubRepo.stations(q, co).filter((x) => !cityParam || x.city === cityParam);
+    const list = live ? await liveStations({ ...co, q: q || undefined, city: cityParam }) : fleetHubRepo.stations(q, co).filter((x) => !cityParam || x.city === cityParam);
     toolbar = (
       <>
         {companyFilter}
-        {select("Ville", "ville", cityParam, [{ value: "all", label: "Toutes" }, ...fleetMapRepo.cities().map((c) => ({ value: c, label: c }))])}
+        {select("Ville", "ville", cityParam, [{ value: "all", label: "Toutes" }, ...(live ? liveCities : fleetMapRepo.cities()).map((c) => ({ value: c, label: c }))])}
         {viewSwitch}
       </>
     );
-    empty = view === "liste" && list.length === 0;
-    body = view === "carte" ? <StationsMapLoader stations={fleetMapRepo.stations(q, { companyId, city: cityParam })} /> : <StationsList rows={list} />;
+    empty = (live || view === "liste") && list.length === 0;
+    body = view === "carte" && !live ? <StationsMapLoader stations={fleetMapRepo.stations(q, { companyId, city: cityParam })} /> : <StationsList rows={list} />;
   } else if (tab === "flottes") {
-    const list = fleetHubRepo.fleets(q, co);
+    const list = live ? await liveFleets({ ...co, q: q || undefined }) : fleetHubRepo.fleets(q, co);
     empty = list.length === 0;
     body = <FleetsGrid fleets={list} />;
   } else if (tab === "plans-de-sieges") {
-    const list = fleetHubRepo.seatMaps(q, co);
+    const list = live ? await liveSeatMaps({ ...co, q: q || undefined }) : fleetHubRepo.seatMaps(q, co);
     empty = list.length === 0;
     body = <SeatMapsGrid maps={list} />;
   } else if (tab === "maintenance") {
     const status = parseFilter(rawStatus, ["PLANNED", "IN_PROGRESS", "COMPLETED", "CANCELLED"] as const);
-    const all = fleetHubRepo.maintenance(undefined, co);
-    const list = fleetHubRepo.maintenance(q, { ...co, status });
+    const all = live ? await liveMaintenance(co) : fleetHubRepo.maintenance(undefined, co);
+    const list = live ? await liveMaintenance({ ...co, q: q || undefined, status }) : fleetHubRepo.maintenance(q, { ...co, status });
     stats = [
       { label: "En cours", value: formatNumber(all.filter((m) => m.status === "IN_PROGRESS").length), icon: Wrench },
       { label: "Planifiées", value: formatNumber(all.filter((m) => m.status === "PLANNED").length), icon: CalendarCheck },
@@ -166,7 +180,7 @@ export async function FleetHubPage({ tab, searchParams }: { tab: FleetTab; searc
     empty = list.length === 0;
     body = <MaintenanceList rows={list} />;
   } else {
-    const list = fleetHubRepo.vendors(q, co);
+    const list = live ? await liveVendors({ ...co, q: q || undefined }) : fleetHubRepo.vendors(q, co);
     empty = list.length === 0;
     body = <VendorsList rows={list} />;
   }

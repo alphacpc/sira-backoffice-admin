@@ -127,7 +127,15 @@ const customerColumns: ColumnDef<TieredCustomer, unknown>[] = [
   { accessorKey: "createdAt", header: "Inscrit le", cell: ({ row }) => <span className="whitespace-nowrap tabular-nums text-muted-foreground">{formatDate(row.original.createdAt)}</span> },
 ];
 
-export function CustomersList({ rows, toolbar }: { rows: TieredCustomer[]; toolbar?: React.ReactNode }) {
-  return <DataTable columns={customerColumns} data={rows} rowHref={(c) => `/clients/comptes/${c.id}`} searchable={false} toolbar={toolbar} emptyMessage="Aucun client pour ces critères." />;
+/** Live mode: the platform does not report online bookings, parcel counts or account status, so those are not shown. */
+const liveCustomerColumns: ColumnDef<TieredCustomer, unknown>[] = customerColumns
+  .filter((c) => (c as { accessorKey?: string }).accessorKey !== "userStatus")
+  .map((c) => c.id !== "activity" ? c : {
+    ...c,
+    cell: ({ row }) => <span className="inline-flex items-center gap-1.5 text-sm tabular-nums" title="Avis"><ChatCircleText size={16} weight="duotone" aria-hidden className="text-violet-500" />{row.original.feedbackCount}</span>,
+  });
+
+export function CustomersList({ rows, toolbar, live }: { rows: TieredCustomer[]; toolbar?: React.ReactNode; live?: boolean }) {
+  return <DataTable columns={live ? liveCustomerColumns : customerColumns} data={rows} rowHref={(c) => `/clients/comptes/${c.id}`} searchable={false} toolbar={toolbar} emptyMessage="Aucun client pour ces critères." />;
 }
 

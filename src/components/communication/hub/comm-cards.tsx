@@ -27,31 +27,35 @@ const SCHEDULE = {
   CANCELLED: ["Annulée", "bg-zinc-200 text-zinc-700 dark:bg-zinc-300/15 dark:text-zinc-200", "bg-zinc-400"],
 } as const;
 
-export function CampaignsGrid({ campaigns, now }: { campaigns: CampaignRow[]; now: number }) {
+/** `live`: the campaign detail page is not wired to the platform, so cards are not links. */
+export function CampaignsGrid({ campaigns, now, live = false }: { campaigns: CampaignRow[]; now: number; live?: boolean }) {
   return (
     <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {campaigns.map((c) => {
-        const start = Date.parse(c.startDate);
-        const end = Date.parse(c.endDate);
-        const pct = Math.round(Math.min(1, Math.max(0, (now - start) / Math.max(1, end - start))) * 100);
+        const start = c.startDate ? Date.parse(c.startDate) : NaN;
+        const end = c.endDate ? Date.parse(c.endDate) : NaN;
+        const hasDates = Number.isFinite(start) && Number.isFinite(end);
+        const pct = hasDates ? Math.round(Math.min(1, Math.max(0, (now - start) / Math.max(1, end - start))) * 100) : 0;
         const [label, cls] = CAMPAIGN[c.status];
         return (
           <li key={c.id}>
-            <Link href={`/communication/campagnes/${c.id}`} className={cn(CARD, "flex h-full flex-col")}>
+            <Wrap href={live ? null : `/communication/campagnes/${c.id}`} className={cn(CARD, "flex h-full flex-col")}>
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0"><h3 className="truncate text-lg font-bold">{c.name}</h3><p className="truncate text-sm text-muted-foreground">{c.companyName}</p></div>
                 <span className={cn("shrink-0 rounded-full px-2.5 py-0.5 text-xs font-medium", cls)}>{label}</span>
               </div>
-              <p className="mt-4 inline-flex items-center gap-2 text-sm"><Target size={18} weight="duotone" aria-hidden className="text-accent" />{objectiveLabel(c.objective)}</p>
-              <div className="mt-5">
-                <div className="flex justify-between text-xs text-muted-foreground"><span>{formatDate(c.startDate)}</span><span>{formatDate(c.endDate)}</span></div>
-                <div className="mt-1.5 h-2 rounded-full bg-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${c.status === "COMPLETED" ? 100 : pct}%` }} /></div>
-              </div>
+              {c.objective && <p className="mt-4 inline-flex items-center gap-2 text-sm"><Target size={18} weight="duotone" aria-hidden className="text-accent" />{objectiveLabel(c.objective)}</p>}
+              {hasDates && (
+                <div className="mt-5">
+                  <div className="flex justify-between text-xs text-muted-foreground"><span>{formatDate(c.startDate!)}</span><span>{formatDate(c.endDate!)}</span></div>
+                  <div className="mt-1.5 h-2 rounded-full bg-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${c.status === "COMPLETED" ? 100 : pct}%` }} /></div>
+                </div>
+              )}
               <dl className="mt-5 grid grid-cols-2 gap-2 rounded-2xl bg-muted/70 p-4 text-center">
-                <div><dd className="inline-flex items-center gap-1.5 text-lg font-bold tabular-nums"><Coins size={16} weight="duotone" aria-hidden className="text-muted-foreground" />{formatMoney(c.budget, c.currency)}</dd><dt className="text-[11px] text-muted-foreground">budget</dt></div>
+                <div><dd className="inline-flex items-center gap-1.5 text-lg font-bold tabular-nums"><Coins size={16} weight="duotone" aria-hidden className="text-muted-foreground" />{c.budget === null ? "—" : formatMoney(c.budget, c.currency)}</dd><dt className="text-[11px] text-muted-foreground">budget</dt></div>
                 <div><dd className="text-lg font-bold tabular-nums">{c.scheduleCount}</dd><dt className="text-[11px] text-muted-foreground">programmation(s)</dt></div>
               </dl>
-            </Link>
+            </Wrap>
           </li>
         );
       })}
@@ -59,8 +63,13 @@ export function CampaignsGrid({ campaigns, now }: { campaigns: CampaignRow[]; no
   );
 }
 
+/** A link, or a plain block when the target page is not available. */
+function Wrap({ href, className, children }: { href: string | null; className: string; children: React.ReactNode }) {
+  return href ? <Link href={href} className={className}>{children}</Link> : <div className={className}>{children}</div>;
+}
+
 /** Messages shown the way the recipient will see them: a bubble under a channel header. */
-export function MessagesGrid({ messages }: { messages: MessageRow[] }) {
+export function MessagesGrid({ messages, live = false }: { messages: MessageRow[]; live?: boolean }) {
   return (
     <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {messages.map((m) => {
@@ -68,15 +77,15 @@ export function MessagesGrid({ messages }: { messages: MessageRow[] }) {
         const ch = CHANNEL[m.channel];
         return (
           <li key={m.id}>
-            <Link href={`/communication/campagnes/${m.campaignId}?onglet=messages`} className={cn(CARD, "flex h-full flex-col")}>
+            <Wrap href={live ? null : `/communication/campagnes/${m.campaignId}?onglet=messages`} className={cn(CARD, "flex h-full flex-col")}>
               <div className="flex items-center justify-between gap-2"><ChannelChip channel={m.channel} /><span className={cn("rounded-full px-2.5 py-0.5 text-xs font-medium", cls)}>{label}</span></div>
               <div className="mt-5 flex-1 rounded-2xl rounded-tl-sm bg-muted/70 p-4">
                 <p className="font-bold">{m.subject}</p>
-                <p className="mt-1.5 line-clamp-4 text-sm text-muted-foreground">{m.content}</p>
+                {m.content ? <p className="mt-1.5 line-clamp-4 text-sm text-muted-foreground">{m.content}</p> : live ? <p className="mt-1.5 text-sm italic text-muted-foreground">Le texte du message n&apos;est pas affiché.</p> : null}
               </div>
               <p className="mt-4 truncate text-xs text-muted-foreground"><span className="font-medium text-foreground">{m.campaignName}</span> · {m.companyName}</p>
               <span className="sr-only">{ch.label}</span>
-            </Link>
+            </Wrap>
           </li>
         );
       })}
@@ -88,7 +97,8 @@ export function SegmentsGrid({ segments }: { segments: SegmentRow[] }) {
   return (
     <ul className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
       {segments.map((s) => {
-        const max = Math.max(1, s.estimatedSize, s.eligibleNow);
+        const estimated = s.estimatedSize ?? 0;
+        const max = Math.max(1, estimated, s.eligibleNow);
         return (
           <li key={s.id} className={cn(CARD, "flex flex-col")}>
             <div className="flex items-start gap-3">
@@ -97,7 +107,7 @@ export function SegmentsGrid({ segments }: { segments: SegmentRow[] }) {
             </div>
             <p className="mt-4 rounded-xl bg-muted/70 px-3 py-2 text-sm"><span className="text-muted-foreground">Ciblage · </span><span className="font-medium">{s.criteriaLabel}</span></p>
             <div className="mt-5 space-y-3 text-sm">
-              <div><div className="flex justify-between"><span className="text-muted-foreground">Taille estimée</span><span className="font-bold tabular-nums">{formatNumber(s.estimatedSize)}</span></div><div className="mt-1.5 h-2 rounded-full bg-muted"><div className="h-full rounded-full bg-zinc-400" style={{ width: `${(s.estimatedSize / max) * 100}%` }} /></div></div>
+              <div><div className="flex justify-between"><span className="text-muted-foreground">Taille estimée</span><span className="font-bold tabular-nums">{s.estimatedSize === null ? "—" : formatNumber(s.estimatedSize)}</span></div><div className="mt-1.5 h-2 rounded-full bg-muted"><div className="h-full rounded-full bg-zinc-400" style={{ width: `${(estimated / max) * 100}%` }} /></div></div>
               <div><div className="flex justify-between"><span className="text-muted-foreground">Éligibles aujourd&apos;hui</span><span className="font-bold tabular-nums">{formatNumber(s.eligibleNow)}</span></div><div className="mt-1.5 h-2 rounded-full bg-muted"><div className="h-full rounded-full bg-accent" style={{ width: `${(s.eligibleNow / max) * 100}%` }} /></div></div>
             </div>
             <p className="mt-auto pt-4 text-xs text-muted-foreground">{s.campaignName ? `Campagne : ${s.campaignName}` : "Réutilisable"} · créé le {formatDate(s.createdAt)}</p>
@@ -132,7 +142,7 @@ export function ScheduleAgenda({ schedules }: { schedules: ScheduleRow[] }) {
                 <li key={s.id} className="flex flex-wrap items-center gap-4 rounded-2xl bg-white p-4 shadow-card dark:bg-card">
                   <div className="w-14 text-center"><p className="text-lg font-bold tabular-nums">{time(s.scheduledAt)}</p><span aria-hidden className={cn("mx-auto mt-1 block h-1 w-8 rounded-full", dot)} /></div>
                   <div className="min-w-0 flex-1"><p className="truncate font-semibold">{s.campaignName}</p><p className="truncate text-xs text-muted-foreground">{s.messageSubject} · {s.segmentName} · {s.companyName}</p></div>
-                  <ChannelChip channel={s.channel} compact />
+                  {s.channel ? <ChannelChip channel={s.channel} compact /> : <span className="w-7" aria-hidden />}
                   <div className="text-center"><p className="font-bold tabular-nums">{formatNumber(s.recipientsCount)}</p><p className="text-[11px] text-muted-foreground">destinataires</p></div>
                   <span className={cn("rounded-full px-3 py-1 text-xs font-medium", cls)}>{label}</span>
                   {s.cancellable ? <CancelScheduleButton scheduleId={s.id} subject={s.messageSubject} /> : <span className="w-20" />}
@@ -153,7 +163,7 @@ export function UpcomingList({ schedules }: { schedules: ScheduleRow[] }) {
         <li key={s.id} className="flex items-center gap-3 rounded-xl border border-border p-3">
           <Clock size={20} weight="duotone" aria-hidden className="shrink-0 text-orange-500" />
           <div className="min-w-0 flex-1"><p className="truncate text-sm font-semibold">{s.campaignName}</p><p className="truncate text-xs text-muted-foreground">{formatDateTime(s.scheduledAt)}</p><p className="truncate text-xs text-muted-foreground">{s.segmentName}</p></div>
-          <span title={CHANNEL[s.channel].label} className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", CHANNEL[s.channel].tile)}>{(() => { const I = CHANNEL[s.channel].icon; return <I size={16} weight="duotone" aria-hidden />; })()}</span>
+          {s.channel && <span title={CHANNEL[s.channel].label} className={cn("flex size-8 shrink-0 items-center justify-center rounded-lg", CHANNEL[s.channel].tile)}>{(() => { const I = CHANNEL[s.channel!].icon; return <I size={16} weight="duotone" aria-hidden />; })()}</span>}
         </li>
       ))}
     </ul>

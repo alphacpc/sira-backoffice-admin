@@ -17,12 +17,16 @@ export const CHANNEL_LOGO: Record<PaymentChannel, string> = {
 };
 
 export function ChannelBadge({ channel }: { channel: PaymentChannel }) {
+  // The platform names the kind of method (e.g. MOBILE_MONEY), not the operator: no logo for those.
+  const logo = CHANNEL_LOGO[channel] as string | undefined;
   return (
     <span className="inline-flex items-center gap-2.5">
-      <span className="relative block h-9 w-12 shrink-0">
-        <Image src={CHANNEL_LOGO[channel]} alt="" fill sizes="48px" unoptimized className="object-contain p-1" />
-      </span>
-      <span className="font-medium">{PAYMENT_CHANNEL_LABEL[channel]}</span>
+      {logo && (
+        <span className="relative block h-9 w-12 shrink-0">
+          <Image src={logo} alt="" fill sizes="48px" unoptimized className="object-contain p-1" />
+        </span>
+      )}
+      <span className="font-medium">{(PAYMENT_CHANNEL_LABEL as Record<string, string>)[channel] ?? channel.replace(/_/g, " ").toLowerCase()}</span>
     </span>
   );
 }

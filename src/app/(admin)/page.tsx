@@ -10,6 +10,8 @@ import { ACCENT, BAD, Gauge, Heatmap, INFO, OK, Panel, StatPanel, StateTimeline,
 import { parseFilter } from "@/lib/filters";
 import { formatDateTime, formatMoney, formatNumber } from "@/lib/format";
 import { dsrTypeLabel, severityBadge } from "@/lib/labels";
+import { liveDashData } from "@/lib/api/dashboard-live";
+import { isLive } from "@/lib/api/config";
 import { DASH_WINDOWS, dashData, type ParetoResult } from "@/lib/repos/dashboard-hub";
 import { firstString } from "@/lib/search-params";
 import { cn } from "@/lib/utils";
@@ -37,7 +39,7 @@ function ParetoNote({ p, noun, action }: { p: ParetoResult; noun: string; action
 export default async function DashboardPage({ searchParams }: { searchParams: Promise<{ jours?: string | string[] }> }) {
   const sp = await searchParams;
   const days = Number(parseFilter(firstString(sp.jours), DASH_WINDOWS.map(String))) || 14;
-  const d = dashData(days);
+  const d = isLive() ? await liveDashData(days) : dashData(days);
   const k = d.kpis;
   const b = d.base;
   const mon = d.mon;
@@ -104,7 +106,7 @@ export default async function DashboardPage({ searchParams }: { searchParams: Pr
         <StatPanel label="Panier moyen" value={formatNumber(k.avgBasket)} unit="XOF" delta={k.avgBasketDelta} hint={`${formatNumber(b.kpis.activeCompanies)} compagnies actives sur ${b.kpis.totalCompanies}`} icon={Coins} color={VIOLET} />
         <StatPanel label="Remplissage des départs" value={k.occupancy === null ? "—" : `${k.occupancy}`} unit="%" hint="sièges réservés sur les prochains trajets" icon={Bus} color={ACCENT} />
         <StatPanel label="Livraison des colis" value={k.deliveryRate === null ? "—" : `${k.deliveryRate}`} unit="%" hint={`${b.kpis.parcelsInTransit} en circulation · ${d.parcels.late} en retard`} icon={Package} color={INFO} tone={d.parcels.late > 0 ? "warn" : undefined} />
-        <StatPanel label="Disponibilité API" value={mon.api.totals.availability.toFixed(2)} unit="%" hint={`${live.length - down}/${live.length} services opérationnels`} spark={mon.api.byDay.map((x) => 100 - x.err5)} icon={ShieldCheck} color={mon.api.totals.availability >= 99.5 ? OK : BAD} tone={down ? "warn" : undefined} />
+        <StatPanel label="Disponibilité API" value={mon.api.totals.availability === null ? "—" : mon.api.totals.availability.toFixed(2)} unit={mon.api.totals.availability === null ? undefined : "%"} hint={`${live.length - down}/${live.length} services opérationnels`} spark={mon.api.byDay.map((x) => 100 - x.err5)} icon={ShieldCheck} color={mon.api.totals.availability === null || mon.api.totals.availability >= 99.5 ? OK : BAD} tone={down ? "warn" : undefined} />
         <StatPanel label="Incidents ouverts" value={String(mon.incidents.open)} hint={mon.incidents.mttrMinutes === null ? "aucun résolu" : `MTTR ${mon.incidents.mttrMinutes < 60 ? `${mon.incidents.mttrMinutes} min` : `${Math.round(mon.incidents.mttrMinutes / 60)} h`}`} icon={Siren} color={mon.incidents.open ? BAD : OK} tone={mon.incidents.open ? "bad" : undefined} />
       </section>
 

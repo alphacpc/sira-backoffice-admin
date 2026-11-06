@@ -3,6 +3,10 @@ export interface TokenPayload {
   stage: "pre" | "full";
   exp: number;
   attempts?: number;
+  /** Live mode: the platform's pre-authentication token (stage « pre »). */
+  pat?: string;
+  /** Live mode: the server-side platform session (stage « full »). */
+  sid?: string;
 }
 
 const enc = new TextEncoder();

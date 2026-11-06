@@ -57,7 +57,7 @@ export function KycPanel({
                       <p className="truncate text-sm font-medium">{d.typeName}</p>
                       <p className="text-xs text-muted-foreground">{DOC_LABEL[d.status]}</p>
                     </div>
-                    {d.status === "pending" && d.id && <KycActions docId={d.id} docLabel={`${d.typeName} de ${card.name}`} />}
+                    {d.status === "pending" && d.id && <KycActions docId={d.id} companyId={card.companyId} docLabel={`${d.typeName} de ${card.name}`} />}
                   </li>
                 ))}
               </ul>

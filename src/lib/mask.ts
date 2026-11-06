@@ -1,10 +1,12 @@
 export function maskEmail(value: string): string {
+  if (value.includes("•")) return value; // already masked by the platform
   const at = value.indexOf("@");
   if (at < 1) return "••••";
   return `${value[0]}•••${value.slice(at)}`;
 }
 
 export function maskPhone(value: string): string {
+  if (value.includes("•")) return value; // already masked by the platform
   const cleaned = value.replace(/[\s\-.()]/g, "");
   const digits = cleaned.replace(/\D/g, "");
   if (digits.length < 3) return "••••";

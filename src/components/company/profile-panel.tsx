@@ -94,8 +94,8 @@ export function ProfilePanel({ company: c, employees = [] }: { company: CompanyD
         <Section title="Contact">
           <Field icon={Envelope} label="E-mail de contact"><ContactField companyId={c.id} field="email" masked={maskEmail(c.contactEmail)} /></Field>
           <Field icon={Phone} label="Téléphone"><ContactField companyId={c.id} field="phone" masked={maskPhone(c.contactPhone)} /></Field>
-          <Field icon={Globe} label="Pays">{(() => { const k = countryLabel(c.country); return <span className="flex items-center gap-2"><span aria-hidden className="text-lg leading-none">{k.flag}</span>{k.name} <span className="font-normal text-muted-foreground">({c.country})</span></span>; })()}</Field>
-          <Field icon={Coins} label="Devise">{c.currency}</Field>
+          <Field icon={Globe} label="Pays">{!c.country.trim() ? "—" : (() => { const k = countryLabel(c.country); return <span className="flex items-center gap-2"><span aria-hidden className="text-lg leading-none">{k.flag}</span>{k.name} <span className="font-normal text-muted-foreground">({c.country})</span></span>; })()}</Field>
+          <Field icon={Coins} label="Devise">{c.currency.trim() || "—"}</Field>
         </Section>
 
         <Section title="Informations légales">

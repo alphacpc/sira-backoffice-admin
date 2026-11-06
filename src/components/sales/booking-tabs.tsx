@@ -1,6 +1,7 @@
 import { Buildings, Bus, CalendarBlank, Chair, MapPin, Storefront, Ticket, User, XCircle } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import type { ComponentType } from "react";
+import { isLive } from "@/lib/api/config";
 import { StatusBadge } from "@/components/data/status-badge";
 import { TabsWithUrl } from "@/components/data/tabs-with-url";
 import { formatDateTime, formatMoney } from "@/lib/format";
@@ -44,6 +45,8 @@ const BODY = "[&_td]:py-2.5 [&_tr]:border-b [&_tr]:border-border [&_tr:last-chil
 /** Server Component: tab contents are rendered here; only rendered nodes reach TabsWithUrl. */
 export function BookingTabs({ detail, initialTab }: { detail: BookingDetail; initialTab?: string }) {
   const { booking: b } = detail;
+  // Ticket and trip detail pages are not wired to the platform yet: no link to them in live mode.
+  const live = isLive();
   const status = bookingStatusBadge(b.status);
   const payment = bookingPaymentBadge(b.paymentStatus);
 
@@ -66,7 +69,7 @@ export function BookingTabs({ detail, initialTab }: { detail: BookingDetail; ini
             <Info icon={Buildings} label="Compagnie"><Link href={`/compagnies/${b.companyId}`} className="hover:underline">{detail.companyName}</Link></Info>
             <Info icon={User} label="Passager">{b.userId ? <Link href={`/utilisateurs/${b.userId}`} className="hover:underline">{b.passengerName}</Link> : b.passengerName}</Info>
             <Info icon={Storefront} label="Canal">{channelLabel(b.channel)}</Info>
-            <Info icon={MapPin} label="Trajet"><Link href={`/flotte/trajets/${b.tripId}`} className="hover:underline">{detail.routeLabel}</Link><p className="text-xs font-normal text-muted-foreground">{formatDateTime(detail.departure)}</p></Info>
+            <Info icon={MapPin} label="Trajet">{live ? detail.routeLabel : <Link href={`/flotte/trajets/${b.tripId}`} className="hover:underline">{detail.routeLabel}</Link>}<p className="text-xs font-normal text-muted-foreground">{formatDateTime(detail.departure)}</p></Info>
             <Info icon={Bus} label="Bus">{detail.busPlate}</Info>
             <Info icon={Chair} label="Siège">{b.seatNumber ?? "—"}</Info>
             <Info icon={Ticket} label="Billet émis">{b.ticketIssued ? "Oui" : "Non"}</Info>
@@ -149,7 +152,7 @@ export function BookingTabs({ detail, initialTab }: { detail: BookingDetail; ini
                   return (
                     <tr key={t.id}>
                       <td>
-                        <Link href={`/ventes/billets/${t.ticketCode}`} className="font-medium hover:underline">{t.ticketCode}</Link>
+                        {live ? <span className="font-medium">{t.ticketCode}</span> : <Link href={`/ventes/billets/${t.ticketCode}`} className="font-medium hover:underline">{t.ticketCode}</Link>}
                       </td>
                       <td>{t.seatNumber ?? "—"}</td>
                       <td><StatusBadge tone={badge.tone}>{badge.label}</StatusBadge></td>

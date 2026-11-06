@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
 import { CustomerTabs } from "@/components/clients/customer-tabs";
 import { PageHeader } from "@/components/data/page-header";
 import { customersRepo } from "@/lib/repos/clients";
@@ -13,6 +14,8 @@ export default async function CustomerPage({
 }) {
   const { id } = await params;
   const { onglet } = await searchParams;
+  // Detail pages are not wired to the platform yet: never read the demonstration store in live mode.
+  if (isLive()) notFound();
   const detail = customersRepo.detail(id);
   if (!detail) notFound();
   return (

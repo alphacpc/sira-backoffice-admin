@@ -1,3 +1,4 @@
+import { isLive } from "@/lib/api/config";
 import { cookies } from "next/headers";
 import { DEMO_ID, SESSION_COOKIE, getSecret } from "@/lib/auth/constants";
 import { verifyToken, type TokenPayload } from "@/lib/auth/token";
@@ -13,7 +14,9 @@ export async function requireSession(): Promise<TokenPayload> {
 /** The backoffice has a single administrator level: only that account may overwrite a submitted file. */
 export async function isBackofficeAdmin(): Promise<boolean> {
   try {
-    return (await requireSession()).sub === DEMO_ID;
+    const session = await requireSession();
+    // Live: any full session is the administrator; the demonstration compares the account id.
+    return isLive() || session.sub === DEMO_ID;
   } catch {
     return false;
   }

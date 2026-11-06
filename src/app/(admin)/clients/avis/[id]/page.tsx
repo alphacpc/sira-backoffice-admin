@@ -5,6 +5,7 @@ import type { ComponentType, ReactNode } from "react";
 import { IgnoreFeedbackButton } from "@/components/clients/ignore-feedback-button";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
+import { isLive } from "@/lib/api/config";
 import { formatDateTime } from "@/lib/format";
 import { feedbackStatusBadge, feedbackTypeLabel, ratingStars } from "@/lib/labels";
 import { feedbackRepo } from "@/lib/repos/clients";
@@ -36,6 +37,8 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export default async function FeedbackDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
+  // Detail pages are not wired to the platform yet: never read the demonstration store in live mode.
+  if (isLive()) notFound();
   const detail = feedbackRepo.detail(id);
   if (!detail) notFound();
   const { feedback: f } = detail;

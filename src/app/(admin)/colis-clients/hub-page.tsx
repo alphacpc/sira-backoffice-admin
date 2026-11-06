@@ -8,6 +8,12 @@ import { StatStrip, type Stat } from "@/components/billing/hub/stat-strip";
 import { FilterSelect } from "@/components/data/filter-select";
 import { PageHeader } from "@/components/data/page-header";
 import { LinkTabs, type LinkTab } from "@/components/ui/link-tabs";
+import { isLive } from "@/lib/api/config";
+import {
+  liveCareCounts, liveCareOverview, liveCustomerStats, liveCustomers, liveFeedbackSummary, liveFeedbacks, liveParcelStats, liveParcels,
+  livePrograms, liveTierDistribution,
+} from "@/lib/api/care-live";
+import { liveCompanyNames } from "@/lib/api/sales-live";
 import { parseFilter } from "@/lib/filters";
 import { formatMoney, formatNumber } from "@/lib/format";
 import { CARE_TABS, TIERS, careHubRepo, type CareTab } from "@/lib/repos/care-hub";
@@ -34,9 +40,15 @@ type Params = { q?: string | string[]; compagnie?: string | string[]; statut?: s
 export async function CareHubPage({ tab, searchParams }: { tab: CareTab; searchParams: Promise<Params> }) {
   const sp = await searchParams;
   const q = (firstString(sp.q) ?? "").trim().slice(0, 80);
-  const companyId = parseCompanyFilter(firstString(sp.compagnie));
+  const live = isLive();
+  const rawCompany = firstString(sp.compagnie);
+  const companyId = live ? (rawCompany && /^[0-9a-f-]{36}$/i.test(rawCompany) ? rawCompany : undefined) : parseCompanyFilter(rawCompany);
   const co = { companyId };
-  const counts = careHubRepo.counts(q, co);
+  // Live: a null counter means its source failed, so the tab shows no badge.
+  const liveCounts = live ? await liveCareCounts(q || undefined, companyId) : null;
+  const counts: Record<CareTab, number> = liveCounts
+    ? { apercu: 0, colis: liveCounts.colis ?? 0, comptes: liveCounts.comptes ?? 0, fidelite: liveCounts.fidelite ?? 0, avis: liveCounts.avis ?? 0 }
+    : careHubRepo.counts(q, co);
   const meta = META[tab];
   const rawStatus = firstString(sp.statut);
   const page = Math.max(1, Math.floor(Number(firstString(sp.page)) || 1));
@@ -53,7 +65,7 @@ export async function CareHubPage({ tab, searchParams }: { tab: CareTab; searchP
     const text = qs.toString();
     return text ? `${careTabPath(t)}?${text}` : careTabPath(t);
   };
-  const tabs: LinkTab[] = CARE_TABS.map((t, i) => ({ key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: t === "apercu" ? undefined : counts[t], divider: i === 1 }));
+  const tabs: LinkTab[] = CARE_TABS.map((t, i) => ({ key: t, label: META[t].label, icon: META[t].icon, href: tabHref(t), count: t === "apercu" || (liveCounts && liveCounts[t] === null) ? undefined : counts[t], divider: i === 1 }));
 
   const active: Record<string, string | undefined> = { q: q || undefined, compagnie: companyId, statut: rawStatus, type: parcelType, palier: tier, profil: profile, note: rating ? String(rating) : undefined };
   const select = (label: string, param: string, current: string | undefined, options: { value: string; label: string }[]) => {
@@ -61,7 +73,7 @@ export async function CareHubPage({ tab, searchParams }: { tab: CareTab; searchP
     for (const [k, v] of Object.entries(active)) if (v && k !== param) keep[k] = v;
     return <FilterSelect label={label} param={param} basePath={careTabPath(tab)} current={current ?? "all"} options={options} keep={keep} searchable={param === "compagnie"} />;
   };
-  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...fleetHubRepo.companies().map((c) => ({ value: c.id, label: c.name }))]);
+  const companyFilter = select("Compagnie", "compagnie", companyId, [{ value: "all", label: "Toutes" }, ...(live ? await liveCompanyNames() : fleetHubRepo.companies()).map((c) => ({ value: c.id, label: c.name }))]);
 
   let stats: Stat[] = [];
   let toolbar: React.ReactNode = tab === "comptes" ? null : <>{companyFilter}</>;
@@ -69,12 +81,18 @@ export async function CareHubPage({ tab, searchParams }: { tab: CareTab; searchP
   let empty = false;
 
   if (tab === "apercu") {
-    body = <CareOverviewView o={careHubRepo.overview(co)} />;
+    body = <CareOverviewView o={live ? await liveCareOverview(companyId) : careHubRepo.overview(co)} />;
   } else if (tab === "colis") {
     const status = parseFilter(rawStatus, PARCEL_STATUSES);
-    const all = careHubRepo.parcels(undefined, co);
-    const list = careHubRepo.parcels(q, { ...co, status, type: parcelType });
-    stats = [
+    const all = live ? [] : careHubRepo.parcels(undefined, co);
+    const list = live ? await liveParcels({ q: q || undefined, companyId, status, type: parcelType }) : careHubRepo.parcels(q, { ...co, status, type: parcelType });
+    const ps = live ? await liveParcelStats(companyId) : null;
+    stats = live ? (ps ? [
+      { label: "Colis", value: formatNumber(ps.total), icon: Package },
+      { label: "En circulation", value: formatNumber(ps.inCirculation), icon: Truck },
+      { label: "Livrés", value: formatNumber(ps.delivered), icon: CheckCircle },
+      { label: "En retard", value: formatNumber(ps.late), icon: Warning },
+    ] : []) : [
       { label: "Colis", value: formatNumber(all.length), icon: Package },
       { label: "En circulation", value: formatNumber(all.filter((p) => p.status === "IN_TRANSIT" || p.status === "AT_HUB").length), icon: Truck },
       { label: "Livrés", value: formatNumber(all.filter((p) => p.status === "DELIVERED").length), icon: CheckCircle },
@@ -91,9 +109,18 @@ export async function CareHubPage({ tab, searchParams }: { tab: CareTab; searchP
     body = <ParcelsList rows={list} />;
   } else if (tab === "comptes") {
     const status = parseFilter(rawStatus, ["active", "suspended"] as const);
-    const all = careHubRepo.customers();
-    const list = careHubRepo.customers(q, { status, tier, corporate: profile === undefined ? undefined : profile === "entreprise" });
-    stats = [
+    const corporate = profile === undefined ? undefined : profile === "entreprise";
+    const all = live ? [] : careHubRepo.customers();
+    // Live: the platform filters on the search text only; tier and profile are applied here.
+    const list = live
+      ? (await liveCustomers(q || undefined)).filter((c) => (!tier || c.tier === tier) && (corporate === undefined || c.isCorporate === corporate))
+      : careHubRepo.customers(q, { status, tier, corporate });
+    const cs = live ? await liveCustomerStats() : null;
+    stats = live ? (cs ? [
+      { label: "Clients", value: formatNumber(cs.total), icon: Users },
+      { label: "Entreprises", value: formatNumber(cs.corporate), icon: Crown },
+      { label: "Points distribués", value: formatNumber(cs.totalPoints), icon: Coins },
+    ] : []) : [
       { label: "Clients", value: formatNumber(all.length), icon: Users },
       { label: "Entreprises", value: formatNumber(all.filter((c) => c.isCorporate).length), icon: Crown },
       { label: "Points distribués", value: formatNumber(all.reduce((n, c) => n + c.totalPoints, 0)), icon: Coins },
@@ -103,22 +130,26 @@ export async function CareHubPage({ tab, searchParams }: { tab: CareTab; searchP
       <>
         {select("Palier", "palier", tier, [{ value: "all", label: "Tous" }, { value: "REGULAR", label: "Regular" }, { value: "VIP", label: "VIP" }, { value: "PREMIUM", label: "Premium" }])}
         {select("Profil", "profil", profile, [{ value: "all", label: "Tous" }, { value: "particulier", label: "Particuliers" }, { value: "entreprise", label: "Entreprises" }])}
-        {select("Compte", "statut", status, [{ value: "all", label: "Tous" }, { value: "active", label: "Actifs" }, { value: "suspended", label: "Suspendus" }])}
+        {!live && select("Compte", "statut", status, [{ value: "all", label: "Tous" }, { value: "active", label: "Actifs" }, { value: "suspended", label: "Suspendus" }])}
       </>
     );
     empty = list.length === 0;
-    body = <CustomersList rows={list} />;
+    body = <CustomersList rows={list} live={live} />;
   } else if (tab === "fidelite") {
-    const list = careHubRepo.programs(q, co);
-    const ov = careHubRepo.overview(co);
+    const list = live ? await livePrograms({ q: q || undefined, companyId }) : careHubRepo.programs(q, co);
+    const tiers = live ? await liveTierDistribution(companyId) : careHubRepo.overview(co).customers.tiers;
     empty = list.length === 0;
-    body = <ProgramsGrid programs={list} tiers={ov.customers.tiers} />;
+    body = <ProgramsGrid programs={list} tiers={tiers} />;
   } else {
     const status = parseFilter(rawStatus, FEEDBACK_STATUSES);
-    const all = careHubRepo.feedbacks(undefined, co);
-    const list = careHubRepo.feedbacks(q, { ...co, status, rating });
-    const dist = [1, 2, 3, 4, 5].map((r) => all.filter((x) => x.rating === r).length);
-    const average = all.length ? Math.round((all.reduce((n, x) => n + x.rating, 0) / all.length) * 10) / 10 : null;
+    const all = live ? [] : careHubRepo.feedbacks(undefined, co);
+    const list = live ? await liveFeedbacks({ q: q || undefined, companyId, status, rating }) : careHubRepo.feedbacks(q, { ...co, status, rating });
+    // Live: the rating summary comes from the platform (company filter only, not the list filters).
+    const summary = live ? await liveFeedbackSummary(companyId) : null;
+    const dist = summary ? [1, 2, 3, 4, 5].map((r) => summary.distribution[r - 1] ?? 0) : [1, 2, 3, 4, 5].map((r) => (live ? list : all).filter((x) => x.rating === r).length);
+    const sourceRows = live ? list : all;
+    const average = summary ? summary.average : sourceRows.length ? Math.round((sourceRows.reduce((n, x) => n + x.rating, 0) / sourceRows.length) * 10) / 10 : null;
+    const ratingTotal = summary ? summary.total : sourceRows.length;
     toolbar = <>{companyFilter}{select("Statut", "statut", status, [{ value: "all", label: "Tous" }, { value: "PENDING", label: "En attente" }, { value: "REVIEWED", label: "Examinés" }, { value: "RESOLVED", label: "Résolus" }, { value: "IGNORED", label: "Ignorés" }])}</>;
     const ratingHref = (r: number | null) => {
       const qs = new URLSearchParams();
@@ -130,7 +161,7 @@ export async function CareHubPage({ tab, searchParams }: { tab: CareTab; searchP
     empty = list.length === 0;
     body = (
       <>
-        <RatingSummary average={average} total={all.length} distribution={dist} ratingHref={ratingHref} current={rating} />
+        <RatingSummary average={average} total={ratingTotal} distribution={dist} ratingHref={ratingHref} current={rating} />
         {empty ? null : (
           <>
             <ReviewsGrid reviews={list.slice((page - 1) * PAGE, page * PAGE)} />

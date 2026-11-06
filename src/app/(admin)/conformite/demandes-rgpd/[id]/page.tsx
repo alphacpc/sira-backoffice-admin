@@ -7,6 +7,8 @@ import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { formatDate, formatDateTime } from "@/lib/format";
 import { dsrStatusBadge, dsrTypeLabel } from "@/lib/labels";
+import { isLive } from "@/lib/api/config";
+import { liveDsrDetail } from "@/lib/api/comp-live";
 import { dsrRepo } from "@/lib/repos/compliance";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +38,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 export default async function DataSubjectRequestPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = dsrRepo.detail(id, new Date());
+  const detail = isLive() ? await liveDsrDetail(id, new Date()) : dsrRepo.detail(id, new Date());
   if (!detail) notFound();
   const { request: r } = detail;
   const status = dsrStatusBadge(r.status);

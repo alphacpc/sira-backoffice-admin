@@ -1,9 +1,11 @@
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
 import { BookingTabs } from "@/components/sales/booking-tabs";
 import { CancelBookingButton } from "@/components/sales/cancel-booking-button";
 import { bookingPaymentBadge, bookingStatusBadge } from "@/lib/labels";
+import { liveBookingDetail } from "@/lib/api/sales-detail-live";
 import { bookingsRepo } from "@/lib/repos/sales";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +18,7 @@ export default async function BookingPage({
 }) {
   const { id } = await params;
   const { onglet } = await searchParams;
-  const detail = bookingsRepo.detail(id, new Date());
+  const detail = isLive() ? await liveBookingDetail(id) : bookingsRepo.detail(id, new Date());
   if (!detail) notFound();
   const { booking } = detail;
   const status = bookingStatusBadge(booking.status);

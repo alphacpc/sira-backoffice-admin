@@ -98,7 +98,7 @@ export function KycPanel({
               {doc && (canReplace || doc.status === "pending") && (
                 <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
                   {canReplace ? <ReplaceFile docId={doc.id} docLabel={t.name} /> : <span />}
-                  {doc.status === "pending" && <KycActions docId={doc.id} docLabel={t.name} />}
+                  {doc.status === "pending" && <KycActions docId={doc.id} companyId={company.id} docLabel={t.name} />}
                 </div>
               )}
             </li>

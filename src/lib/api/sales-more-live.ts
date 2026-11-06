@@ -1,0 +1,144 @@
+import { loadAll, names as companyNames, soft } from "@/lib/api/care-live";
+import { arr, liveBookings, liveTransactions, num, numOrNull, obj, pick, str, strOrNull, withFilters } from "@/lib/api/sales-live";
+import type { RentalInvoiceRow, RentalInvoiceStatus } from "@/lib/repos/rental-invoices";
+import type { RentalRow } from "@/lib/repos/rentals";
+import type { ExpiringBooking, OnlineStats, PaymentMethodRow, TicketRow } from "@/lib/repos/sales";
+import type {
+  BookingChannel, BookingPaymentStatus, PaymentMethodKind, RentalPurpose, RentalStatus, TicketStatus,
+} from "@/lib/types";
+
+type Names = Map<string, string>;
+const nameOf = (names: Names, id: string) => names.get(id) ?? "—";
+const TICKET = ["ISSUED", "CHECKED_IN", "USED", "CANCELLED"] as const;
+const RENTAL = ["REQUESTED", "QUOTED", "CONFIRMED", "COMPLETED", "CANCELLED"] as const;
+const PURPOSES = ["WEDDING", "SCHOOL", "SPORT", "BUSINESS", "PILGRIMAGE", "OTHER"] as const;
+const INVOICE = ["TO_PAY", "PARTIAL", "PAID", "OVERDUE", "CANCELLED"] as const;
+const KINDS = ["MOBILE_MONEY", "CARD", "CASH"] as const;
+const PAYMENT = ["settled", "deposit", "none", "partial", "pending"];
+
+/** Passenger, route, amount and channel are not on the ticket: they come from its booking. */
+export function toTicketRow(raw: unknown, names: Names, bookings: Map<string, { passengerName: string; routeLabel: string; departure: string; amount: number; currency: string; channel: BookingChannel; paymentStatus: BookingPaymentStatus }>): TicketRow {
+  const t = obj(raw);
+  const b = bookings.get(str(t.bookingId));
+  return {
+    id: str(t.id), ticketCode: str(t.ticketCode, "—"), bookingId: str(t.bookingId), bookingCode: str(t.bookingCode, "—"), companyId: str(t.companyId),
+    companyName: nameOf(names, str(t.companyId)), passengerName: b?.passengerName ?? "—", routeLabel: b?.routeLabel ?? "—", departure: b?.departure ?? "",
+    seatNumber: strOrNull(t.seatNumber), status: pick<TicketStatus>(t.status, TICKET, true, "ISSUED"), issuedAt: str(t.issuedAt), scanCount: num(t.scanCount),
+    amount: b?.amount ?? 0, currency: b?.currency ?? "XOF", channel: b?.channel ?? "counter", paymentStatus: b?.paymentStatus ?? "pending", busPlate: "—",
+  };
+}
+
+/** The customer phone arrives already masked; the driver is an employee id with no name on the platform. */
+export function toRentalRow(raw: unknown, names: Names): RentalRow {
+  const r = obj(raw);
+  const payment = str(r.payment);
+  return {
+    id: str(r.id), rentalCode: str(r.rentalCode, "—"), companyId: str(r.companyId), companyName: nameOf(names, str(r.companyId)),
+    customerName: str(r.customerName, "—"), customerPhone: str(r.customerPhone, "—"), purpose: pick<RentalPurpose>(r.purpose, PURPOSES, true, "OTHER"),
+    passengers: num(r.passengers), pickup: str(r.pickup, "—"), destination: str(r.destination, "—"), departure: str(r.departure), returnAt: strOrNull(r.returnAt),
+    estimatedKm: num(r.estimatedKm), busId: strOrNull(r.busId), busLabel: strOrNull(r.busLabel), driverId: strOrNull(r.driverId),
+    driverName: strOrNull(r.driverId) ? "Affecté" : null, status: pick<RentalStatus>(r.status, RENTAL, true, "REQUESTED"), quoteAmount: numOrNull(r.quoteAmount),
+    currency: str(r.currency, "XOF"), depositRequired: num(r.depositRequired), cautionAmount: num(r.cautionAmount), paidAmount: num(r.paidAmount), balance: num(r.balance),
+    payment: (PAYMENT.includes(payment) ? payment : "none") as RentalRow["payment"],
+    conflicts: Array.isArray(r.conflicts) ? r.conflicts.filter((c): c is string => typeof c === "string") : [], invoiceNumber: strOrNull(r.invoiceNumber),
+    createdAt: str(r.createdAt), cancelledAt: strOrNull(r.cancelledAt), cancelReason: strOrNull(r.cancelReason),
+  };
+}
+
+export function toRentalInvoiceRow(raw: unknown, names: Names): RentalInvoiceRow {
+  const i = obj(raw);
+  return {
+    number: str(i.number, "—"), rentalId: str(i.rentalId), rentalCode: str(i.rentalCode, "—"), companyId: str(i.companyId), companyName: nameOf(names, str(i.companyId)),
+    customerName: str(i.customerName, "—"), issuedAt: str(i.issuedAt), dueAt: str(i.dueAt), total: num(i.total), balance: num(i.balance), currency: str(i.currency, "XOF"),
+    status: pick<RentalInvoiceStatus>(i.status, INVOICE, true, "TO_PAY"),
+  };
+}
+
+export function toMethodRow(raw: unknown, names: Names, traffic: Map<string, { n: number; ok: number; ko: number }>): PaymentMethodRow {
+  const m = obj(raw);
+  const t = traffic.get(`${str(m.companyId)}|${str(m.name)}`) ?? { n: 0, ok: 0, ko: 0 };
+  return {
+    id: str(m.id), companyId: str(m.companyId), companyName: nameOf(names, str(m.companyId)), name: str(m.name, "—"),
+    kind: pick<PaymentMethodKind>(m.methodType, KINDS, true, "MOBILE_MONEY"), provider: null, active: str(m.status).toUpperCase() === "ACTIVE",
+    transactions: t.n, completed: t.ok, failed: t.ko, successRate: t.ok + t.ko ? Math.round((t.ok / (t.ok + t.ko)) * 100) : null,
+  };
+}
+
+export function toExpiring(raw: unknown, names: Names): ExpiringBooking {
+  const e = obj(raw);
+  return {
+    id: str(e.id), bookingCode: str(e.bookingCode, "—"), companyName: str(e.companyName) || nameOf(names, str(e.companyId)),
+    passengerName: str(e.passengerName, "—"), amount: num(e.amount), currency: str(e.currency, "XOF"), minutesLeft: num(e.minutesLeft),
+  };
+}
+
+// ---------------------------------------------------------------------------------------------------------
+
+export async function liveTickets(f: { q?: string; companyId?: string; status?: string }): Promise<TicketRow[]> {
+  const [rows, n, bookings] = await Promise.all([loadAll("/admin/tickets", withFilters(f)), companyNames(), liveBookings({ companyId: f.companyId })]);
+  const byId = new Map(bookings.rows.map((b) => [b.id, b]));
+  return rows.map((r) => toTicketRow(r, n, byId));
+}
+
+export async function liveTicketFigures() {
+  const s = obj(await soft<unknown>("/admin/tickets/summary"));
+  return { total: num(s.total), issued: num(s.issued), used: num(s.used), cancelled: num(s.cancelled) };
+}
+
+export async function liveRentals(f: { q?: string; companyId?: string; status?: string }): Promise<RentalRow[]> {
+  const [rows, n] = await Promise.all([loadAll("/admin/rentals", withFilters(f)), companyNames()]);
+  return rows.map((r) => toRentalRow(r, n));
+}
+
+export async function liveRentalFigures() {
+  const s = obj(await soft<unknown>("/admin/rentals/summary"));
+  return { total: num(s.total), requestedOrQuoted: num(s.requestedOrQuoted), confirmed: num(s.confirmed), collected: num(s.collected), currency: str(s.currency, "XOF") };
+}
+
+export async function liveRentalInvoices(f: { q?: string; companyId?: string; status?: string }): Promise<RentalInvoiceRow[]> {
+  const [rows, n] = await Promise.all([loadAll("/admin/rental-invoices", withFilters(f)), companyNames()]);
+  return rows.map((r) => toRentalInvoiceRow(r, n));
+}
+
+export async function liveInvoiceFigures() {
+  const s = obj(await soft<unknown>("/admin/rental-invoices/summary"));
+  return { total: num(s.total), toCollect: num(s.toCollect), paid: num(s.paid), overdue: num(s.overdue), currency: str(s.currency, "XOF") };
+}
+
+/** Traffic per method is counted from the transaction list (matched on company and method name). */
+export async function liveMethods(f: { q?: string; companyId?: string }): Promise<PaymentMethodRow[]> {
+  const [rows, n, tx] = await Promise.all([loadAll("/admin/payment-methods", withFilters(f)), companyNames(), liveTransactions({ companyId: f.companyId })]);
+  const traffic = new Map<string, { n: number; ok: number; ko: number }>();
+  for (const t of tx.rows) {
+    const key = `${t.companyId}|${t.methodName}`;
+    const cur = traffic.get(key) ?? { n: 0, ok: 0, ko: 0 };
+    traffic.set(key, { n: cur.n + 1, ok: cur.ok + (t.status === "COMPLETED" ? 1 : 0), ko: cur.ko + (t.status === "FAILED" ? 1 : 0) });
+  }
+  return rows.map((r) => toMethodRow(r, n, traffic));
+}
+
+export async function liveOnlineStats(): Promise<{ stats: OnlineStats; ttl: number }> {
+  const [raw, watch, failed, n] = await Promise.all([
+    soft<unknown>("/admin/sales/online/stats"), soft<unknown>("/admin/online-bookings/watch"),
+    liveBookings({ channel: "online", paymentStatus: "failed" }).then((r) => r.rows.length).catch(() => 0), companyNames(),
+  ]);
+  const s = obj(raw), w = obj(watch);
+  const total = num(s.total), paid = num(s.paid);
+  return {
+    ttl: num(s.ttlMinutes, 30),
+    stats: {
+      total, paid, conversionPercent: total ? Math.round((paid / total) * 100) : null, failedPayments: failed, expired: num(s.expired),
+      stuck: num(w.stuckPayments), expiring: arr(w.expiring).map((e) => toExpiring(e, n)),
+    },
+  };
+}
+
+/** Counters the sales counts endpoint does not carry. */
+export async function liveRentalCounts(q?: string, companyId?: string) {
+  const total = async (path: string) => {
+    const raw = await soft<unknown>(`${path}?${withFilters({ q, companyId, size: "1" })}`);
+    return raw && typeof raw === "object" ? numOrNull(obj(raw).totalElements) : null;
+  };
+  const [locations, factures] = await Promise.all([total("/admin/rentals"), total("/admin/rental-invoices")]);
+  return { locations, factures };
+}

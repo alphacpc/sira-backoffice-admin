@@ -1,6 +1,8 @@
 import { Bus, CalendarBlank, Clock, MapPin, Path } from "@phosphor-icons/react/dist/ssr";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { isLive } from "@/lib/api/config";
+import { liveTripDetail } from "@/lib/api/fleet-live";
 import type { ComponentType, ReactNode } from "react";
 import { PageHeader } from "@/components/data/page-header";
 import { StatusBadge } from "@/components/data/status-badge";
@@ -41,7 +43,7 @@ function duration(minutes: number): string {
 
 export default async function TripPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const detail = tripsRepo.detail(id);
+  const detail = isLive() ? await liveTripDetail(id) : tripsRepo.detail(id);
   if (!detail) notFound();
   const { trip, seatMap } = detail;
   const badge = tripStatusBadge(trip.status);

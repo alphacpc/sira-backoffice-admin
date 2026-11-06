@@ -157,6 +157,8 @@ export interface RouteRow {
 
 /** Server-only detail of a bus (Server Components only; it carries the raw `Bus`). */
 export interface BusDetail {
+  /** Live: the platform does not hold the purchase, engine number, GPS, camera or fuel sensor data; the page hides them. */
+  partial?: boolean;
   bus: Bus;
   companyName: string;
   /** Currency of the owning company (purchase price). */

@@ -1,6 +1,6 @@
 import { onlineRepo } from "@/lib/repos/sales";
 import { homeData, type HomeData } from "@/lib/repos/dashboard";
-import { monOverview, type MonOverview } from "@/lib/repos/monitoring-hub";
+import { monOverview, type ServiceMetric } from "@/lib/repos/monitoring-hub";
 import { getStore } from "@/lib/repos/store";
 
 export const DASH_WINDOWS = [7, 14, 30] as const;
@@ -31,9 +31,20 @@ export function pareto(input: { label: string; value: number; href?: string }[],
 
 export interface FunnelStep { label: string; value: number; ratePct: number | null }
 
+/** What the dashboard page reads of the home data: the demonstration store and the platform both fill it. */
+export type DashBase = Pick<HomeData, "generatedAt" | "attention" | "incidents" | "activity" | "upcomingTrips" | "recentBookings" | "pendingKyc" | "dsr" | "plansMix"> & {
+  kpis: Pick<HomeData["kpis"], "mrr" | "mrrActiveSubscriptions" | "activeCompanies" | "totalCompanies" | "parcelsInTransit" | "activeBuses" | "totalBuses" | "busesInMaintenance">;
+};
+/** What the dashboard page reads of the monitoring overview. `availability` is null when no request was measured. */
+export interface DashMon {
+  metrics: Pick<ServiceMetric, "name" | "status" | "stale" | "responseTimeMs" | "uptimePercent" | "states">[];
+  api: { totals: { availability: number | null }; byDay: { err5: number }[] };
+  incidents: { open: number; mttrMinutes: number | null };
+}
+
 export interface DashData {
   days: number; from: string; to: string;
-  base: HomeData; mon: MonOverview;
+  base: DashBase; mon: DashMon;
   kpis: {
     revenue: number; revenueDelta: number | null; bookings: number; bookingsDelta: number | null;
     paymentRate: number | null; paymentRateDelta: number | null; avgBasket: number; avgBasketDelta: number | null;
